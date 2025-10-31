@@ -1,6 +1,12 @@
 import { apiRequest } from '/assets/js/api.js';
 import { showToast } from '/assets/js/toast.js';
 
+export async function fetchMe(){
+  const r = await apiRequest('/me', 'GET');
+  if (!r.ok) return null;
+  return r.data;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const signupForm = document.getElementById('signup-form');
   const loginForm = document.getElementById('login-form');
@@ -22,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const body = {
         username: signupForm.username.value.trim(),
         password: signupForm.password.value.trim(),
+        name: signupForm.name.value.trim(),
       };
       
       const r = await apiRequest('/signup', 'POST', body);
