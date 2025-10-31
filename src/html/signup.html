@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SII - Signup">
+    <title>Signup</title>
+    <link rel="stylesheet" href="/assets/css/auth.css">
+</head>
+<body>
+    <h1>Welcome to <a href="/">SII Homepage</a></h1>
+
+    <!-- Signup Form -->
+    <section id="signup"> 
+        <h2>Signup</h2>
+        <form action="/signup" method="POST">
+            <label for="signup-username">Username:</label>
+            <input type="text" id="signup-username" name="username" required>
+
+            <label for="signup-password">Password:</label>
+            <input type="password" id="signup-password" name="password" required>
+
+            <button type="submit">Signup</button>
+        </form>
+        <p>Already have an account? <a href="login.html">Go to Login</a></p>
+    </section>
+</body>
+</html>
