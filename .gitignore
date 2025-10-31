@@ -1,0 +1,13 @@
+# Ignore PowerPoint Files
+*.pptx
+*.ppt
+
+# Igrnoe Image Files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.svg
+
