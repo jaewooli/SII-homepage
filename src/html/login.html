@@ -6,6 +6,8 @@
     <meta name="description" content="SII - Login">
     <title>Login</title>
     <link rel="stylesheet" href="/assets/css/auth.css">
+    <link rel="stylesheet" href="/assets/css/toast.css">
+    <script type="module" src="/assets/js/auth.js"></script>
 </head>
 <body>
     <h1>Welcome to <a href="/">SII Homepage</a></h1>
@@ -13,14 +15,14 @@
     <!-- Login Form -->
     <section id="login"> 
         <h2>Login</h2>
-        <form action="/login" method="POST">
+        <form id="login-form" action="/login" method="POST">
             <label for="login-username">Username:</label>
             <input type="text" id="login-username" name="username" required>
 
             <label for="login-password">Password:</label>
             <input type="password" id="login-password" name="password" required>
 
-            <button type="submit">Login</button>
+            <button id="login-btn" type="submit">Login</button>
         </form>
         <p>Don't have an account? <a href="signup.html">Go to Signup</a></p>
     </section>
