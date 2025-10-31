@@ -50,7 +50,7 @@ nav {
     right: 20px;
 }
 
-nav a button {
+nav button {
     background-color: #041f57; /* Primary color */
     color: white;
     border: none;
@@ -61,7 +61,7 @@ nav a button {
     font-size: 1rem;
 }
 
-nav a button:hover {
+nav button:hover {
     background-color: #003399; /* Slightly darker shade */
 }
 
