@@ -1,0 +1,115 @@
+/* Base styles for SII Homepage */
+
+/* General body styling */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f9f9f9; /* Light background color */
+    color: #333; /* Neutral text color */
+
+    display: flex;
+    flex-direction: column;
+
+}
+
+a {
+    text-decoration: none;
+    color: #041f57;
+    font-weight: bold;
+}
+
+a#headtitle {
+    color: #f9f9f9;
+}
+
+
+/* Header styling */
+header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background-color: #041f57; /* Primary color from logo */
+    color: white;
+  }
+
+header img {
+    max-height: 80px;
+    margin-right: 20px;
+}
+
+header h1 {
+    font-size: 24px;
+    margin: 0;
+  }
+
+/* Navigation styling */
+nav {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+nav a button {
+    background-color: #041f57; /* Primary color */
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    margin-left: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+nav a button:hover {
+    background-color: #003399; /* Slightly darker shade */
+}
+
+/* Sidebar styling */
+aside {
+    width: 20%;
+    padding: 20px;
+    background-color: #e6f0ff; /* Light complementary color */
+    border-right: 1px solid #ccc;
+}
+
+aside h2 {
+    font-size: 1.5rem;
+    color: #041f57;
+}
+
+aside ul {
+    list-style: none;
+    padding: 0;
+}
+
+aside ul li {
+    margin: 10px 0;
+}
+
+/* Main content styling */
+main {
+    display: flex;
+}
+
+section {
+    flex: 1;
+    padding: 20px;
+}
+
+section h2 {
+    color: #0044cc;
+}
+
+
+
+/* Footer styling */
+footer {
+    text-align: center;
+    padding: 10px;
+    background-color: #041f57;
+    color: white;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
