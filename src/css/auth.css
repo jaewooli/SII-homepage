@@ -64,14 +64,14 @@ a {
     text-decoration: none;
 }
 
+a:hover {
+    text-decoration: underline;
+}
+
+
 p {
     text-align: center;
     margin-top: 10px;
-}
-
-p a {
-    color: #0044cc;
-    text-decoration: none;
 }
 
 p a:hover {

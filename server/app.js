@@ -41,13 +41,9 @@ app.use(session({
 }));
 
 // Serve static files
-app.use('/', express.static(path.join(__dirname, '../src/html')));
+app.use('/frags', express.static(path.join(__dirname, '../src/html/fragments')));
 app.use('/assets', express.static(path.join(__dirname, '../src')));
 app.use('/images', express.static(path.join(__dirname, '../images')));
-// Serve index.html
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../src/html/index.html'));
-});
 
 // Database connection
 const db = new sqlite3.Database('./users.db');
@@ -73,6 +69,25 @@ function sendJson(res, {
 } = {}) {
  res.status(status).json({ ok, action, resource, message, data, code });
 }
+
+
+app.get('/', (req, res) => {
+  res.redirect('/homepage');
+});
+
+// /homepage 경로로 접근 시 index.html 파일을 제공합니다.
+app.get('/homepage', (req, res) => {
+  res.redirect('/homepage/main');
+});
+
+app.get('/homepage/main', (req, res) => {
+    res.sendFile(path.join(__dirname, '../src/html/index.html'));
+});
+
+app.get('/homepage/:url', (req, res) => {
+    res.sendFile(path.join(__dirname, `../src/html/${req.params.url || 'index.html'}`));
+});
+
 
 // Signup route
 app.post('/signup', (req, res) => {
