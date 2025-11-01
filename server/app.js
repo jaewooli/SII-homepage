@@ -83,11 +83,10 @@ app.get('/homepage', (req, res) => {
 app.get('/homepage/main', (req, res) => {
     res.sendFile(path.join(__dirname, '../src/html/index.html'));
 });
-
+``
 app.get('/homepage/:url', (req, res) => {
-    res.sendFile(path.join(__dirname, `../src/html/${req.params.url || 'index.html'}`));
+  res.sendFile(path.join(__dirname, `../src/html/${req.params.url || 'index.html'}`));
 });
-
 
 // Signup route
 app.post('/signup', (req, res) => {
@@ -192,6 +191,10 @@ app.post('/logout', (req, res) => {
     });
   });
 });
+
+app.get('/:url', (req, res) => {
+    res.redirect(`/homepage/${req.params.url}`);
+})
 
 // Start server
 const PORT = process.env.PORT || 8080;
