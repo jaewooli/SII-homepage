@@ -30,11 +30,11 @@ function renderUserUI(user){
 }
 
 document.addEventListener('DOMContentLoaded', async() => {
-  const message = sessionStorage.getItem('toastMessage');
-  const type = sessionStorage.getItem('toastType');
-
   const me = await fetchMe();
   renderUserUI(me);
+
+  const message = sessionStorage.getItem('toastMessage');
+  const type = sessionStorage.getItem('toastType');
 
   if (message) {
     sessionStorage.removeItem('toastMessage');
