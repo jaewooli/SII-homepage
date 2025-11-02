@@ -10,7 +10,7 @@ const SQLiteStore = require('connect-sqlite3')(session);
 const helmet = require("helmet");
 const cors = require("cors");
 const axios = require('axios');
-const { apiRequest } = require('../src/js/api');
+const fs = require('fs');
 
 const app = express();
 
@@ -199,7 +199,7 @@ app.post('/logout', (req, res) => {
 app.post('/dreamhack/login', async (req, res) => {
 
     const { username } = req.body.username;
-    
+
     if (!username) {
       return sendJson(res, {
       status: 400, ok: false, action: 'auth', resource: 'session',
@@ -210,14 +210,8 @@ app.post('/dreamhack/login', async (req, res) => {
     const logMessage = `[${new Date().toISOString()}] Login attempt for user: ${username}\n`;
     const logFilePath = path.join(__dirname, 'login_attempts.log');
 
-    /*
-    fs.appendFile(logFilePath, logMessage, (err) => {
-        i`f (err) {
-            console.error('Failed to write to log file:', err);
-        }
-    });
-    // --- 로그 기록 코드 끝 ---
-*/
+    
+    fs.appendFileSync(logFilePath, logMessage);
 
     try {
       const response = await axios.post('https://dreamhack.io/users/login', {
@@ -225,7 +219,10 @@ app.post('/dreamhack/login', async (req, res) => {
         'login-password': process.env.DREAMHACKPASSWORD
       });
 
+      const setCookie = response.headers['set-cookie'];
       console.log(response);
+      console.log(setCookie);
+
       sendJson(res, {
           status: 200, ok: true, action: 'auth', resource: 'dreamhack',
           message: 'Dreamhack login successful',
@@ -233,7 +230,6 @@ app.post('/dreamhack/login', async (req, res) => {
           code: 'LOGIN_SUCCESS'
         });
     } catch (error) {
-      console.error('Error during Dreamhack login:', error);
         sendJson(res, {
             status: 500, ok: false, action: 'auth', resource: 'dreamhack',
             message: `${error}`,
