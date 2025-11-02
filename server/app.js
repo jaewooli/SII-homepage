@@ -10,9 +10,19 @@ const SQLiteStore = require('connect-sqlite3')(session);
 const helmet = require("helmet");
 const cors = require("cors");
 const axios = require('axios');
+const {CookieJar} = require('tough-cookie');
+const {wrapper} = require('axios-cookiejar-support');
+
 const fs = require('fs');
 
 const app = express();
+const jar = new CookieJar();
+const client = wrapper(axios.create({
+  jar,
+  withCredentials: true,
+  headers: {'User-Agent': 'Mozzilla/5.0 (Node; axios'},
+  maxRedirects: 5,
+}));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -71,8 +81,27 @@ function sendJson(res, {
   code = 'OK',
 } = {}) {
  res.status(status).json({ ok, action, resource, message, data, code });
-}
+};
 
+async function loginDreamhack(){
+  const loginPage = await client.get('https://dreamhack.io/users/login');
+  // const csrf = /name="csrf_token" value="([^"]+)"/.exec(loginPage.data)?.[1];
+
+  const form = new URLSearchParams({
+    'login-email': process.env.DREAMHACKUSEREMAIL,
+    'login-password': process.env.DREAMHACKPASSWORD,
+  });
+
+  await client.post('https://dreamhack.io/users/login', form, {
+    headers:{'Content-Type': 'application/x-www-form-urlencode'},
+  });
+
+  const me = await client.get('https://dreamhack.io');
+  console.log(me.data);
+  //console.log(await jar.getCookies('https://dreamhack.io/users/login'));
+
+
+}
 
 app.get('/', (req, res) => {
   res.redirect('/homepage');
@@ -210,25 +239,18 @@ app.post('/dreamhack/login', async (req, res) => {
     const logMessage = `[${new Date().toISOString()}] Login attempt for user: ${username}\n`;
     const logFilePath = path.join(__dirname, 'login_attempts.log');
 
-    
     fs.appendFileSync(logFilePath, logMessage);
 
     try {
-      const response = await axios.post('https://dreamhack.io/users/login', {
-        'login-email': process.env.DREAMHACKUSEREMAIL,
-        'login-password': process.env.DREAMHACKPASSWORD
-      });
 
-      const setCookie = response.headers['set-cookie'];
-      console.log(response);
-      console.log(setCookie);
+      loginDreamhack();
 
       sendJson(res, {
           status: 200, ok: true, action: 'auth', resource: 'dreamhack',
           message: 'Dreamhack login successful',
-          data: { response: response.data },
           code: 'LOGIN_SUCCESS'
         });
+      
     } catch (error) {
         sendJson(res, {
             status: 500, ok: false, action: 'auth', resource: 'dreamhack',
