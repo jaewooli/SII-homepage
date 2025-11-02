@@ -14,8 +14,21 @@ function showLoginRequiredToast() {
   showToast('You need to Login first', 'error');
 }
 
-function executeSpecificFeature() {
-  showToast("Special feqture!!", "success");
+async function executeSpecificFeature(userdata) {
+  const loginResponse = await apiRequest('/dreamhack/login', 'POST', {
+    username: userdata,
+  });
+
+    try {
+    if (loginResponse.ok) {
+      showToast(`Dreamhack login successful! ${loginResponse.data}`, 'success');
+    } else {
+      showToast(`Dreamhack login failed: ${loginResponse.data?.message || loginResponse.statusText}`, 'error');
+    }
+  } catch (error) {
+    console.error('Error during Dreamhack login:', error);
+    showToast('An error occurred during Dreamhack login.', 'error');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,8 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (confirmbtn) {
     confirmbtn.addEventListener('click', async () => {
-      if (await isLoggedIn()){
-        executeSpecificFeature();
+      const userdata = await isLoggedIn();
+      if (userdata){
+        executeSpecificFeature(userdata);
       } else{
         showLoginRequiredToast();
       }

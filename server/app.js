@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
@@ -7,7 +9,8 @@ const SQLiteStore = require('connect-sqlite3')(session);
 
 const helmet = require("helmet");
 const cors = require("cors");
-
+const axios = require('axios');
+const { apiRequest } = require('../src/js/api');
 
 const app = express();
 
@@ -136,6 +139,7 @@ app.post('/login', (req, res) => {
       code: 'VALIDATION_ERROR'
     });
     }
+
     const query = `SELECT * FROM users WHERE username = ? AND password = ?`;
 
     db.get(query, [username, password], (err, row) => {
@@ -192,11 +196,56 @@ app.post('/logout', (req, res) => {
   });
 });
 
+app.post('/dreamhack/login', async (req, res) => {
+
+    const { username } = req.body.username;
+    
+    if (!username) {
+      return sendJson(res, {
+      status: 400, ok: false, action: 'auth', resource: 'session',
+      message: 'Username needed', code: 'LOGIN_FAILED'
+    });
+    }
+
+    const logMessage = `[${new Date().toISOString()}] Login attempt for user: ${username}\n`;
+    const logFilePath = path.join(__dirname, 'login_attempts.log');
+
+    /*
+    fs.appendFile(logFilePath, logMessage, (err) => {
+        i`f (err) {
+            console.error('Failed to write to log file:', err);
+        }
+    });
+    // --- 로그 기록 코드 끝 ---
+*/
+
+    try {
+      const response = await axios.post('https://dreamhack.io/users/login', {
+        'login-email': process.env.DREAMHACKUSEREMAIL,
+        'login-password': process.env.DREAMHACKPASSWORD
+      });
+
+      console.log(response);
+      sendJson(res, {
+          status: 200, ok: true, action: 'auth', resource: 'dreamhack',
+          message: 'Dreamhack login successful',
+          data: { response: response.data },
+          code: 'LOGIN_SUCCESS'
+        });
+    } catch (error) {
+      console.error('Error during Dreamhack login:', error);
+        sendJson(res, {
+            status: 500, ok: false, action: 'auth', resource: 'dreamhack',
+            message: `${error}`,
+            code: 'SERVER_ERROR'
+        });
+    }
+});
+
 app.get('/:url', (req, res) => {
     res.redirect(`/homepage/${req.params.url}`);
-})
+});
 
-// Start server
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
