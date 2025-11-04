@@ -8,10 +8,14 @@ export async function apiRequest(url, method = 'GET', body = null) {
 
   const res = await fetch(url, opts);
 
+  console.log(res.ok);
+  console.log(res.status);
+
   // JSON 파싱 실패 대비
   let payload = null;
   try { payload = await res.json(); } catch (_) { payload = null; }
 
+  console.log(payload)
   // 항상 앱 레벨 형태로 반환
   return {
     httpStatus: res.status,
