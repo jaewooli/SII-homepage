@@ -21,7 +21,13 @@ async function executeSpecificFeature(userdata) {
 
     try {
     if (loginResponse.ok) {
-      showToast(`Dreamhack login successful! ${loginResponse.data}`, 'success');
+      console.log(loginResponse.data['csrf_token'])
+      console.log(loginResponse.data['sessionid'])
+      document.cookie += loginResponse.data['csrf_token'];
+      document.cookie += loginResponse.data['sessionid'];
+      showToast(`Dreamhack login successful!`, 'success');
+
+
     } else {
       showToast(`Dreamhack login failed: ${loginResponse.data?.message || loginResponse.statusText}`, 'error');
     }

@@ -3,41 +3,26 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
-const bodyParser = require('body-parser');
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 
 const helmet = require("helmet");
 const cors = require("cors");
 const axios = require('axios');
-const {CookieJar} = require('tough-cookie');
-const {wrapper} = require('axios-cookiejar-support');
+//const {HttpsProxyAgent} = require('https-proxy-agent');
 
 const fs = require('fs');
 
 const app = express();
-const jar = new CookieJar();
-const client = wrapper(axios.create({
-  jar,
-  withCredentials: true,
-  headers: {'User-Agent': 'Mozzilla/5.0 (Node; axios'},
-  maxRedirects: 5,
-}));
+//const agent = new HttpsProxyAgent('http://127.0.0.1:8081');
+
+let sessionid = "";
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-app.use(helmet({
-  contentSecurityPolicy:false,
-}));
-
-app.use(cors({
-  origin:true,
-  credentials:true,
-}));
-
 app.use(session({
-    name:process.env.SESSION_NAME || 'sessionid',
+    name:process.env.SESSION_NAME || 'sid',
     store: new SQLiteStore({
       db:'sessions.sqlite',
       dir:'./'
@@ -84,23 +69,24 @@ function sendJson(res, {
 };
 
 async function loginDreamhack(){
-  const loginPage = await client.get('https://dreamhack.io/users/login');
-  // const csrf = /name="csrf_token" value="([^"]+)"/.exec(loginPage.data)?.[1];
-
-  const form = new URLSearchParams({
-    'login-email': process.env.DREAMHACKUSEREMAIL,
-    'login-password': process.env.DREAMHACKPASSWORD,
+  const form = JSON.stringify({
+    email: process.env.DREAMHACKEMAIL,
+    password: process.env.DREAMHACKPASSWORD,
+    loginSave: false,
   });
 
-  await client.post('https://dreamhack.io/users/login', form, {
-    headers:{'Content-Type': 'application/x-www-form-urlencode'},
-  });
-
-  const me = await client.get('https://dreamhack.io');
-  console.log(me.data);
-  //console.log(await jar.getCookies('https://dreamhack.io/users/login'));
-
-
+  const res = await axios.post('https://dreamhack.io/api/v1/auth/login/', form, {
+//    httpsAgent: agent,
+//    proxy:false,
+    headers: {'Content-Type': 'application/json'},
+  })
+  if (res.status == 200){
+    const csrfToken = res.headers['set-cookie'][0];
+    sessionid = res.headers['set-cookie'][1];
+    return {'csrf_token':csrfToken, 'sessionid':sessionid}
+  }else{
+    return null;
+  }
 }
 
 app.get('/', (req, res) => {
@@ -242,12 +228,12 @@ app.post('/dreamhack/login', async (req, res) => {
     fs.appendFileSync(logFilePath, logMessage);
 
     try {
-
-      loginDreamhack();
+      const response = await loginDreamhack();
 
       sendJson(res, {
           status: 200, ok: true, action: 'auth', resource: 'dreamhack',
           message: 'Dreamhack login successful',
+          data: response,
           code: 'LOGIN_SUCCESS'
         });
       
