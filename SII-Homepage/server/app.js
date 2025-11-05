@@ -179,7 +179,7 @@ app.post('/login', (req, res) => {
         sendJson(res, {
       status: 200, ok: true, action: 'auth', resource: 'users',
       message: 'Login Success!.',
-      data: { id: row.id, username: row.username },
+      data: { id: row.id, username: row.username},
       code: 'LOGIN_SUCCESS'
       });
         }
@@ -215,9 +215,7 @@ app.post('/logout', (req, res) => {
 });
 
 app.post('/dreamhack/login', async (req, res) => {
-
-    const { username } = req.body.username;
-
+    const { username } = req.body.userinfo;
     if (!username) {
       return sendJson(res, {
       status: 400, ok: false, action: 'auth', resource: 'session',

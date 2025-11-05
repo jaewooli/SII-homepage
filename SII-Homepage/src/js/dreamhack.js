@@ -16,7 +16,7 @@ function showLoginRequiredToast() {
 
 async function executeSpecificFeature(userdata) {
   const loginResponse = await apiRequest('/dreamhack/login', 'POST', {
-    username: userdata,
+    userinfo: userdata,
   });
 
     try {

@@ -1,9 +1,12 @@
-const SERVER_BASE = 'http://localhost:8089'; // 실제 서버 주소로 변경
+const SERVER_BASE = 'http://localhost:8080'; // 실제 서버 주소로 변경
+
+//SIIuser 추후 수정 시 고려
 
 function showMsg(text, ok = true) {
-  const m = document.getElementById('msg');
-  m.textContent = text;
-  m.style.color = ok ? 'green' : 'crimson';
+  const m = Array.from(document.getElementsByClassName('msg'))
+  .filter(el => !el.hidden && el.offsetParent !== null);
+  m[0].textContent = text;
+  m[0].style.color = ok ? 'green' : 'crimson';
 }
 
 // 공통 fetch 유틸 (쿠키 포함)
@@ -21,10 +24,36 @@ async function postJson(path, body) {
   return { httpStatus: res.status, ok: res.ok, payload };
 }
 
+function domreload(){
+  location.reload()
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const userinfo = await chrome.storage.local.get();
+  
+  if (userinfo.SIIuser){
+
+    //try{
+      // const r = await postJson('/me')
+   // }
+
+    const loginsection = document.getElementById('login');
+    loginsection.hidden=true;
+
+    const usernamep = document.getElementById('username');
+    usernamep.textContent = userinfo.SIIuser.username;
+
+  }else{
+    const loggedinsection = document.getElementById('loggedin');
+    loggedinsection.hidden=true;
+  }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('login-form');
   const signupForm = document.getElementById('signup-form');
   const dreamhackBtn = document.getElementById('dreamhack-btn');
+  const signoutBtn = document.getElementById('signout-btn');
 
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -37,13 +66,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const r = await postJson('/login',{username, password });
       if (r.ok) {
         showMsg(r.payload?.message ?? '로그인 성공');
-        chrome.storage.local.set({user: r.payload?.data});
+        console.log(r.headers);
+        chrome.storage.local.set({SIIuser: {username, password}});
+        domreload();
       } else {
         showMsg(r.payload?.message ?? `로그인 실패 (${r.httpStatus})`, false);
       }
     } catch (err) {
       console.log(err);
-      showMsg(err, false);
+      showMsg("네트워크 오류", false);
     }
   });
 
@@ -59,6 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const r = await postJson('/signup', { username, password, name });
       if (r.ok) {
         showMsg(r.payload?.message ?? '회원가입 성공');
+        domreload();
       } else {
         showMsg(r.payload?.message ?? `회원가입 실패 (${r.httpStatus})`, false);
       }
@@ -70,10 +102,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Dreamhack 버튼: /dreamhack/login 으로 POST
   dreamhackBtn.addEventListener('click', async () => {
-    // Dreamhack 로그인은 추가 필드가 필요하면 수정
+    const userinfo = await chrome.storage.local.get('SIIuser');
+    const username = userinfo['SIIuser']
     showMsg('Dreamhack 로그인 시도중...');
     try {
-      const r = await postJson('/dreamhack/login', { /* 필요하면 body 추가 */ });
+      const r = await postJson('/dreamhack/login',{'userinfo': username},  { /* 필요하면 body 추가 */ });
       if (r.ok) {
         showMsg(r.payload?.message ?? 'Dreamhack 로그인 성공');
       } else {
@@ -84,4 +117,15 @@ document.addEventListener('DOMContentLoaded', () => {
       showMsg('네트워크 오류', false);
     }
   });
-});
+
+  signoutBtn.addEventListener('click', async() => {
+    showMsg('로그아웃 합니다.');
+    try{
+      await chrome.storage.local.remove('SIIuser')
+      domreload();
+    }catch(err){
+      console.error(err);
+      showMsg('로그아웃 실패', false);
+    }
+  })
+})
