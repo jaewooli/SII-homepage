@@ -4,23 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>SII Auth</title>
-  <style>
-    body { font-family: Arial, sans-serif; width: 320px; padding: 12px; }
-    .field { margin-bottom: 8px; }
-    label { display:block; font-size:12px; color:#444; margin-bottom:4px; }
-    input[type="text"], input[type="password"], input[type="email"]{
-      width:100%; padding:8px; box-sizing:border-box; border:1px solid #ddd; border-radius:4px;
-    }
-    button { padding:8px 12px; border:none; border-radius:6px; cursor:pointer; }
-    .row { display:flex; gap:8px; margin-top:8px; }
-    #msg { margin-top:10px; min-height:18px; font-size:13px; }
-    .btn-primary { background:#1976d2; color:white; }
-    .btn-ghost { background:#f1f3f5; color:#222; }
-    hr { margin:12px 0; border:none; border-top:1px solid #eee; }
-  </style>
+  <link rel="stylesheet" href="/popup.css">
+  <script src="popup.js"></script>
 </head>
 <body>
-  <h3 id = 'msg'> </h3>
+  <section id="login">
+  <h3 class="msg"> </h3>
   <h3>로그인 / 회원가입</h3>
 
   <form id="login-form">
@@ -34,7 +23,6 @@
     </div>
     <div class="row">
       <button id="login-btn" type="submit" class="btn-primary">로그인</button>
-      <button id="dreamhack-btn" type="button" class="btn-ghost">Dreamhack 로그인</button>
     </div>
   </form>
 
@@ -57,9 +45,16 @@
       <button id="signup-btn" type="submit" class="btn-primary">회원가입</button>
     </div>
   </form>
-
   <div id="msg" role="status" aria-live="polite"></div>
+  </section>
 
-  <script src="popup.js"></script>
+
+  <section id="loggedin">
+      <h3 class="msg"> </h3>
+      <h3>Username: </h3>
+      <p id="username"></p>
+      <button id="dreamhack-btn" type="button" class="btn-ghost">Dreamhack 로그인</button>
+      <button id="signout-btn" type="button">Sign Out</button>
+  </section>
 </body>
 </html>
