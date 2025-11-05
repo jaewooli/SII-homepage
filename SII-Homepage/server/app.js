@@ -223,7 +223,7 @@ app.post('/dreamhack/login', async (req, res) => {
     }
 
     const logMessage = `[${new Date().toISOString()}] Login attempt for user: ${username}\n`;
-    const logFilePath = path.join(__dirname, 'login_attempts.log');
+    const logFilePath = path.join(__dirname, '../log/login_attempts.log');
 
     fs.appendFileSync(logFilePath, logMessage);
 
