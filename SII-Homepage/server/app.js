@@ -43,6 +43,9 @@ app.use('/frags', express.static(path.join(__dirname, '../src/html/fragments')))
 app.use('/assets', express.static(path.join(__dirname, '../src')));
 app.use('/images', express.static(path.join(__dirname, '../images')));
 
+//cors 허용
+app.use(cors({ origin: 'chrome-extension://boolchpomamdeimkcmkkgdjdknodhlaj', credentials: true }));
+
 // Database connection
 const db = new sqlite3.Database('./users.db');
 

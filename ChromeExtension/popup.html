@@ -20,15 +20,16 @@
   </style>
 </head>
 <body>
+  <h3 id = 'msg'> </h3>
   <h3>로그인 / 회원가입</h3>
 
   <form id="login-form">
     <div class="field">
-      <label for="login-email">이메일</label>
-      <input id="login-email" type="email" required />
+      <label for="login-username">username</label>
+      <input id="login-username" type="text" required />
     </div>
     <div class="field">
-      <label for="login-password">비밀번호</label>
+      <label for="login-password">password</label>
       <input id="login-password" type="password" required />
     </div>
     <div class="row">
@@ -41,12 +42,16 @@
 
   <form id="signup-form">
     <div class="field">
-      <label for="signup-email">이메일</label>
-      <input id="signup-email" type="email" required />
+      <label for="signup-username">username</label>
+      <input id="signup-username" type="text" required />
     </div>
     <div class="field">
-      <label for="signup-password">비밀번호</label>
+      <label for="signup-password">password</label>
       <input id="signup-password" type="password" required />
+    </div>
+    <div classe="field">
+      <label for="signup-name">name</label>
+      <input id="signup-name" type="text" required />
     </div>
     <div class="row">
       <button id="signup-btn" type="submit" class="btn-primary">회원가입</button>
