@@ -27,7 +27,7 @@ async function executeSpecificFeature(userdata) {
       document.cookie += loginResponse.data['sessionid'];
       showToast(`Dreamhack login successful!`, 'success');
 
-
+      window.location = "https://dreamhack.io";
     } else {
       showToast(`Dreamhack login failed: ${loginResponse.data?.message || loginResponse.statusText}`, 'error');
     }
