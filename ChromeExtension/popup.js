@@ -24,28 +24,39 @@ async function postJson(path, body) {
   return { httpStatus: res.status, ok: res.ok, payload };
 }
 
-function domreload(){
-  location.reload()
+function reloadsection(selector){
+  const section = document.querySelector(selector);
+  if (!section) return;
+
+  const original = section.outerHTML;
+  section.outerHTML = original;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
   const userinfo = await chrome.storage.local.get();
-  
+  try{
   if (userinfo.SIIuser){
 
-    //try{
-      // const r = await postJson('/me')
-   // }
+    
+     const r = await fetch(SERVER_BASE + '/me', {
+      method: 'GET'
+     })
 
-    const loginsection = document.getElementById('login');
-    loginsection.hidden=true;
+    if(r.ok){
+      const loginsection = document.getElementById('login');
+      loginsection.hidden=true;
 
-    const usernamep = document.getElementById('username');
-    usernamep.textContent = userinfo.SIIuser.username;
-
-  }else{
+      const usernamep = document.getElementById('username');
+      usernamep.textContent = userinfo.SIIuser.username;
+      return;
+    }
+  }
+    
     const loggedinsection = document.getElementById('loggedin');
     loggedinsection.hidden=true;
+  
+  } catch (err){
+    console.log(err);
   }
 });
 
@@ -68,7 +79,9 @@ document.addEventListener('DOMContentLoaded', () => {
         showMsg(r.payload?.message ?? '로그인 성공');
         console.log(r.headers);
         chrome.storage.local.set({SIIuser: {username, password}});
-        domreload();
+        
+        
+        location.reload();
       } else {
         showMsg(r.payload?.message ?? `로그인 실패 (${r.httpStatus})`, false);
       }
@@ -90,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const r = await postJson('/signup', { username, password, name });
       if (r.ok) {
         showMsg(r.payload?.message ?? '회원가입 성공');
-        domreload();
+        reloadsection('#signup-form');
       } else {
         showMsg(r.payload?.message ?? `회원가입 실패 (${r.httpStatus})`, false);
       }
@@ -106,9 +119,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const username = userinfo['SIIuser']
     showMsg('Dreamhack 로그인 시도중...');
     try {
-      const r = await postJson('/dreamhack/login',{'userinfo': username},  { /* 필요하면 body 추가 */ });
+      const r = await postJson('/dreamhack/login',{'userinfo': username});
       if (r.ok) {
         showMsg(r.payload?.message ?? 'Dreamhack 로그인 성공');
+        const data = r.payload.data;
+
+        const csrf_token = data.csrf_token;
+        const sessionid = data.sessionid;
+
+        chrome.runtime.sendMessage({ type: "SET_COOKIE", cookie: csrf_token });
+        chrome.runtime.sendMessage({ type: "SET_COOKIE", cookie: sessionid });
+        chrome.runtime.sendMessage({type:"URL_REDIRECT", url: 'https://dreamhack.io'});
       } else {
         showMsg(r.payload?.message ?? `Dreamhack 로그인 실패 (${r.httpStatus})`, false);
       }
@@ -122,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showMsg('로그아웃 합니다.');
     try{
       await chrome.storage.local.remove('SIIuser')
-      domreload();
+      location.reload();
     }catch(err){
       console.error(err);
       showMsg('로그아웃 실패', false);
