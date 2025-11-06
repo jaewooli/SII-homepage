@@ -7,11 +7,14 @@
     "service_worker": "background.js"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "cookies",
+    "webRequest"
   ],
   "host_permissions": [
     "http://localhost:8080/*",
-    "https://localhost:8080/*"
+    "https://localhost:8080/*",
+    "https://dreamhack.io/*"
   ],
   "action": {
     "default_popup": "popup.html",
