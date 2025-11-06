@@ -35,7 +35,7 @@ function reloadsection(selector){
 document.addEventListener('DOMContentLoaded', async () => {
   const userinfo = await chrome.storage.local.get();
   try{
-  if (userinfo.SIIuser){
+  if (userinfo.SIIuser){ //dfgsdfg
 
     
      const r = await fetch(SERVER_BASE + '/me', {
@@ -77,11 +77,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const r = await postJson('/login',{username, password });
       if (r.ok) {
         showMsg(r.payload?.message ?? '로그인 성공');
-        console.log(r.headers);
-        chrome.storage.local.set({SIIuser: {username, password}});
-        
-        
-        location.reload();
+
+        const sessionid =r.payload.sessionid
+        chrome.runtime.sendMessage({ type: "SET_COOKIE", cookie: sessionid, isValue:true });
+        console.log(await chrome.runtime.sendMessage({ type: "GET_COOKIE" }));
+        //location.reload();
       } else {
         showMsg(r.payload?.message ?? `로그인 실패 (${r.httpStatus})`, false);
       }
@@ -115,11 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Dreamhack 버튼: /dreamhack/login 으로 POST
   dreamhackBtn.addEventListener('click', async () => {
-    const userinfo = await chrome.storage.local.get('SIIuser');
-    const username = userinfo['SIIuser']
     showMsg('Dreamhack 로그인 시도중...');
     try {
-      const r = await postJson('/dreamhack/login',{'userinfo': username});
+      const r = await postJson('/dreamhack/login',{'sessionid': sessionid});
       if (r.ok) {
         showMsg(r.payload?.message ?? 'Dreamhack 로그인 성공');
         const data = r.payload.data;
@@ -150,3 +148,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   })
 })
+

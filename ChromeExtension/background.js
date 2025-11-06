@@ -1,24 +1,18 @@
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
-  if (msg.type === "SET_COOKIE") await setCookie(msg.cookie);
+  if (msg.type === "SET_COOKIE") await setCookie(msg.cookie, msg.isValue);
   else if(msg.type ==="URL_REDIRECT") chrome.tabs.create({ url: msg.url });
+  else if(msg.type === "GET_COOKIE") sendResponse(await chrome.cookies.getAll({ domain: 'localhost'}));
 });
 
-chrome.webRequest.onHeadersReceived.addListener(
-  async (details) => {
-    const setCookies = details.responseHeaders?.filter(h => h.name.toLowerCase() === 'set-cookie') || [];
-    for (const h of setCookies) {
-      const cookieObj = toChromeCookie(h.value, BASE + "/");
-      await chrome.cookies.set(cookieObj);
+async function setCookie(raw, isValue) {
+  if (isValue)
+    {
+       await chrome.cookies.set({ url: 'http://localhost:8080/', name: 'sessionid', value: raw,  path: '/', secure: false});
     }
-  },
-  { urls: [BASE + "/*"], types: ["xmlhttprequest", "main_frame"] },
-  ["responseHeaders"]
-);
-
-
-async function setCookie(raw) {
+    else{
   const realcookie = parseCookieString(raw, 'https://dreamhack.io/');
   await chrome.cookies.set(realcookie);
+    }
 }
 
 function parseCookieString(raw, baseUrl) {
