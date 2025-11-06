@@ -179,7 +179,7 @@ app.post('/login', (req, res) => {
         sendJson(res, {
       status: 200, ok: true, action: 'auth', resource: 'users',
       message: 'Login Success!.',
-      data: { id: row.id, username: row.username},
+      data: { id: row.id, username: row.username, sessionid:req.sessionID},
       code: 'LOGIN_SUCCESS'
       });
         }
