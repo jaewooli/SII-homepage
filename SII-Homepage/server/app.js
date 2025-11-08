@@ -33,6 +33,7 @@ app.use(session({
     cookie:{
       maxAge:24*60*60*1000,
       sameSite:'lax',
+      secure: false
       // secure:process.env.NODE_ENV === 'production'
     },
     rolling:false,
@@ -44,7 +45,9 @@ app.use('/assets', express.static(path.join(__dirname, '../src')));
 app.use('/images', express.static(path.join(__dirname, '../images')));
 
 //cors 허용
-app.use(cors({ origin: 'chrome-extension://boolchpomamdeimkcmkkgdjdknodhlaj', credentials: true }));
+app.use(cors({ 
+  origin: '*',  //TODO: change
+  credentials: true }));
 
 // Database connection
 const db = new sqlite3.Database('./users.db');
@@ -179,7 +182,7 @@ app.post('/login', (req, res) => {
         sendJson(res, {
       status: 200, ok: true, action: 'auth', resource: 'users',
       message: 'Login Success!.',
-      data: { id: row.id, username: row.username, sessionid:req.sessionID},
+      data: req.session.user,
       code: 'LOGIN_SUCCESS'
       });
         }
