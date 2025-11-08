@@ -218,7 +218,7 @@ app.post('/logout', (req, res) => {
 });
 
 app.post('/dreamhack/login', async (req, res) => {
-    const { username } = req.body.userinfo;
+    const { username } = req.session.user;
     if (!username) {
       return sendJson(res, {
       status: 400, ok: false, action: 'auth', resource: 'session',

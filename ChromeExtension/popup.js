@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
   dreamhackBtn.addEventListener('click', async () => {
     showMsg('Dreamhack 로그인 시도중...');
     try {
-      const r = await postJson('/dreamhack/login',{'sessionid': sessionid});
+      const r = await postJson('/dreamhack/login');
       if (r.ok) {
         showMsg(r.payload?.message ?? 'Dreamhack 로그인 성공');
         const data = r.payload.data;
