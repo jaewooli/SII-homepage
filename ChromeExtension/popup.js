@@ -35,11 +35,10 @@ function reloadsection(selector){
 document.addEventListener('DOMContentLoaded', async () => {
   const userinfo = await chrome.storage.local.get();
   try{
-  if (userinfo.SIIuser){ //dfgsdfg
-
-    
+  if (userinfo.SIIuser){
      const r = await fetch(SERVER_BASE + '/me', {
-      method: 'GET'
+      method: 'GET',
+      credentials: 'include'
      })
 
     if(r.ok){
@@ -77,11 +76,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const r = await postJson('/login',{username, password });
       if (r.ok) {
         showMsg(r.payload?.message ?? '로그인 성공');
+        const userdata = r.payload.data;
 
-        const sessionid =r.payload.sessionid
-        chrome.runtime.sendMessage({ type: "SET_COOKIE", cookie: sessionid, isValue:true });
-        console.log(await chrome.runtime.sendMessage({ type: "GET_COOKIE" }));
-        //location.reload();
+        const id = userdata.id;
+        const username = userdata.username;
+        const name = userdata.name;
+
+        chrome.storage.local.set({SIIuser: {id, username, name}})
+        console.log(await chrome.storage.local.get())
+        location.reload();
       } else {
         showMsg(r.payload?.message ?? `로그인 실패 (${r.httpStatus})`, false);
       }
