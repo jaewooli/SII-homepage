@@ -39,8 +39,10 @@ function renderUserUI(user){
   let logoutbtn = document.getElementById('logout-btn');
 
   if (user) {
+    if (loginbtn && signupbtn){
     loginbtn.hidden = true;
     signupbtn.hidden = true;
+    }
 
     logoutbtn = document.createElement('button');
     logoutbtn.id = 'logout-btn';
@@ -57,6 +59,27 @@ function renderUserUI(user){
       } else {
         showToast('Logout failed', 'error');
       }
+    });
+  }else{
+    if (logoutbtn){
+    logoutbtn.hidden = true;
+    }
+    loginbtn = document.createElement('button');
+    loginbtn.id = 'login-btn';
+    loginbtn.textContent = 'Login';
+    document.querySelector('nav').appendChild(loginbtn);
+
+    signupbtn = document.createElement('button');
+    signupbtn.id = 'signup-btn';
+    signupbtn.textContent = 'Signup';
+    document.querySelector('nav').appendChild(signupbtn);
+
+    loginbtn.addEventListener('click', () => {
+      location.href = '/login';
+    });
+
+    signupbtn.addEventListener('click', () =>{
+      location.href = '/signup';
     });
   }
 }

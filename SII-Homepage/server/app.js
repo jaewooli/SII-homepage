@@ -39,7 +39,7 @@ app.use(session({
 
 app.use(rateLimit({
   windowMs: 10 * 60 * 1000,
-  max: 30,
+  max: 500,
   message: '너무 많은 요청을 보냈습니다. 10분 후에 다시 시도해주세요.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -109,7 +109,7 @@ app.get('/homepage/main', (req, res) => {
 });
 ``
 app.get('/homepage/:url', (req, res) => {
-  res.sendFile(path.join(__dirname, `../src/html/${req.params.url || 'index.html'}`));
+  res.sendFile(path.join(__dirname, `../src/html/${req.params.url+'.html' || 'index.html'}`));
 });
 
 // Signup route
