@@ -15,22 +15,21 @@
     "http://localhost:8080/*",
     "https://localhost:8080/*",
     "https://dreamhack.io/*",
-    "http://127.0.0.1:8080/*"
   ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "/images/icons8-color-16.png",
-      "32": "/images/icons8-color-32.png",
-      "48": "/images/icons8-color-48.png",
-      "128": "/images/icons8-color-128.png"
+      "16": "/images/sii-logo-16.png",
+      "32": "/images/sii-logo-32.png",
+      "64": "/images/sii-logo-64.png",
+      "128": "/images/sii-logo-128.png"
     }
   },
   "icons": {
-    "16": "/images/icons8-color-16.png",
-    "32": "/images/icons8-color-32.png",
-    "48": "/images/icons8-color-48.png",
-    "128": "/images/icons8-color-128.png"
+    "16": "/images/sii-logo-16.png",
+    "32": "/images/sii-logo-32.png",
+    "64": "/images/sii-logo-64.png",
+    "128": "/images/sii-logo-128.png"
   },
   "options_page": "options.html"
 }
