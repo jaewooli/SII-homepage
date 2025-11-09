@@ -76,14 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const r = await postJson('/login',{username, password });
       if (r.ok) {
         showMsg(r.payload?.message ?? '로그인 성공');
-        const userdata = r.payload.data;
-
-        const id = userdata.id;
-        const username = userdata.username;
-        const name = userdata.name;
-
-        chrome.storage.local.set({SIIuser: {id, username, name}})
-        console.log(await chrome.storage.local.get())
+        chrome.storage.local.set({SIIuser: {username}})
         location.reload();
       } else {
         showMsg(r.payload?.message ?? `로그인 실패 (${r.httpStatus})`, false);

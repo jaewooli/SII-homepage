@@ -5,16 +5,14 @@ const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
+const rateLimit = require('express-rate-limit');
 
 const helmet = require("helmet");
-const cors = require("cors");
 const axios = require('axios');
-//const {HttpsProxyAgent} = require('https-proxy-agent');
 
 const fs = require('fs');
 
 const app = express();
-//const agent = new HttpsProxyAgent('http://127.0.0.1:8081');
 
 let sessionid = "";
 
@@ -39,15 +37,17 @@ app.use(session({
     rolling:false,
 }));
 
+app.use(rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+  message: '너무 많은 요청을 보냈습니다. 10분 후에 다시 시도해주세요.',
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
 // Serve static files
 app.use('/frags', express.static(path.join(__dirname, '../src/html/fragments')));
 app.use('/assets', express.static(path.join(__dirname, '../src')));
 app.use('/images', express.static(path.join(__dirname, '../images')));
-
-//cors 허용
-app.use(cors({ 
-  origin: '*',  //TODO: change
-  credentials: true }));
 
 // Database connection
 const db = new sqlite3.Database('./users.db');
@@ -182,7 +182,6 @@ app.post('/login', (req, res) => {
         sendJson(res, {
       status: 200, ok: true, action: 'auth', resource: 'users',
       message: 'Login Success!.',
-      data: req.session.user,
       code: 'LOGIN_SUCCESS'
       });
         }
