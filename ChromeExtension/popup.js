@@ -1,6 +1,5 @@
 const SERVER_BASE = 'http://localhost:8080'; // 실제 서버 주소로 변경
-
-//SIIuser 추후 수정 시 고려
+const Chrome_local_text = 'SIIUSER';
 
 function showMsg(text, ok = true) {
   const m = Array.from(document.getElementsByClassName('msg'))
