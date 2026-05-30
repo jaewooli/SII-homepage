@@ -3,22 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="SII - Login">
-    <title>Login</title>
+    <meta name="description" content="SII - Dreamhack Redirection">
+    <title>SII - Dreamhack Redirection</title>
     <link rel="stylesheet" href="/assets/css/auth.css">
     <link rel="stylesheet" href="/assets/css/toast.css">
     <script type="module" src="/assets/js/dreamhack.js"></script>
+    <style>
+        .option-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .option-card {
+            background: rgba(6, 8, 20, 0.4);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            border-radius: 8px;
+            padding: 1.25rem;
+            transition: all 0.25s ease;
+        }
+        .option-card:hover {
+            border-color: var(--color-cyan);
+            box-shadow: var(--shadow-cyan);
+        }
+        .option-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .option-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            margin-bottom: 1rem;
+        }
+        .status-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            font-size: 0.9rem;
+        }
+        .status-badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .status-connected {
+            background: rgba(57, 255, 20, 0.1);
+            color: var(--color-green);
+            border: 1px solid rgba(57, 255, 20, 0.3);
+            text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+        }
+        .status-disconnected {
+            background: rgba(255, 51, 102, 0.1);
+            color: #ff3366;
+            border: 1px solid rgba(255, 51, 102, 0.3);
+            text-shadow: 0 0 8px rgba(255, 51, 102, 0.4);
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-connected .status-dot {
+            background-color: var(--color-green);
+            box-shadow: 0 0 8px var(--color-green);
+        }
+        .status-disconnected .status-dot {
+            background-color: #ff3366;
+            box-shadow: 0 0 8px #ff3366;
+        }
+        .download-btn {
+            display: block;
+            text-align: center;
+            text-decoration: none;
+            background: linear-gradient(135deg, #1e293b, #334155);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 0.8rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .download-btn:hover {
+            transform: translateY(-1px);
+            background: linear-gradient(135deg, #334155, #475569);
+            box-shadow: 0 6px 20px rgba(0, 240, 255, 0.2);
+            border-color: var(--color-cyan);
+        }
+        .action-btn {
+            width: 100%;
+            margin-top: 0;
+        }
+    </style>
 </head>
 <body>
     <h1>Welcome to <a href="/">SII Homepage</a></h1>
 
     <section id="dreamhack">
-    <h2>Dreamhack</h2>
-    <label id="dreamhack-login">Dreamhack login</label>
-    <button id="dreamhack-confirm" type="button">Confirm</button>
-</section>
+        <h2>Dreamhack Access</h2>
+        
+        <div class="status-wrapper">
+            <span id="ext-status" class="status-badge status-disconnected">
+                <span class="status-dot"></span>
+                Extension: Not Detected
+            </span>
+        </div>
+
+        <div class="option-container">
+            <!-- Option 1: Chrome Extension Sync -->
+            <div class="option-card">
+                <div class="option-title">
+                    <span>Option 1: Sync via Extension</span>
+                </div>
+                <div class="option-desc">
+                    Synchronize your login session directly to the Dreamhack site using the installed SII Chrome Extension.
+                </div>
+                <button id="dreamhack-confirm" class="action-btn" type="button">Sync & Open Dreamhack</button>
+            </div>
+
+            <!-- Option 2: Download Extension -->
+            <div class="option-card">
+                <div class="option-title">
+                    <span>Option 2: Setup Extension</span>
+                </div>
+                <div class="option-desc">
+                    If the Chrome Extension is not installed, download the extension files to install it on your browser.
+                </div>
+                <a href="/assets/SII-Extension.zip" download id="dreamhack-download" class="download-btn">Download Extension (.zip)</a>
+            </div>
+        </div>
+    </section>
 </body>
 </html>
-
-
-
