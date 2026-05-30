@@ -285,9 +285,13 @@ app.post('/dreamhack/login', async (req, res) => {
         });
       
     } catch (error) {
+        console.error('Dreamhack login API error:', error.response ? error.response.data : error.message);
+        const detailMsg = error.response && error.response.data
+          ? (typeof error.response.data === 'object' ? JSON.stringify(error.response.data) : error.response.data)
+          : error.message;
         sendJson(res, {
             status: 500, ok: false, action: 'auth', resource: 'dreamhack',
-            message: `${error}`,
+            message: `Dreamhack API Error: ${detailMsg}`,
             code: 'SERVER_ERROR'
         });
     }
