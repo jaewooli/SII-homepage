@@ -46,15 +46,15 @@ app.use(session({
     name:process.env.SESSION_NAME || 'sid',
     store: new SQLiteStore({
       db:'sessions.sqlite',
-      dir:'./'
+      dir: path.join(__dirname, '..')
     }),
     secret:process.env.SESSION_SECRET || 'default',
     resave:false,
     saveUninitialized:false,
     cookie:{
       maxAge:24*60*60*1000,
-      sameSite:'strict',
-      secure: process.env.NODE_ENV === 'production',
+      sameSite:'lax',
+      secure: false,
       httpOnly: true
     },
     rolling:false,
@@ -73,7 +73,7 @@ app.use('/assets', express.static(path.join(__dirname, '../src')));
 app.use('/images', express.static(path.join(__dirname, '../images')));
 
 // Database connection
-const db = new sqlite3.Database('./users.db');
+const db = new sqlite3.Database(path.join(__dirname, '../users.db'));
 
 // Create users table if it doesn't exist
 db.serialize(() => {
