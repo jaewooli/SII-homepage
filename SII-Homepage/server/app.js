@@ -83,6 +83,10 @@ db.serialize(() => {
         password TEXT,
         name TEXT
     )`);
+    
+    // Seed default developer account (password: 'developer_password')
+    db.run(`INSERT OR IGNORE INTO users (username, password, name) 
+            VALUES ('developer', '$2a$10$1MqylMlV2ta6UBokSD5e7OsadhRAq9Puecv3Z3VX606Ts4OYoTe6S', 'Developer')`);
 });
 
 function sendJson(res, {
