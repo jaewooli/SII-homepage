@@ -126,6 +126,15 @@ function validateLogin(req, res, next) {
 }
 
 async function loginDreamhack(){
+  // Bypasses ReCAPTCHA by returning pre-configured session cookies if they exist in .env
+  if (process.env.DREAMHACK_CSRF && process.env.DREAMHACK_SESSIONID) {
+    console.log('[Dreamhack Connect] Using pre-configured session cookies.');
+    return {
+      'csrf_token': process.env.DREAMHACK_CSRF,
+      'sessionid': process.env.DREAMHACK_SESSIONID
+    };
+  }
+
   const form = JSON.stringify({
     email: process.env.DREAMHACKEMAIL,
     password: process.env.DREAMHACKPASSWORD,
