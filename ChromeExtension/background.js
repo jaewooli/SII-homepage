@@ -16,6 +16,31 @@ function verifyMessageSender(sender) {
   return false;
 }
 
+async function performDreamhackLogin(email, password) {
+  console.log('[SII Background] Performing direct browser-context Dreamhack login...');
+  const response = await fetch('https://dreamhack.io/api/v1/auth/login/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Origin': 'https://dreamhack.io',
+      'Referer': 'https://dreamhack.io/login',
+      'Accept': 'application/json, text/plain, */*',
+      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+    },
+    body: JSON.stringify({ email, password, loginSave: false })
+  });
+
+  if (!response.ok) {
+    let errData = '';
+    try { errData = await response.text(); } catch(_) {}
+    throw new Error(`Dreamhack status ${response.status}: ${errData}`);
+  }
+  
+  console.log('[SII Background] Direct login succeeded. Cookies updated automatically.');
+  return true;
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!verifyMessageSender(sender)) {
     console.warn("[SII Security] Blocked message from untrusted sender:", sender.tab ? sender.tab.url : "unknown");
@@ -26,6 +51,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     setCookie(msg.cookie, msg.isValue);
   } else if (msg.type === "URL_REDIRECT") {
     chrome.tabs.create({ url: msg.url });
+  } else if (msg.type === "PERFORM_DREAMHACK_LOGIN") {
+    performDreamhackLogin(msg.email, msg.password)
+      .then(() => {
+        sendResponse({ ok: true });
+        // Redirect to dreamhack after successful cookie injection
+        setTimeout(() => {
+          chrome.tabs.create({ url: 'https://dreamhack.io' });
+        }, 800);
+      })
+      .catch(err => {
+        console.error('[SII Background] Dreamhack login failed:', err);
+        sendResponse({ ok: false, message: err.message });
+      });
+    return true; // Keep message channel open for async response
   } else if (msg.type === "GET_COOKIE") {
     chrome.cookies.getAll({ domain: 'localhost' }).then(cookies => {
       sendResponse(cookies);

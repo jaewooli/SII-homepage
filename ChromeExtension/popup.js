@@ -102,25 +102,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Dreamhack Button integration
   dreamhackBtn.addEventListener('click', async () => {
-    showMsg('Dreamhack 로그인 시도중...');
+    showMsg('인증 정보 조회 중...');
     try {
-      const r = await postJson('/dreamhack/login');
-      if (r.ok) {
-        showMsg('Dreamhack 로그인 성공! 연동 중...');
-        const data = r.payload.data;
-
-        const csrf_token = data.csrf_token;
-        const sessionid = data.sessionid;
-
-        // Set cookies via chrome.runtime
-        chrome.runtime.sendMessage({ type: "SET_COOKIE", cookie: csrf_token });
-        chrome.runtime.sendMessage({ type: "SET_COOKIE", cookie: sessionid });
+      const credRes = await fetch(SERVER_BASE + '/dreamhack/credentials', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (!credRes.ok) {
+        showMsg('홈페이지 세션이 만료되었습니다. 다시 로그인해주세요.', false);
+        return;
+      }
+      
+      const payload = await credRes.json();
+      if (payload && payload.ok && payload.data) {
+        const { email, password } = payload.data;
+        showMsg('Dreamhack 로그인 시도 중 (브라우저)...');
         
-        setTimeout(() => {
-          chrome.runtime.sendMessage({ type: "URL_REDIRECT", url: 'https://dreamhack.io' });
-        }, 1000);
+        chrome.runtime.sendMessage({ 
+          type: "PERFORM_DREAMHACK_LOGIN", 
+          email, 
+          password 
+        }, (response) => {
+          if (response && response.ok) {
+            showMsg('Dreamhack 연동 완료! 리다이렉트 중...');
+          } else {
+            const cleanErr = response?.message ? (response.message.includes('401') ? '아이디/비밀번호 오류 또는 캡차 필요' : response.message) : '오류 발생';
+            showMsg('연동 실패: ' + cleanErr, false);
+          }
+        });
       } else {
-        showMsg(r.payload?.message ?? `Dreamhack 로그인 실패 (${r.httpStatus})`, false);
+        showMsg('인증 정보가 비어있습니다.', false);
       }
     } catch (err) {
       console.error(err);

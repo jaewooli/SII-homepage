@@ -36,27 +36,25 @@ async function executeSpecificFeature(userdata) {
     return;
   }
 
-  showToast('Fetching Dreamhack authentication tokens...', 'info');
+  showToast('Fetching Dreamhack credentials...', 'info');
 
-  const loginResponse = await apiRequest('/dreamhack/login', 'POST', {
-    userinfo: userdata,
-  });
+  const credentialsRes = await apiRequest('/dreamhack/credentials', 'GET');
 
   try {
-    if (loginResponse.ok) {
-      const { csrf_token, sessionid } = loginResponse.data;
-      showToast('Synchronizing cookies & opening Dreamhack...', 'success');
+    if (credentialsRes.ok && credentialsRes.data) {
+      const { email, password } = credentialsRes.data;
+      showToast('Logging in to Dreamhack via Extension...', 'success');
 
-      // Dispatch event to the Chrome Extension content script
+      // Dispatch event to the Chrome Extension content script to trigger browser-side login
       window.dispatchEvent(new CustomEvent('SII_DREAMHACK_LOGIN_TRIGGER', {
-        detail: { csrf_token, sessionid }
+        detail: { email, password }
       }));
     } else {
-      showToast(`Dreamhack login failed: ${loginResponse.message || 'Server error'}`, 'error');
+      showToast(`Failed to retrieve credentials: ${credentialsRes.message || 'Server error'}`, 'error');
     }
   } catch (error) {
-    console.error('Error during Dreamhack login:', error);
-    showToast('An error occurred during Dreamhack login.', 'error');
+    console.error('Error fetching Dreamhack credentials:', error);
+    showToast('An error occurred while fetching credentials.', 'error');
   }
 }
 

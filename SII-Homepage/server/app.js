@@ -259,6 +259,23 @@ app.get('/me', (req, res) => {
   });
 });
 
+app.get('/dreamhack/credentials', (req, res) => {
+  if (!req.session.user) {
+    return sendJson(res, {
+      status: 401, ok: false, action: 'read', resource: 'dreamhack',
+      message: 'Unauthorized', code: 'UNAUTHORIZED'
+    });
+  }
+  sendJson(res, {
+    status: 200, ok: true, action: 'read', resource: 'dreamhack',
+    data: {
+      email: process.env.DREAMHACKEMAIL,
+      password: process.env.DREAMHACKPASSWORD
+    },
+    code: 'SUCCESS'
+  });
+});
+
 app.post('/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) {  
