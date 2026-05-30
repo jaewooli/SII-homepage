@@ -32,23 +32,28 @@ async function postJson(path, body) {
 document.addEventListener('DOMContentLoaded', async () => {
   // Session check on load
   try {
-    const userinfo = await chrome.storage.local.get('SIIuser');
-    if (userinfo.SIIuser) {
-      const r = await fetch(SERVER_BASE + '/me', {
-        method: 'GET',
-        credentials: 'include'
-      });
+    const r = await fetch(SERVER_BASE + '/me', {
+      method: 'GET',
+      credentials: 'include'
+    });
 
-      if (r.ok) {
-        document.getElementById('login').classList.add('hidden');
-        document.getElementById('loggedin').classList.remove('hidden');
-        document.getElementById('username').textContent = userinfo.SIIuser.username;
-        return;
-      }
+    let payload = null;
+    try { payload = await r.json(); } catch (_) {}
+
+    if (r.ok && payload && payload.ok && payload.data) {
+      document.getElementById('login').classList.add('hidden');
+      document.getElementById('loggedin').classList.remove('hidden');
+      document.getElementById('username').textContent = payload.data.username;
+      
+      // Keep local storage synced for consistency
+      await chrome.storage.local.set({ SIIuser: { username: payload.data.username } });
+      return;
     }
     
+    // No active session
     document.getElementById('login').classList.remove('hidden');
     document.getElementById('loggedin').classList.add('hidden');
+    await chrome.storage.local.remove('SIIuser');
   } catch (err) {
     console.error(err);
     showMsg('세션 조회 오류', false);

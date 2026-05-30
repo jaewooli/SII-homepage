@@ -1,4 +1,27 @@
+function verifyMessageSender(sender) {
+  // Allow messages from the extension popup itself
+  if (!sender.tab) {
+    return true;
+  }
+  if (sender.tab && sender.tab.url) {
+    try {
+      const url = new URL(sender.tab.url);
+      if ((url.hostname === 'localhost' || url.hostname === '127.0.0.1') && url.port === '8080') {
+        return true;
+      }
+    } catch (e) {
+      return false;
+    }
+  }
+  return false;
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!verifyMessageSender(sender)) {
+    console.warn("[SII Security] Blocked message from untrusted sender:", sender.tab ? sender.tab.url : "unknown");
+    return;
+  }
+
   if (msg.type === "SET_COOKIE") {
     setCookie(msg.cookie, msg.isValue);
   } else if (msg.type === "URL_REDIRECT") {
