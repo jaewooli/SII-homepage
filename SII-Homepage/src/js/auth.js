@@ -8,7 +8,6 @@ export async function fetchMe(){
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const signupForm = document.getElementById('signup-form');
   const loginForm = document.getElementById('login-form');
   const toast = document.getElementById('toast');
 
@@ -21,33 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast(message, type || 'info');
   }
   
-  if (signupForm) {
-    const msgBox = document.getElementById('signup-message');
-    signupForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const body = {
-        username: signupForm.username.value.trim(),
-        password: signupForm.password.value.trim(),
-        name: signupForm.name.value.trim(),
-      };
-      
-      const r = await apiRequest('/signup', 'POST', body);
-      const msg = r.message =='Success' ? 'Signup Success': r.message;
-      const type = r.ok ? 'success' : 'error';
-      showToast(msg, type);
 
-
-    sessionStorage.setItem('toastMessage', msg);
-    sessionStorage.setItem('toastType', type);
-    if (r.ok) {
-      location.href = '/';
-      }
-      else{
-        location.reload();
-      }
-    });
-    
-  }
 
 
   if (loginForm) {

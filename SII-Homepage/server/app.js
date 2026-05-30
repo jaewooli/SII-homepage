@@ -162,15 +162,6 @@ app.get('/homepage/:url', (req, res) => {
   res.sendFile(path.join(__dirname, `../src/html/${fileName}.html`));
 });
 
-// Signup route (Disabled)
-app.post('/signup', (req, res) => {
-    sendJson(res, {
-        status: 403, ok: false, action: 'create', resource: 'users',
-        message: '회원가입은 허용되지 않습니다. 관리자에게 승인을 요청하세요.',
-        code: 'SIGNUP_DISABLED'
-    });
-});
-
 // Login route
 app.post('/login', validateLogin, (req, res) => {
     const { username, password } = req.body;
