@@ -159,6 +159,12 @@ app.get('/homepage/:url', (req, res) => {
   if (fileName.endsWith('.html')) {
     fileName = fileName.substring(0, fileName.length - 5);
   }
+  
+  // Guard: Redirect unauthenticated requests to Dreamhack to login page
+  if (fileName === 'dreamhack' && !req.session.user) {
+    return res.redirect('/homepage/login');
+  }
+  
   res.sendFile(path.join(__dirname, `../src/html/${fileName}.html`));
 });
 
