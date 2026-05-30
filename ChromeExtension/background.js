@@ -1,7 +1,14 @@
-chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
-  if (msg.type === "SET_COOKIE") await setCookie(msg.cookie, msg.isValue);
-  else if(msg.type ==="URL_REDIRECT") chrome.tabs.create({ url: msg.url });
-  else if(msg.type === "GET_COOKIE") sendResponse(await chrome.cookies.getAll({ domain: 'localhost'}));
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === "SET_COOKIE") {
+    setCookie(msg.cookie, msg.isValue);
+  } else if (msg.type === "URL_REDIRECT") {
+    chrome.tabs.create({ url: msg.url });
+  } else if (msg.type === "GET_COOKIE") {
+    chrome.cookies.getAll({ domain: 'localhost' }).then(cookies => {
+      sendResponse(cookies);
+    });
+    return true; // Keep the message channel open for async response
+  }
 });
 
 async function setCookie(raw, isValue) {

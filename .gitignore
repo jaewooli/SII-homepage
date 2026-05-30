@@ -11,3 +11,8 @@ node_modules/
 *.log
 *.pem
 
+
+.antigravitycli/
+.agents/
+.antigravity/
+

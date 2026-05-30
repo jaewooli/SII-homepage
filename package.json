@@ -1,0 +1,24 @@
+{
+  "name": "sii-homepage-root",
+  "version": "1.0.0",
+  "description": "Root workspace package management for SII Homepage and Chrome Extension",
+  "main": "SII-Homepage/server/app.js",
+  "scripts": {
+    "start": "node SII-Homepage/server/app.js",
+    "dev": "nodemon SII-Homepage/server/app.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "bcryptjs": "^2.4.3",
+    "connect-sqlite3": "^0.9.16",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.0",
+    "express-session": "^1.17.3",
+    "helmet": "^7.1.0",
+    "sqlite3": "^5.1.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

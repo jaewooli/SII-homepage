@@ -1,7 +1,16 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
+// Verify environment variables on startup
+const requiredEnv = ['DREAMHACKEMAIL', 'DREAMHACKPASSWORD', 'SESSION_SECRET'];
+const missingEnv = requiredEnv.filter(key => !process.env[key]);
+if (missingEnv.length > 0) {
+    console.error(`CRITICAL ERROR: Missing environment variables in .env: ${missingEnv.join(', ')}`);
+    process.exit(1);
+}
+
 
 const express = require('express');
-const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
@@ -11,8 +20,22 @@ const helmet = require("helmet");
 const axios = require('axios');
 
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
 
 const app = express();
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "/images/", "http://127.0.0.1:8080", "http://localhost:8080", "https://dreamhack.io"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      connectSrc: ["'self'", "http://127.0.0.1:8080", "http://localhost:8080", "https://dreamhack.io"]
+    }
+  }
+}));
 
 let sessionid = "";
 
@@ -30,9 +53,9 @@ app.use(session({
     saveUninitialized:false,
     cookie:{
       maxAge:24*60*60*1000,
-      sameSite:'lax',
-      secure: false
-      // secure:process.env.NODE_ENV === 'production'
+      sameSite:'strict',
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true
     },
     rolling:false,
 }));
@@ -74,6 +97,69 @@ function sendJson(res, {
  res.status(status).json({ ok, action, resource, message, data, code });
 };
 
+function sanitizeString(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
+function validateSignup(req, res, next) {
+  const { username, password, name } = req.body;
+  if (!username || !password || !name) {
+    return sendJson(res, {
+      status: 400, ok: false, action: 'create', resource: 'users',
+      message: '모든 필드를 입력해야 합니다.',
+      code: 'VALIDATION_ERROR'
+    });
+  }
+
+  const usernameRegex = /^[a-z0-9]{3,20}$/;
+  if (!usernameRegex.test(username)) {
+    return sendJson(res, {
+      status: 400, ok: false, action: 'create', resource: 'users',
+      message: '아이디는 3~20자의 영문 소문자와 숫자만 가능합니다.',
+      code: 'VALIDATION_ERROR'
+    });
+  }
+
+  if (password.length < 8) {
+    return sendJson(res, {
+      status: 400, ok: false, action: 'create', resource: 'users',
+      message: '비밀번호는 최소 8자 이상이어야 합니다.',
+      code: 'VALIDATION_ERROR'
+    });
+  }
+
+  const cleanName = sanitizeString(name.trim());
+  if (cleanName.length < 1 || cleanName.length > 50) {
+    return sendJson(res, {
+      status: 400, ok: false, action: 'create', resource: 'users',
+      message: '이름은 1~50자 사이여야 합니다.',
+      code: 'VALIDATION_ERROR'
+    });
+  }
+
+  req.body.name = cleanName;
+  next();
+}
+
+function validateLogin(req, res, next) {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return sendJson(res, {
+      status: 400, ok: false, action: 'auth', resource: 'users',
+      message: 'username과 password가 필요합니다.',
+      code: 'VALIDATION_ERROR'
+    });
+  }
+  next();
+}
+
 async function loginDreamhack(){
   const form = JSON.stringify({
     email: process.env.DREAMHACKEMAIL,
@@ -107,83 +193,99 @@ app.get('/homepage', (req, res) => {
 app.get('/homepage/main', (req, res) => {
     res.sendFile(path.join(__dirname, '../src/html/index.html'));
 });
-``
 app.get('/homepage/:url', (req, res) => {
-  res.sendFile(path.join(__dirname, `../src/html/${req.params.url+'.html' || 'index.html'}`));
+  let fileName = req.params.url || 'index';
+  if (fileName.endsWith('.html')) {
+    fileName = fileName.substring(0, fileName.length - 5);
+  }
+  res.sendFile(path.join(__dirname, `../src/html/${fileName}.html`));
 });
 
 // Signup route
-app.post('/signup', (req, res) => {
+app.post('/signup', validateSignup, (req, res) => {
     const { username, password, name } = req.body;
-    if (!username || !password || !name) {
-    return sendJson(res, {
-      
-      status: 400, ok: false, action: 'create', resource: 'users',
-      message: 'username과 password가 필요합니다.',
-      code: 'VALIDATION_ERROR'
-    });
-  }
-    const query = `INSERT INTO users (username, password, name) VALUES (?, ?, ?)`;
+    
+    try {
+        const hashedPassword = bcrypt.hashSync(password, 10);
+        const query = `INSERT INTO users (username, password, name) VALUES (?, ?, ?)`;
 
-    db.run(query, [username, password, name], function (err) {
-        if (err) {
-            if (err.code === 'SQLITE_CONSTRAINT') {
+        db.run(query, [username, hashedPassword, name], function (err) {
+            if (err) {
+                if (err.code === 'SQLITE_CONSTRAINT') {
+                    sendJson(res, {
+                        status: 400, ok: false, action: 'create', resource: 'users',
+                        message: 'Username already exists.',
+                        code: 'USER_EXISTS'
+                    });
+                } else {
+                    sendJson(res, {
+                        status: 500, ok: false, action: 'create', resource: 'users',
+                        message: 'Database error',
+                        code: 'DB_ERROR'
+                    });
+                }
+            } else {
                 sendJson(res, {
-          status: 400, ok: false, action: 'create', resource: 'users',
-          message: 'Username already exists.',
-          code: 'USER_EXISTS'
+                    status: 201, ok: true, action: 'create', resource: 'users',
+                    message: 'Signup Success!',
+                    data: { id: this.lastID, username },
+                    code: 'USER_CREATED'
+                });
+            }
         });
-        }else{
-             sendJson(res, {
-        status: 500, ok: false, action: 'create', resource: 'users',
-        message: 'Database error',
-        code: 'DB_ERROR'
-        });
-        }}else{
+    } catch (e) {
         sendJson(res, {
-      status: 201, ok: true, action: 'create', resource: 'users',
-      message: 'Signup Success!',
-      data: { id: this.lastID, username },
-      code: 'USER_CREATED'
-    });
-  }
-    });
+            status: 500, ok: false, action: 'create', resource: 'users',
+            message: 'Password hashing error',
+            code: 'HASH_ERROR'
+        });
+    }
 });
 
 // Login route
-app.post('/login', (req, res) => {
+app.post('/login', validateLogin, (req, res) => {
     const { username, password } = req.body;
-     if (!username || !password) {
-     return sendJson(res, {
-      status: 400, ok: false, action: 'auth', resource: 'users',
-      message: 'username과 password가 필요합니다.',
-      code: 'VALIDATION_ERROR'
-    });
-    }
 
-    const query = `SELECT * FROM users WHERE username = ? AND password = ?`;
+    const query = `SELECT * FROM users WHERE username = ?`;
 
-    db.get(query, [username, password], (err, row) => {
+    db.get(query, [username], (err, row) => {
         if (err) {
-             sendJson(res, {
+             return sendJson(res, {
               status: 500, ok: false, action: 'auth', resource: 'users',
               message: 'Database error',
               code: 'DB_ERROR'
             });
         }
         if (!row) {
-          sendJson(res, {
-        status: 401, ok: false, action: 'auth', resource: 'users',
-        message: 'Invalid username or password',
-        code: 'INVALID_CREDENTIALS'
-    });
-        } else {
-        req.session.user = { id: row.id, username:row.username, name:row.name };
-        sendJson(res, {
-      status: 200, ok: true, action: 'auth', resource: 'users',
-      message: 'Login Success!.',
-      code: 'LOGIN_SUCCESS'
-      });
+            return sendJson(res, {
+                status: 401, ok: false, action: 'auth', resource: 'users',
+                message: 'Invalid username or password',
+                code: 'INVALID_CREDENTIALS'
+            });
+        }
+
+        try {
+            const passwordMatch = bcrypt.compareSync(password, row.password);
+            if (!passwordMatch) {
+                return sendJson(res, {
+                    status: 401, ok: false, action: 'auth', resource: 'users',
+                    message: 'Invalid username or password',
+                    code: 'INVALID_CREDENTIALS'
+                });
+            }
+
+            req.session.user = { id: row.id, username: row.username, name: row.name };
+            sendJson(res, {
+                status: 200, ok: true, action: 'auth', resource: 'users',
+                message: 'Login Success!.',
+                code: 'LOGIN_SUCCESS'
+            });
+        } catch (e) {
+            sendJson(res, {
+                status: 500, ok: false, action: 'auth', resource: 'users',
+                message: 'Password comparison error',
+                code: 'HASH_ERROR'
+            });
         }
     });
 });
@@ -254,6 +356,6 @@ app.get('/:url', (req, res) => {
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });

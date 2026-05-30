@@ -1,5 +1,64 @@
+<section id="ctf" class="ctf-view">
+    <h2>CTF (Capture The Flag)</h2>
+    <p class="section-desc">SII 자체 CTF 대회 스코어보드 및 활성 챌린지 정보입니다.</p>
 
-        <section id="ctf">
-            <h2>CTF</h2>
-            <p>Details about the CTF...</p>
-        </section>
+    <div class="ctf-container">
+        <div class="scoreboard-section">
+            <h3>Leaderboard</h3>
+            <table class="ctf-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>User</th>
+                        <th>Score</th>
+                        <th>Solved</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="rank-1">
+                        <td>🥇 1</td>
+                        <td>alice_sec</td>
+                        <td>1200 pts</td>
+                        <td>5 / 5</td>
+                    </tr>
+                    <tr class="rank-2">
+                        <td>🥈 2</td>
+                        <td>bob_overflow</td>
+                        <td>950 pts</td>
+                        <td>4 / 5</td>
+                    </tr>
+                    <tr class="rank-3">
+                        <td>🥉 3</td>
+                        <td>cyber_pwn</td>
+                        <td>700 pts</td>
+                        <td>3 / 5</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="challenges-section">
+            <h3>Active Challenges</h3>
+            <div class="challenge-list">
+                <div class="challenge-card solved">
+                    <span class="chal-category web">Web</span>
+                    <h4>Super Simple SQL</h4>
+                    <p class="chal-pts">100 pts</p>
+                    <span class="status-badge solved">Solved</span>
+                </div>
+                <div class="challenge-card">
+                    <span class="chal-category pwn">Pwn</span>
+                    <h4>Stack Over Flowing</h4>
+                    <p class="chal-pts">300 pts</p>
+                    <span class="status-badge open">Open</span>
+                </div>
+                <div class="challenge-card">
+                    <span class="chal-category rev">Rev</span>
+                    <h4>Ghidra's Secret</h4>
+                    <p class="chal-pts">500 pts</p>
+                    <span class="status-badge open">Open</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

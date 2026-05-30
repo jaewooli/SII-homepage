@@ -3,58 +3,80 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SII Auth</title>
-  <link rel="stylesheet" href="/popup.css">
+  <title>SII Auth Popup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
   <script src="popup.js"></script>
 </head>
 <body>
-  <section id="login">
-  <h3 class="msg"> </h3>
-  <h3>로그인 / 회원가입</h3>
+  <header class="popup-header">
+    <img src="/images/sii-logo-64.png" alt="SII Logo" class="logo">
+    <h2>SII Auth Panel</h2>
+  </header>
 
-  <form id="login-form">
-    <div class="field">
-      <label for="login-username">username</label>
-      <input id="login-username" type="text" required />
-    </div>
-    <div class="field">
-      <label for="login-password">password</label>
-      <input id="login-password" type="password" required />
-    </div>
-    <div class="row">
-      <button id="login-btn" type="submit" class="btn-primary">로그인</button>
-    </div>
-  </form>
+  <main class="popup-main">
+    <section id="login">
+      <div class="msg-container">
+        <div class="msg"></div>
+      </div>
 
-  <hr/>
+      <div class="tab-container">
+        <button id="tab-login-btn" class="tab-btn active">로그인</button>
+        <button id="tab-signup-btn" class="tab-btn">회원가입</button>
+      </div>
 
-  <form id="signup-form">
-    <div class="field">
-      <label for="signup-username">username</label>
-      <input id="signup-username" type="text" required />
-    </div>
-    <div class="field">
-      <label for="signup-password">password</label>
-      <input id="signup-password" type="password" required />
-    </div>
-    <div classe="field">
-      <label for="signup-name">name</label>
-      <input id="signup-name" type="text" required />
-    </div>
-    <div class="row">
-      <button id="signup-btn" type="submit" class="btn-primary">회원가입</button>
-    </div>
-  </form>
-  <div id="msg" role="status" aria-live="polite"></div>
-  </section>
+      <!-- Login Section -->
+      <form id="login-form">
+        <div class="field">
+          <label for="login-username">Username</label>
+          <input id="login-username" type="text" placeholder="아이디 입력" required />
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" placeholder="비밀번호 입력" required />
+        </div>
+        <button id="login-btn" type="submit" class="btn-primary">로그인</button>
+      </form>
 
+      <!-- Signup Section (hidden by default) -->
+      <form id="signup-form" class="hidden">
+        <div class="field">
+          <label for="signup-username">Username</label>
+          <input id="signup-username" type="text" placeholder="아이디 입력" required />
+        </div>
+        <div class="field">
+          <label for="signup-password">Password</label>
+          <input id="signup-password" type="password" placeholder="비밀번호 입력" required />
+        </div>
+        <div class="field">
+          <label for="signup-name">Name</label>
+          <input id="signup-name" type="text" placeholder="이름 입력" required />
+        </div>
+        <button id="signup-btn" type="submit" class="btn-primary">회원가입</button>
+      </form>
+    </section>
 
-  <section id="loggedin">
-      <h3 class="msg"> </h3>
-      <h3>Username: </h3>
-      <p id="username"></p>
-      <button id="dreamhack-btn" type="button" class="btn-ghost">Dreamhack 로그인</button>
-      <button id="signout-btn" type="button">Sign Out</button>
-  </section>
+    <!-- Logged In Section -->
+    <section id="loggedin" class="hidden">
+      <div class="msg-container">
+        <div class="msg"></div>
+      </div>
+      
+      <div class="user-card">
+        <span class="user-badge">Active Session</span>
+        <div class="user-info">
+          <span class="label">ID:</span>
+          <span id="username" class="val"></span>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <button id="dreamhack-btn" type="button" class="btn-cyan">Dreamhack 로그인 연동</button>
+        <button id="signout-btn" type="button" class="btn-danger">Sign Out</button>
+      </div>
+    </section>
+  </main>
 </body>
 </html>
