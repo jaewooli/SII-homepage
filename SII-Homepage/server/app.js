@@ -108,45 +108,6 @@ function sanitizeString(str) {
     .replace(/\//g, '&#x2F;');
 }
 
-function validateSignup(req, res, next) {
-  const { username, password, name } = req.body;
-  if (!username || !password || !name) {
-    return sendJson(res, {
-      status: 400, ok: false, action: 'create', resource: 'users',
-      message: '모든 필드를 입력해야 합니다.',
-      code: 'VALIDATION_ERROR'
-    });
-  }
-
-  const usernameRegex = /^[a-z0-9]{3,20}$/;
-  if (!usernameRegex.test(username)) {
-    return sendJson(res, {
-      status: 400, ok: false, action: 'create', resource: 'users',
-      message: '아이디는 3~20자의 영문 소문자와 숫자만 가능합니다.',
-      code: 'VALIDATION_ERROR'
-    });
-  }
-
-  if (password.length < 8) {
-    return sendJson(res, {
-      status: 400, ok: false, action: 'create', resource: 'users',
-      message: '비밀번호는 최소 8자 이상이어야 합니다.',
-      code: 'VALIDATION_ERROR'
-    });
-  }
-
-  const cleanName = sanitizeString(name.trim());
-  if (cleanName.length < 1 || cleanName.length > 50) {
-    return sendJson(res, {
-      status: 400, ok: false, action: 'create', resource: 'users',
-      message: '이름은 1~50자 사이여야 합니다.',
-      code: 'VALIDATION_ERROR'
-    });
-  }
-
-  req.body.name = cleanName;
-  next();
-}
 
 function validateLogin(req, res, next) {
   const { username, password } = req.body;
@@ -201,45 +162,13 @@ app.get('/homepage/:url', (req, res) => {
   res.sendFile(path.join(__dirname, `../src/html/${fileName}.html`));
 });
 
-// Signup route
-app.post('/signup', validateSignup, (req, res) => {
-    const { username, password, name } = req.body;
-    
-    try {
-        const hashedPassword = bcrypt.hashSync(password, 10);
-        const query = `INSERT INTO users (username, password, name) VALUES (?, ?, ?)`;
-
-        db.run(query, [username, hashedPassword, name], function (err) {
-            if (err) {
-                if (err.code === 'SQLITE_CONSTRAINT') {
-                    sendJson(res, {
-                        status: 400, ok: false, action: 'create', resource: 'users',
-                        message: 'Username already exists.',
-                        code: 'USER_EXISTS'
-                    });
-                } else {
-                    sendJson(res, {
-                        status: 500, ok: false, action: 'create', resource: 'users',
-                        message: 'Database error',
-                        code: 'DB_ERROR'
-                    });
-                }
-            } else {
-                sendJson(res, {
-                    status: 201, ok: true, action: 'create', resource: 'users',
-                    message: 'Signup Success!',
-                    data: { id: this.lastID, username },
-                    code: 'USER_CREATED'
-                });
-            }
-        });
-    } catch (e) {
-        sendJson(res, {
-            status: 500, ok: false, action: 'create', resource: 'users',
-            message: 'Password hashing error',
-            code: 'HASH_ERROR'
-        });
-    }
+// Signup route (Disabled)
+app.post('/signup', (req, res) => {
+    sendJson(res, {
+        status: 403, ok: false, action: 'create', resource: 'users',
+        message: '회원가입은 허용되지 않습니다. 관리자에게 승인을 요청하세요.',
+        code: 'SIGNUP_DISABLED'
+    });
 });
 
 // Login route

@@ -244,3 +244,22 @@ button.btn-danger:hover {
     display: flex;
     flex-direction: column;
 }
+
+.support-section {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.support-section a {
+    color: var(--color-cyan);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.25s ease;
+}
+
+.support-section a:hover {
+    color: #fff;
+    text-shadow: var(--shadow-cyan);
+}

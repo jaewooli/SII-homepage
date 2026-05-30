@@ -35,13 +35,13 @@ window.addEventListener('hashchange', () => {
 
 function renderUserUI(user){
   let loginbtn = document.getElementById('login-btn');
-  let signupbtn = document.getElementById('signup-btn');
+  let supportbtn = document.getElementById('support-btn');
   let logoutbtn = document.getElementById('logout-btn');
 
   if (user) {
-    if (loginbtn && signupbtn){
+    if (loginbtn && supportbtn){
     loginbtn.hidden = true;
-    signupbtn.hidden = true;
+    supportbtn.hidden = true;
     }
 
     logoutbtn = document.createElement('button');
@@ -69,17 +69,17 @@ function renderUserUI(user){
     loginbtn.textContent = 'Login';
     document.querySelector('nav').appendChild(loginbtn);
 
-    signupbtn = document.createElement('button');
-    signupbtn.id = 'signup-btn';
-    signupbtn.textContent = 'Signup';
-    document.querySelector('nav').appendChild(signupbtn);
+    supportbtn = document.createElement('button');
+    supportbtn.id = 'support-btn';
+    supportbtn.textContent = 'Support';
+    document.querySelector('nav').appendChild(supportbtn);
 
     loginbtn.addEventListener('click', () => {
       location.href = '/login';
     });
 
-    signupbtn.addEventListener('click', () =>{
-      location.href = '/signup';
+    supportbtn.addEventListener('click', () =>{
+      window.location.href = 'mailto:jaeu1341@naver.com?subject=[SII Homepage] Support / Account Request';
     });
   }
 }

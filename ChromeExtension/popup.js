@@ -30,30 +30,6 @@ async function postJson(path, body) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Tab Switching Logic
-  const tabLoginBtn = document.getElementById('tab-login-btn');
-  const tabSignupBtn = document.getElementById('tab-signup-btn');
-  const loginForm = document.getElementById('login-form');
-  const signupForm = document.getElementById('signup-form');
-
-  if (tabLoginBtn && tabSignupBtn) {
-    tabLoginBtn.addEventListener('click', () => {
-      tabLoginBtn.classList.add('active');
-      tabSignupBtn.classList.remove('active');
-      loginForm.classList.remove('hidden');
-      signupForm.classList.add('hidden');
-      showMsg('');
-    });
-
-    tabSignupBtn.addEventListener('click', () => {
-      tabSignupBtn.classList.add('active');
-      tabLoginBtn.classList.remove('active');
-      signupForm.classList.remove('hidden');
-      loginForm.classList.add('hidden');
-      showMsg('');
-    });
-  }
-
   // Session check on load
   try {
     const userinfo = await chrome.storage.local.get('SIIuser');
@@ -81,9 +57,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('login-form');
-  const signupForm = document.getElementById('signup-form');
   const dreamhackBtn = document.getElementById('dreamhack-btn');
   const signoutBtn = document.getElementById('signout-btn');
+  const supportLink = document.getElementById('support-link');
+
+  // Support link redirection
+  if (supportLink) {
+    supportLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      chrome.runtime.sendMessage({ 
+        type: "URL_REDIRECT", 
+        url: 'mailto:jaeu1341@naver.com?subject=[SII Chrome Extension] Support / Account Request' 
+      });
+    });
+  }
 
   // Login Submit
   loginForm.addEventListener('submit', async (e) => {
@@ -105,33 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error(err);
       showMsg("네트워크 오류", false);
-    }
-  });
-
-  // Signup Submit
-  signupForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = document.getElementById('signup-username').value.trim();
-    const password = document.getElementById('signup-password').value;
-    const name = document.getElementById('signup-name').value.trim();
-
-    showMsg('회원가입 중...');
-
-    try {
-      const r = await postJson('/signup', { username, password, name });
-      if (r.ok) {
-        showMsg(r.payload?.message ?? '회원가입 성공');
-        signupForm.reset();
-        // Switch back to login tab automatically
-        setTimeout(() => {
-          document.getElementById('tab-login-btn').click();
-        }, 1200);
-      } else {
-        showMsg(r.payload?.message ?? `회원가입 실패 (${r.httpStatus})`, false);
-      }
-    } catch (err) {
-      console.error(err);
-      showMsg('네트워크 오류', false);
     }
   });
 
