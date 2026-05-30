@@ -152,7 +152,11 @@ app.get('/homepage', (req, res) => {
 });
 
 app.get('/homepage/main', (req, res) => {
-    res.sendFile(path.join(__dirname, '../src/html/index.html'));
+    res.sendFile(path.join(__dirname, '../src/html/index.html'), (err) => {
+        if (err) {
+            res.status(404).send('<h1>404 Not Found</h1>');
+        }
+    });
 });
 app.get('/homepage/:url', (req, res) => {
   let fileName = req.params.url || 'index';
@@ -165,7 +169,15 @@ app.get('/homepage/:url', (req, res) => {
     return res.redirect('/homepage/login');
   }
   
-  res.sendFile(path.join(__dirname, `../src/html/${fileName}.html`));
+  res.sendFile(path.join(__dirname, `../src/html/${fileName}.html`), (err) => {
+    if (err) {
+      if (err.code === 'ENOENT') {
+        res.status(404).send('<h1>404 Not Found</h1><p>요청하신 페이지를 찾을 수 없습니다.</p>');
+      } else {
+        res.status(500).send('<h1>500 Internal Server Error</h1>');
+      }
+    }
+  });
 });
 
 // Login route
