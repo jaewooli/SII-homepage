@@ -181,18 +181,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn("Cannot find the button with id 'dreamhack-confirm'.");
   }
 
-  // Listen for admin auto login response from extension content script
-  window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', (event) => {
-    const { ok, message } = event.detail;
-    if (ok) {
-      showToast('드림핵 공용 계정 세션 재발급 및 동기화 완료!', 'success');
-      loadActivityLogs();
-      updateSharedSessionStatus();
-    } else {
-      showToast(`드림핵 세션 재발급 실패: ${message || '알 수 없는 오류'}`, 'error');
-    }
-  });
-
   // Listen for load response event from extension content script
   window.addEventListener('INHACK_DREAMHACK_LOAD_RESPONSE', (event) => {
     const { ok, message } = event.detail;

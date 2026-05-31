@@ -20,6 +20,62 @@ const helmet = require("helmet");
 const axios = require('axios');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
+const puppeteer = require('puppeteer');
+
+// Headless Chrome Login to Dreamhack
+async function loginDreamhackWithPuppeteer() {
+  console.log('[Headless Chrome] Launching browser...');
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--window-size=1920,1080'
+    ]
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    
+    console.log('[Headless Chrome] Navigating to Dreamhack login page...');
+    await page.goto('https://dreamhack.io/login/', { waitUntil: 'networkidle2', timeout: 30000 });
+
+    await page.waitForSelector('input[type="email"]', { timeout: 10000 });
+
+    console.log('[Headless Chrome] Submitting credentials...');
+    await page.type('input[type="email"]', process.env.DREAMHACKEMAIL, { delay: 50 });
+    await page.type('input[type="password"]', process.env.DREAMHACKPASSWORD, { delay: 50 });
+
+    const submitBtn = await page.waitForSelector('button[type="submit"]');
+    await Promise.all([
+      submitBtn.click(),
+      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 })
+    ]);
+
+    console.log('[Headless Chrome] Login submitted. Extracting cookies...');
+    const cookies = await page.cookies();
+    const sessionidCookie = cookies.find(c => c.name === 'sessionid');
+    const csrfCookie = cookies.find(c => c.name === 'csrf_token' || c.name === 'csrftoken');
+
+    if (sessionidCookie && sessionidCookie.value) {
+      console.log('[Headless Chrome] Login success. Cookies captured.');
+      return {
+        sessionid: sessionidCookie.value,
+        csrftoken: csrfCookie ? csrfCookie.value : ''
+      };
+    } else {
+      console.error('[Headless Chrome] Failed to find sessionid cookie in login page response.');
+    }
+  } catch (err) {
+    console.error('[Headless Chrome] Login routine error:', err.message);
+  } finally {
+    await browser.close();
+  }
+  return null;
+}
 
 const app = express();
 
@@ -413,38 +469,83 @@ app.get('/me', (req, res) => {
   });
 });
 
-app.get('/dreamhack/credentials', (req, res) => {
+app.post('/dreamhack/regenerate', async (req, res) => {
   if (!req.session.user || req.session.user.username !== 'developer') {
     return sendJson(res, {
-      status: 403, ok: false, action: 'read', resource: 'dreamhack',
-      message: 'Only the administrator can access credentials', code: 'FORBIDDEN'
+      status: 403, ok: false, action: 'create', resource: 'dreamhack_regenerate',
+      message: 'Only the administrator can regenerate shared sessions', code: 'FORBIDDEN'
     });
   }
-  
-  const { id, username } = req.session.user;
+
+  console.log('[Dreamhack Connect] Starting server-side headless chrome regeneration for 3 sessions...');
+  const sessions = [];
+
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
   const timestamp = new Date().toISOString();
-  
-  // 1. Log to SQLite database
-  db.run(`INSERT INTO dreamhack_access_logs (user_id, username, ip_address, timestamp) VALUES (?, ?, ?, ?)`, 
-    [id, username, ip, timestamp], (err) => {
-      if (err) {
-        console.error('[Database Log Error] Failed to log dreamhack credential fetch:', err.message);
-      }
+
+  // Generate 3 unique sessions sequentially
+  for (let i = 0; i < 3; i++) {
+    console.log(`[Dreamhack Connect] Executing headless login ${i + 1}/3...`);
+    const sessionData = await loginDreamhackWithPuppeteer();
+    if (sessionData && sessionData.sessionid) {
+      sessions.push(sessionData);
+      console.log(`[Dreamhack Connect] Session ${i + 1} generated successfully.`);
+    } else {
+      console.warn(`[Dreamhack Connect] Failed to generate session ${i + 1}.`);
     }
-  );
-  
-  // 2. Log to log file
-  const logMessage = `[${timestamp}] User '${username}' (ID: ${id}) requested Dreamhack credentials from IP: ${ip}\n`;
-  const logFilePath = path.join(__dirname, '../log/dreamhack_sync.log');
-  fs.appendFileSync(logFilePath, logMessage);
+    // Add small delay to prevent rate limiting
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  if (sessions.length === 0) {
+    return sendJson(res, {
+      status: 500, ok: false, action: 'create', resource: 'dreamhack_regenerate',
+      message: 'Headless Chrome failed to generate any active sessions. Check credentials/network.',
+      code: 'REGENERATION_FAILED'
+    });
+  }
+
+  // Update DB (clear first, then insert the new sessions)
+  db.serialize(() => {
+    db.run(`DELETE FROM shared_session`, [], (err) => {
+      if (err) {
+        console.error('[Database Error] Failed to clear shared sessions during regeneration:', err.message);
+      }
+    });
+    const stmt = db.prepare(`INSERT INTO shared_session (id, sessionid, csrftoken, updated_at) VALUES (?, ?, ?, ?)`);
+    sessions.forEach((s, idx) => {
+      stmt.run(idx + 1, s.sessionid, s.csrftoken || '', timestamp);
+    });
+    stmt.finalize();
+  });
+
+  // Log action
+  const logMessage = `[${timestamp}] Headless Chrome session regeneration by admin from IP: ${ip} (Generated: ${sessions.length}/3)\n`;
+  fs.appendFileSync(path.join(__dirname, '../log/login_attempts.log'), logMessage);
+
+  // Sync server-side global variables (using first session as primary)
+  const primarySession = sessions[0];
+  sessionid = primarySession.sessionid;
+  process.env.DREAMHACK_SESSIONID = primarySession.sessionid;
+  if (primarySession.csrftoken) {
+    process.env.DREAMHACK_CSRF = primarySession.csrftoken;
+  }
+
+  // Clear and update validation cache
+  sessionCache = {};
+  sessions.forEach(s => {
+    sessionCache[s.sessionid] = {
+      timestamp: Date.now(),
+      isValid: true
+    };
+  });
+
+  console.log(`[Dreamhack Connect] Session pool regenerated successfully. Count: ${sessions.length}`);
 
   sendJson(res, {
-    status: 200, ok: true, action: 'read', resource: 'dreamhack',
-    data: {
-      email: process.env.DREAMHACKEMAIL,
-      password: process.env.DREAMHACKPASSWORD
-    },
+    status: 200, ok: true, action: 'create', resource: 'dreamhack_regenerate',
+    message: `공용 세션 ${sessions.length}개가 성공적으로 재발급 및 갱신되었습니다.`,
+    data: { valid_count: sessions.length },
     code: 'SUCCESS'
   });
 });
