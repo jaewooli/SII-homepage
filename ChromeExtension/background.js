@@ -41,7 +41,7 @@ async function clearDreamhackCookiesLocally() {
       console.warn('[INHACK Background] Failed to fetch cookies for dynamic URLs:', err);
     }
 
-    const targetNames = ['sessionid', 'csrf_token'];
+    const targetNames = ['sessionid', 'csrf_token', 'csrftoken'];
     
     // 2. Iterate through all targets and execute removals
     for (const url of urlsToTry) {
@@ -266,9 +266,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   } else if (msg.type === "GET_DREAMHACK_COOKIES") {
     chrome.cookies.getAll({ domain: 'dreamhack.io' }).then(cookies => {
       const sessionidCookie = cookies.find(c => c.name === 'sessionid');
+      const csrfCookie = cookies.find(c => c.name === 'csrf_token' || c.name === 'csrftoken');
 
       const sessionid = sessionidCookie ? sessionidCookie.value : '';
-      const csrftoken = ''; // Do not retrieve csrftoken
+      const csrftoken = csrfCookie ? csrfCookie.value : '';
 
       if (!sessionid) {
         sendResponse({ ok: false, message: "드림핵 로그인 세션이 발견되지 않았습니다. 드림핵(dreamhack.io)에 먼저 로그인해주세요." });
