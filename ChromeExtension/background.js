@@ -18,11 +18,11 @@ async function setupDNRRules() {
     }
   ];
   try {
-    await chrome.declarativeNetRequest.updateSessionRules({
+    await chrome.declarativeNetRequest.updateDynamicRules({
       removeRuleIds: [1],
       addRules: rules
     });
-    console.log('[SII Background] DeclarativeNetRequest session rules registered.');
+    console.log('[SII Background] DeclarativeNetRequest dynamic rules registered.');
   } catch (err) {
     console.error('[SII Background] Failed to register DNR rules:', err);
   }
@@ -77,8 +77,14 @@ function verifyMessageSender(sender) {
 async function performDreamhackLogin(email, password) {
   console.log('[SII Background] Performing direct browser-context Dreamhack login...');
   
-  // Get csrftoken cookie dynamically
-  let csrfCookie = await chrome.cookies.get({ url: 'https://dreamhack.io', name: 'csrftoken' });
+  // Get all cookies for dreamhack.io to cover subdomains and wildcards
+  let cookies = [];
+  try {
+    cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
+  } catch (err) {
+    console.warn('[SII Background] Failed to query cookies:', err);
+  }
+  let csrfCookie = cookies.find(c => c.name === 'csrftoken');
   
   // If the cookie does not exist, fetch the login page to initialize cookies
   if (!csrfCookie) {
@@ -88,7 +94,8 @@ async function performDreamhackLogin(email, password) {
         method: 'GET',
         credentials: 'include'
       });
-      csrfCookie = await chrome.cookies.get({ url: 'https://dreamhack.io', name: 'csrftoken' });
+      cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
+      csrfCookie = cookies.find(c => c.name === 'csrftoken');
     } catch (err) {
       console.warn('[SII Background] Failed to fetch login page to init CSRF token:', err);
     }
