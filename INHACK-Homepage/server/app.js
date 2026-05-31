@@ -446,7 +446,7 @@ app.get('/dreamhack/encrypted-credentials', (req, res) => {
     });
   }
 
-  db.get(`SELECT email, encrypted_password, iv FROM admin_credentials WHERE id = 1`, [], (err, row) => {
+  db.get(`SELECT encrypted_password, iv FROM admin_credentials WHERE id = 1`, [], (err, row) => {
     if (err) {
       console.error('[Database Read Error] Failed to read admin credentials:', err.message);
       return sendJson(res, {
@@ -464,7 +464,7 @@ app.get('/dreamhack/encrypted-credentials', (req, res) => {
     sendJson(res, {
       status: 200, ok: true, action: 'read', resource: 'dreamhack_credentials',
       data: {
-        email: row.email,
+        email: process.env.DREAMHACKEMAIL || '',
         encryptedPassword: row.encrypted_password,
         iv: row.iv
       },
@@ -482,15 +482,16 @@ app.post('/dreamhack/encrypted-credentials', (req, res) => {
     });
   }
 
-  const { email, encryptedPassword, iv } = req.body;
-  if (!email || !encryptedPassword || !iv) {
+  const { encryptedPassword, iv } = req.body;
+  if (!encryptedPassword || !iv) {
     return sendJson(res, {
       status: 400, ok: false, action: 'create', resource: 'dreamhack_credentials',
-      message: 'email, encryptedPassword, and iv are required', code: 'BAD_REQUEST'
+      message: 'encryptedPassword and iv are required', code: 'BAD_REQUEST'
     });
   }
 
   const timestamp = new Date().toISOString();
+  const email = process.env.DREAMHACKEMAIL || '';
 
   db.run(`INSERT OR REPLACE INTO admin_credentials (id, email, encrypted_password, iv, updated_at) 
           VALUES (1, ?, ?, ?, ?)`, [email, encryptedPassword, iv, timestamp], (err) => {
@@ -504,7 +505,7 @@ app.post('/dreamhack/encrypted-credentials', (req, res) => {
 
     sendJson(res, {
       status: 200, ok: true, action: 'create', resource: 'dreamhack_credentials',
-      message: '종단간(E2E) 암호화된 자격 증명이 성공적으로 저장되었습니다.',
+      message: '종단간(E2E) 암호화된 비밀번호가 성공적으로 저장되었습니다.',
       code: 'SUCCESS'
     });
   });

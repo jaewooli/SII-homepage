@@ -190,26 +190,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       adminCard.style.border = '1px solid rgba(255, 75, 75, 0.3)';
       adminCard.innerHTML = `
         <div class="option-title">
-            <span style="color: #ff4b4b;">E2E Credentials Setup</span>
+            <span style="color: #ff4b4b;">E2E Password Setup</span>
         </div>
         <div class="option-desc" style="margin-bottom: 12px;">
-            Set up or update the administrator's Dreamhack credentials securely using End-to-End Encryption. Plain password is encrypted locally and never transmitted to the server.
+            Set up or update the administrator's Dreamhack password securely using End-to-End Encryption. Plain password is encrypted locally and never transmitted to the server.
         </div>
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
-            <input type="email" id="dh-admin-email" placeholder="Dreamhack Email" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff;">
             <input type="password" id="dh-admin-password" placeholder="Dreamhack Password" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff;">
         </div>
-        <button id="dh-admin-save-btn" class="action-btn" style="background: #ff4b4b;" type="button">Save Credentials (E2E)</button>
+        <button id="dh-admin-save-btn" class="action-btn" style="background: #ff4b4b;" type="button">Save Password (E2E)</button>
       `;
       container.appendChild(adminCard);
 
       const saveBtn = document.getElementById('dh-admin-save-btn');
       if (saveBtn) {
         saveBtn.addEventListener('click', async () => {
-          const email = document.getElementById('dh-admin-email').value.trim();
           const password = document.getElementById('dh-admin-password').value;
-          if (!email || !password) {
-            showToast('이메일과 비밀번호를 모두 입력해 주세요.', 'error');
+          if (!password) {
+            showToast('비밀번호를 입력해 주세요.', 'error');
             return;
           }
 
@@ -243,16 +241,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Give a small delay to let extension save the key
             await new Promise(resolve => setTimeout(resolve, 600));
 
-            // 4. Save encrypted credentials to server
+            // 4. Save encrypted credentials to server (email bound server-side from env)
             const saveRes = await apiRequest('/dreamhack/encrypted-credentials', 'POST', {
-              email,
               encryptedPassword: ciphertextBase64,
               iv: ivBase64
             });
 
             if (saveRes.ok) {
               showToast('E2E 암호화 설정이 안전하게 완료되었습니다!', 'success');
-              document.getElementById('dh-admin-email').value = '';
               document.getElementById('dh-admin-password').value = '';
             } else {
               showToast(`자격 증명 서버 저장 실패: ${saveRes.message}`, 'error');
