@@ -49,5 +49,51 @@
             </div>
         </div>
     </section>
+
+    <!-- Activity Logs Panel -->
+    <section id="logs-panel" class="logs-container">
+        <h2>DREAMHACK ACTIVITY LOGS</h2>
+        <div class="logs-grid">
+            <div class="log-card">
+                <div class="log-card-title">> SESSION_SYNC_ATTEMPTS</div>
+                <div class="log-table-wrapper">
+                    <table class="log-table" id="access-log-table">
+                        <thead>
+                            <tr>
+                                <th>USER</th>
+                                <th>IP ADDRESS</th>
+                                <th>TIMESTAMP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="3" class="log-empty">Loading sync logs...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="log-card">
+                <div class="log-card-title">> CHALLENGE_SOLVE_LOGS</div>
+                <div class="log-table-wrapper">
+                    <table class="log-table" id="solve-log-table">
+                        <thead>
+                            <tr>
+                                <th>USER</th>
+                                <th>CHALLENGE</th>
+                                <th>SOLVED AT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="3" class="log-empty">Loading solve logs...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
 </body>
 </html>

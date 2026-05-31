@@ -42,10 +42,71 @@ async function executeSpecificFeature(userdata) {
   window.dispatchEvent(new CustomEvent('SII_DREAMHACK_SYNC_TRIGGER'));
 }
 
+async function loadActivityLogs() {
+  try {
+    const res = await apiRequest('/dreamhack/logs', 'GET');
+    if (res.ok && res.data) {
+      const { accessLogs, solveLogs } = res.data;
+      
+      // Render access logs
+      const accessBody = document.querySelector('#access-log-table tbody');
+      if (accessBody) {
+        if (accessLogs && accessLogs.length > 0) {
+          accessBody.innerHTML = accessLogs.map(log => {
+            const timeStr = new Date(log.timestamp).toLocaleString();
+            return `
+              <tr>
+                <td>${escapeHtml(log.username)}</td>
+                <td>${escapeHtml(log.ip_address)}</td>
+                <td>${timeStr}</td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          accessBody.innerHTML = `<tr><td colspan="3" class="log-empty">No sync attempts logged yet.</td></tr>`;
+        }
+      }
+
+      // Render solve logs
+      const solveBody = document.querySelector('#solve-log-table tbody');
+      if (solveBody) {
+        if (solveLogs && solveLogs.length > 0) {
+          solveBody.innerHTML = solveLogs.map(log => {
+            const timeStr = new Date(log.timestamp).toLocaleString();
+            return `
+              <tr>
+                <td>${escapeHtml(log.username)}</td>
+                <td>${escapeHtml(log.challenge_name || log.challenge_id)}</td>
+                <td>${timeStr}</td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          solveBody.innerHTML = `<tr><td colspan="3" class="log-empty">No solved challenges logged yet.</td></tr>`;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load activity logs:', err);
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   updateExtensionStatus();
   // Brief timeout check to avoid injection race conditions
   setTimeout(updateExtensionStatus, 300);
+
+  // Load activity logs list
+  loadActivityLogs();
 
   const confirmbtn = document.getElementById('dreamhack-confirm');
 
@@ -76,6 +137,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const syncRes = await apiRequest('/dreamhack/login', 'POST', { sessionid, csrftoken });
         if (syncRes.ok) {
           showToast('드림핵 세션 동기화 성공!', 'success');
+          // Reload the logs panel to display the new sync attempt immediately
+          loadActivityLogs();
           setTimeout(() => {
             window.location.href = 'https://dreamhack.io';
           }, 1200);

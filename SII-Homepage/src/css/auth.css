@@ -319,3 +319,115 @@ p a:hover {
         padding: 2.5rem 1.5rem;
     }
 }
+
+/* ==========================================================================
+   Logs Panel & Terminal Styles
+   ========================================================================== */
+.logs-container {
+    width: 100%;
+    max-width: 900px;
+    margin-top: 3rem;
+    padding: 2.5rem;
+    background-color: var(--bg-surface);
+    border: var(--border-dim);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    position: relative;
+    animation: panelSlideUp 0.45s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+.logs-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--color-cyan), var(--color-blue));
+}
+
+.logs-container h2 {
+    font-family: var(--font-heading);
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: left;
+    margin-bottom: 1.5rem;
+    color: #ffffff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 0.75rem;
+}
+
+.logs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+@media (max-width: 768px) {
+    .logs-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.log-card {
+    background-color: rgba(0, 0, 0, 0.2);
+    border: var(--border-dim);
+    border-radius: 2px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.log-card-title {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-cyan);
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+}
+
+.log-table-wrapper {
+    overflow-x: auto;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.log-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-align: left;
+}
+
+.log-table th {
+    color: #475569;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.log-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    color: #94a3b8;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: 150px;
+}
+
+.log-table tbody tr:hover td {
+    background-color: rgba(255, 255, 255, 0.02);
+    color: #ffffff;
+}
+
+.log-empty {
+    text-align: center;
+    color: #475569;
+    padding: 2rem !important;
+}

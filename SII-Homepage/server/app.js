@@ -313,6 +313,47 @@ app.get('/dreamhack/credentials', (req, res) => {
   });
 });
 
+app.get('/dreamhack/logs', (req, res) => {
+  if (!req.session.user) {
+    return sendJson(res, {
+      status: 401, ok: false, action: 'read', resource: 'dreamhack_logs',
+      message: 'Unauthorized access', code: 'UNAUTHORIZED'
+    });
+  }
+
+  const queryAccess = `SELECT username, ip_address, timestamp FROM dreamhack_access_logs ORDER BY timestamp DESC LIMIT 50`;
+  const querySolves = `SELECT username, challenge_id, challenge_name, timestamp FROM dreamhack_solves ORDER BY timestamp DESC LIMIT 50`;
+
+  db.all(queryAccess, [], (err, accessLogs) => {
+    if (err) {
+      console.error('[Database Read Error] Failed to read dreamhack access logs:', err.message);
+      return sendJson(res, {
+        status: 500, ok: false, action: 'read', resource: 'dreamhack_logs',
+        message: 'Failed to retrieve access logs', code: 'DATABASE_ERROR'
+      });
+    }
+
+    db.all(querySolves, [], (err, solveLogs) => {
+      if (err) {
+        console.error('[Database Read Error] Failed to read dreamhack solve logs:', err.message);
+        return sendJson(res, {
+          status: 500, ok: false, action: 'read', resource: 'dreamhack_logs',
+          message: 'Failed to retrieve solve logs', code: 'DATABASE_ERROR'
+        });
+      }
+
+      sendJson(res, {
+        status: 200, ok: true, action: 'read', resource: 'dreamhack_logs',
+        data: {
+          accessLogs,
+          solveLogs
+        },
+        code: 'SUCCESS'
+      });
+    });
+  });
+});
+
 app.post('/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) {  
