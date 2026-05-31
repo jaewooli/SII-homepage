@@ -76,17 +76,44 @@ function verifyMessageSender(sender) {
 
 async function performDreamhackLogin(email, password) {
   console.log('[SII Background] Performing direct browser-context Dreamhack login...');
+  
+  // Get csrftoken cookie dynamically
+  let csrfCookie = await chrome.cookies.get({ url: 'https://dreamhack.io', name: 'csrftoken' });
+  
+  // If the cookie does not exist, fetch the login page to initialize cookies
+  if (!csrfCookie) {
+    console.log('[SII Background] No csrftoken cookie found. Initializing session via GET request...');
+    try {
+      await fetch('https://dreamhack.io/login', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      csrfCookie = await chrome.cookies.get({ url: 'https://dreamhack.io', name: 'csrftoken' });
+    } catch (err) {
+      console.warn('[SII Background] Failed to fetch login page to init CSRF token:', err);
+    }
+  }
+
+  const csrfToken = csrfCookie ? csrfCookie.value : '';
+  console.log('[SII Background] Retracted csrftoken:', csrfToken);
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Origin': 'https://dreamhack.io',
+    'Referer': 'https://dreamhack.io/login',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+  };
+
+  if (csrfToken) {
+    headers['X-CSRFToken'] = csrfToken;
+  }
+
   const response = await fetch('https://dreamhack.io/api/v1/auth/login/', {
     method: 'POST',
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Origin': 'https://dreamhack.io',
-      'Referer': 'https://dreamhack.io/login',
-      'Accept': 'application/json, text/plain, */*',
-      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
-    },
+    headers: headers,
     body: JSON.stringify({ email, password, loginSave: false })
   });
 
