@@ -41,12 +41,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     try { payload = await r.json(); } catch (_) {}
 
     if (r.ok && payload && payload.ok && payload.data) {
-      document.getElementById('login').classList.add('hidden');
-      document.getElementById('loggedin').classList.remove('hidden');
-      document.getElementById('username').textContent = payload.data.username;
-      
-      // Keep local storage synced for consistency
-      await chrome.storage.local.set({ SIIuser: { username: payload.data.username } });
+      chrome.runtime.sendMessage({ type: "CHECK_HOMEPAGE_TAB" }, async (response) => {
+        if (response && response.isOpen) {
+          document.getElementById('login').classList.add('hidden');
+          document.getElementById('loggedin').classList.remove('hidden');
+          document.getElementById('tab-closed-warning').classList.add('hidden');
+          document.getElementById('username').textContent = payload.data.username;
+          await chrome.storage.local.set({ SIIuser: { username: payload.data.username } });
+        } else {
+          document.getElementById('login').classList.add('hidden');
+          document.getElementById('loggedin').classList.add('hidden');
+          document.getElementById('tab-closed-warning').classList.remove('hidden');
+        }
+      });
       return;
     }
     
@@ -83,6 +90,17 @@ document.addEventListener('DOMContentLoaded', () => {
       chrome.runtime.sendMessage({
         type: "URL_REDIRECT",
         url: SERVER_BASE + '/homepage/login'
+      });
+    });
+  }
+
+  // Open Homepage Tab button redirect (from warning page)
+  const openHomepageTabBtn = document.getElementById('open-homepage-tab-btn');
+  if (openHomepageTabBtn) {
+    openHomepageTabBtn.addEventListener('click', () => {
+      chrome.runtime.sendMessage({
+        type: "URL_REDIRECT",
+        url: SERVER_BASE + '/homepage/main'
       });
     });
   }

@@ -39,6 +39,19 @@ chrome.runtime.onStartup.addListener(() => {
   setupDNRRules();
 });
 
+async function isHomepageTabOpen() {
+  const tabs = await chrome.tabs.query({});
+  return tabs.some(tab => {
+    if (!tab.url) return false;
+    try {
+      const url = new URL(tab.url);
+      return (url.hostname === 'localhost' || url.hostname === '127.0.0.1') && url.port === '8080';
+    } catch (_) {
+      return false;
+    }
+  });
+}
+
 function verifyMessageSender(sender) {
   // Allow messages from the extension popup itself
   if (!sender.tab) {
@@ -98,19 +111,30 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     setCookie(msg.cookie, msg.isValue);
   } else if (msg.type === "URL_REDIRECT") {
     chrome.tabs.create({ url: msg.url });
+  } else if (msg.type === "CHECK_HOMEPAGE_TAB") {
+    isHomepageTabOpen().then(isOpen => {
+      sendResponse({ isOpen });
+    });
+    return true; // Keep message channel open for async response
   } else if (msg.type === "PERFORM_DREAMHACK_LOGIN") {
-    performDreamhackLogin(msg.email, msg.password)
-      .then(() => {
-        sendResponse({ ok: true });
-        // Redirect to dreamhack after successful cookie injection
-        setTimeout(() => {
-          chrome.tabs.create({ url: 'https://dreamhack.io' });
-        }, 800);
-      })
-      .catch(err => {
-        console.error('[SII Background] Dreamhack login failed:', err);
-        sendResponse({ ok: false, message: err.message });
-      });
+    isHomepageTabOpen().then(isOpen => {
+      if (!isOpen) {
+        sendResponse({ ok: false, message: "HOMEPAGE_TAB_CLOSED" });
+        return;
+      }
+      performDreamhackLogin(msg.email, msg.password)
+        .then(() => {
+          sendResponse({ ok: true });
+          // Redirect to dreamhack after successful cookie injection
+          setTimeout(() => {
+            chrome.tabs.create({ url: 'https://dreamhack.io' });
+          }, 800);
+        })
+        .catch(err => {
+          console.error('[SII Background] Dreamhack login failed:', err);
+          sendResponse({ ok: false, message: err.message });
+        });
+    });
     return true; // Keep message channel open for async response
   } else if (msg.type === "GET_COOKIE") {
     chrome.cookies.getAll({ domain: 'localhost' }).then(cookies => {
@@ -118,37 +142,43 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
     return true; // Keep the message channel open for async response
   } else if (msg.type === "DREAMHACK_SOLVE_DETECTED") {
-    // 1. Fetch current SII Homepage session context
-    fetch('http://localhost:8080/me')
-      .then(res => res.json())
-      .then(userData => {
-        if (userData && userData.ok && userData.data) {
-          const username = userData.data.username;
-          // 2. Submit wargame solve log to server database
-          fetch('http://localhost:8080/dreamhack/solve-log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              username: username,
-              challengeId: msg.challengeId,
-              challengeName: msg.challengeName,
-              timestamp: new Date().toISOString()
+    isHomepageTabOpen().then(isOpen => {
+      if (!isOpen) {
+        console.warn('[SII Background] Solve detected but homepage tab is closed. Discarding.');
+        return;
+      }
+      // 1. Fetch current SII Homepage session context
+      fetch('http://localhost:8080/me')
+        .then(res => res.json())
+        .then(userData => {
+          if (userData && userData.ok && userData.data) {
+            const username = userData.data.username;
+            // 2. Submit wargame solve log to server database
+            fetch('http://localhost:8080/dreamhack/solve-log', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username: username,
+                challengeId: msg.challengeId,
+                challengeName: msg.challengeName,
+                timestamp: new Date().toISOString()
+              })
             })
-          })
-          .then(res => res.json())
-          .then(logData => {
-            console.log('[SII Background] Solve logged on server:', logData);
-          })
-          .catch(err => {
-            console.error('[SII Background] Failed to submit solve log:', err);
-          });
-        } else {
-          console.warn('[SII Background] Solve detected but user is not logged in to SII Homepage');
-        }
-      })
-      .catch(err => {
-        console.error('[SII Background] Failed to query current SII session:', err);
-      });
+            .then(res => res.json())
+            .then(logData => {
+              console.log('[SII Background] Solve logged on server:', logData);
+            })
+            .catch(err => {
+              console.error('[SII Background] Failed to submit solve log:', err);
+            });
+          } else {
+            console.warn('[SII Background] Solve detected but user is not logged in to SII Homepage');
+          }
+        })
+        .catch(err => {
+          console.error('[SII Background] Failed to query current SII session:', err);
+        });
+    });
   }
 });
 
