@@ -200,6 +200,20 @@ async function loginToDreamhackAndSync(email, password, origin) {
             return { ok: false, error: 'CSRF cookie not found in page document.cookie: ' + document.cookie };
           }
 
+          // 1. Invalidate old session on Dreamhack server by calling logout
+          console.log('[INHACK Tab] Logging out old session to invalidate it...');
+          try {
+            await fetch('/api/v1/auth/logout/', {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': csrfToken
+              }
+            });
+          } catch (e) {
+            console.warn('[INHACK Tab] Failed to logout old session:', e);
+          }
+
+          // 2. Perform new login
           const loginRes = await fetch('/api/v1/auth/login/', {
             method: 'POST',
             headers: {
