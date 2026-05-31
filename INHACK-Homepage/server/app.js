@@ -205,7 +205,7 @@ async function loginDreamhack(force = false){
       let sessId = '';
       
       cookies.forEach(cookie => {
-        if (cookie.startsWith('csrftoken=')) {
+        if (cookie.startsWith('csrftoken=') || cookie.startsWith('csrf_token=')) {
           csrfToken = cookie.split(';')[0].split('=')[1];
         } else if (cookie.startsWith('sessionid=')) {
           sessId = cookie.split(';')[0].split('=')[1];

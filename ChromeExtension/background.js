@@ -87,7 +87,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           await chrome.cookies.set({
             url: 'https://dreamhack.io',
             domain: '.dreamhack.io',
-            name: 'csrftoken',
+            name: 'csrf_token',
             value: csrftoken,
             path: '/'
           });
@@ -122,7 +122,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   } else if (msg.type === "GET_DREAMHACK_COOKIES") {
     chrome.cookies.getAll({ domain: 'dreamhack.io' }).then(cookies => {
       const sessionidCookie = cookies.find(c => c.name === 'sessionid');
-      const csrftokenCookie = cookies.find(c => c.name === 'csrftoken');
+      const csrftokenCookie = cookies.find(c => c.name === 'csrf_token');
 
       const sessionid = sessionidCookie ? sessionidCookie.value : '';
       const csrftoken = csrftokenCookie ? csrftokenCookie.value : '';
@@ -184,7 +184,7 @@ async function loginToDreamhackAndSync(email, password, origin) {
             return '';
           };
 
-          const csrfToken = getCookie('csrftoken');
+          const csrfToken = getCookie('csrf_token');
           if (!csrfToken) {
             return { ok: false, error: 'CSRF cookie not found in page document.cookie: ' + document.cookie };
           }
@@ -228,7 +228,7 @@ async function loginToDreamhackAndSync(email, password, origin) {
 
     const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
     const sessionidCookie = cookies.find(c => c.name === 'sessionid');
-    const csrftokenCookie = cookies.find(c => c.name === 'csrftoken');
+    const csrftokenCookie = cookies.find(c => c.name === 'csrf_token');
 
     if (!sessionidCookie) {
       throw new Error("드림핵 로그인에는 성공했으나 sessionid 쿠키를 획득하지 못했습니다.");
