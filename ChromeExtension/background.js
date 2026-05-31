@@ -1,3 +1,27 @@
+// Helper to thoroughly clear all dreamhack-related local authorization cookies
+async function clearDreamhackCookiesLocally() {
+  try {
+    const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
+    for (const cookie of cookies) {
+      if (cookie.name === 'sessionid' || cookie.name === 'csrf_token' || cookie.name === 'csrftoken') {
+        const prefix = cookie.secure ? 'https://' : 'http://';
+        // strip leading dot from domain for URL formation
+        const domainStr = cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain;
+        const cookieUrl = prefix + domainStr + cookie.path;
+        
+        await chrome.cookies.remove({
+          url: cookieUrl,
+          name: cookie.name,
+          storeId: cookie.storeId
+        });
+        console.log(`[INHACK Background] Cleared local cookie: ${cookie.name} from url: ${cookieUrl}`);
+      }
+    }
+  } catch (err) {
+    console.warn('[INHACK Background] Failed to clear local cookies:', err.message);
+  }
+}
+
 async function isHomepageTabOpen() {
   try {
     const tabs = await chrome.tabs.query({
@@ -142,11 +166,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           }).catch(e => console.warn('[INHACK Background] Invalidation request failed:', e.message));
 
           // Clear cookies locally so they don't linger
-          try {
-            await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'sessionid' });
-            await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrf_token' });
-            await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrftoken' });
-          } catch (e) {}
+          await clearDreamhackCookiesLocally();
 
           throw new Error('선택된 공유 세션이 만료되었습니다. 포털에서 자동 삭제 처리되었으니 세션 발급을 다시 시도해주세요.');
         }
@@ -204,9 +224,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         console.log('[INHACK Background] Intercepted student logout via client-side trigger. Discarding cookies locally...');
         
         // Clear cookies locally
-        await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'sessionid' });
-        await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrf_token' });
-        await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrftoken' });
+        await clearDreamhackCookiesLocally();
 
         // Notify portal for logs
         const storageData = await chrome.storage.local.get('portalOrigin');
@@ -271,11 +289,7 @@ async function loginToDreamhackAndSync(email, password, origin) {
     console.log(`[INHACK Background] Generating session ${i + 1}/3...`);
 
     // Clear existing cookies locally to force Django to generate a fresh session ID
-    try {
-      await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'sessionid' });
-      await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrf_token' });
-      await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrftoken' });
-    } catch (e) {}
+    await clearDreamhackCookiesLocally();
 
     // Add a small delay to let Chrome process cookie deletions
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -562,16 +576,7 @@ chrome.webRequest.onBeforeRequest.addListener(
     }
 
     // Clear cookies locally in parallel (do not block flow)
-    (async () => {
-      try {
-        await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'sessionid' });
-        await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrf_token' });
-        await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrftoken' });
-        console.log('[INHACK Background] Local cookies cleared successfully.');
-      } catch (err) {
-        console.warn('[INHACK Background] Failed to remove local cookies during intercept:', err);
-      }
-    })();
+    clearDreamhackCookiesLocally();
 
     // Notify portal about interception for debugging logs
     chrome.storage.local.get('portalOrigin').then(res => {
