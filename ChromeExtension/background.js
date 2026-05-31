@@ -179,14 +179,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 async function getCsrfToken() {
   for (let attempt = 0; attempt < 25; attempt++) {
     try {
-      // Try both csrf_token and csrftoken names
-      let cookie = await chrome.cookies.get({ url: 'https://dreamhack.io', name: 'csrf_token' });
-      if (cookie && cookie.value) {
-        return cookie.value;
-      }
-      cookie = await chrome.cookies.get({ url: 'https://dreamhack.io', name: 'csrftoken' });
-      if (cookie && cookie.value) {
-        return cookie.value;
+      // Use chrome.cookies.getAll for maximum compatibility with domain/path variations
+      const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
+      const csrfCookie = cookies.find(c => c.name === 'csrf_token' || c.name === 'csrftoken');
+      if (csrfCookie && csrfCookie.value) {
+        return csrfCookie.value;
       }
     } catch (e) {
       console.warn('[INHACK Background] Error getting cookie:', e);
