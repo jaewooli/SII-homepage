@@ -153,10 +153,13 @@ if (isDreamhackDomain) {
     chrome.storage.local.get('showLogoutBlockedAlert', (data) => {
       if (data && data.showLogoutBlockedAlert) {
         chrome.storage.local.remove('showLogoutBlockedAlert', () => {
-          console.log('[INHACK Extension] Detected showLogoutBlockedAlert flag. Displaying alert...');
-          alert('[INHACK 디버그] 드림핵 로그아웃 시도가 감지되어 차단되었습니다. 다른 사용자의 공용 세션을 보호하기 위해 서버 로그아웃을 방지하고 로컬 브라우저 쿠키만 삭제합니다.');
-          // Reload the page to reflect the logged-out UI state (since we cleared cookies locally)
-          window.location.reload();
+          console.log('[INHACK Extension] Detected showLogoutBlockedAlert flag. Delaying alert to avoid blank screen...');
+          // Delay the alert with setTimeout so the browser has time to fully render the page first
+          setTimeout(() => {
+            alert('[INHACK 디버그] 드림핵 로그아웃 시도가 감지되어 차단되었습니다. 다른 사용자의 공용 세션을 보호하기 위해 서버 로그아웃을 방지하고 로컬 브라우저 쿠키만 삭제합니다.');
+            // Reload the page to reflect the logged-out UI state (since we cleared cookies locally)
+            window.location.reload();
+          }, 600);
         });
       }
     });
@@ -165,6 +168,7 @@ if (isDreamhackDomain) {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', checkAlertFlag);
   } else {
-    checkAlertFlag();
+    // If DOM is already loaded, check with a slight delay
+    setTimeout(checkAlertFlag, 500);
   }
 }

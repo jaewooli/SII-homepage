@@ -555,11 +555,11 @@ chrome.webRequest.onBeforeRequest.addListener(
       }).catch(e => console.warn('[INHACK Background] Failed to log intercept:', e));
     });
 
-    // Force the tab to redirect to the dreamhack main page immediately
-    if (details.tabId && details.tabId !== chrome.tabs.TAB_ID_NONE) {
+    // Force the tab to redirect ONLY if it is not a main_frame navigation (which DNR redirects automatically)
+    if (details.type !== 'main_frame' && details.tabId && details.tabId !== chrome.tabs.TAB_ID_NONE) {
       try {
         await chrome.tabs.update(details.tabId, { url: 'https://dreamhack.io/' });
-        console.log('[INHACK Background] Tab redirected to main page.');
+        console.log('[INHACK Background] Non-navigation logout request. Redirecting tab programmatically.');
       } catch (err) {
         console.warn('[INHACK Background] Failed to redirect tab:', err);
       }
