@@ -1,3 +1,8 @@
+// Helper to check if extension context is still valid (not reloaded/invalidated by Chrome)
+function isContextValid() {
+  return typeof chrome !== 'undefined' && chrome.runtime && !!chrome.runtime.id;
+}
+
 // Robust function to set the installed flag on document.documentElement
 function setInstalledFlag() {
   if (document.documentElement) {
@@ -20,6 +25,11 @@ setInstalledFlag();
 
 // Listen for custom trigger events from the webpage
 window.addEventListener('INHACK_DREAMHACK_SYNC_TRIGGER', () => {
+  if (!isContextValid()) {
+    console.warn('[INHACK Extension] Context invalidated. Reloading portal page...');
+    window.location.reload();
+    return;
+  }
   console.log('[INHACK Extension] Received cookie sync trigger from webpage. Querying background worker...');
   
   chrome.runtime.sendMessage({ 
@@ -46,6 +56,11 @@ window.addEventListener('INHACK_DREAMHACK_SYNC_TRIGGER', () => {
 
 // Listen for shared session load trigger from the webpage
 window.addEventListener('INHACK_DREAMHACK_LOAD_TRIGGER', () => {
+  if (!isContextValid()) {
+    console.warn('[INHACK Extension] Context invalidated. Reloading portal page...');
+    window.location.reload();
+    return;
+  }
   console.log('[INHACK Extension] Received load shared session trigger from webpage...');
   
   chrome.runtime.sendMessage({ 
@@ -68,6 +83,11 @@ window.addEventListener('INHACK_DREAMHACK_LOAD_TRIGGER', () => {
 
 // Listen for admin auto login trigger from the webpage
 window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', (event) => {
+  if (!isContextValid()) {
+    console.warn('[INHACK Extension] Context invalidated. Reloading portal page...');
+    window.location.reload();
+    return;
+  }
   console.log('[INHACK Extension] Received admin auto login trigger from webpage...');
   const { email, password } = event.detail;
 
@@ -93,6 +113,11 @@ window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', (event) => {
 
 // Listen for admin logout shared trigger from the webpage
 window.addEventListener('INHACK_ADMIN_LOGOUT_SHARED_TRIGGER', (event) => {
+  if (!isContextValid()) {
+    console.warn('[INHACK Extension] Context invalidated. Reloading portal page...');
+    window.location.reload();
+    return;
+  }
   console.log('[INHACK Extension] Received admin logout shared trigger from webpage...');
   const { sessionid, csrftoken } = event.detail;
 
@@ -118,11 +143,13 @@ window.addEventListener('INHACK_ADMIN_LOGOUT_SHARED_TRIGGER', (event) => {
 
 // Automatically update user session state in the extension on page load
 async function syncUserSession() {
+  if (!isContextValid()) return;
   try {
     const res = await fetch('/me');
     if (res.ok) {
       const payload = await res.json();
       if (payload && payload.ok && payload.data && payload.data.username) {
+        if (!isContextValid()) return;
         console.log('[INHACK Extension] Syncing logged-in user to background:', payload.data.username);
         chrome.runtime.sendMessage({
           type: "SET_USER",
@@ -131,6 +158,7 @@ async function syncUserSession() {
         return;
       }
     }
+    if (!isContextValid()) return;
     console.log('[INHACK Extension] Syncing logged-out user to background.');
     chrome.runtime.sendMessage({ type: "CLEAR_USER" });
   } catch (e) {
@@ -174,12 +202,15 @@ if (isDreamhackDomain) {
   };
 
   const checkAlertFlag = () => {
+    if (!isContextValid()) return;
     chrome.storage.local.get('showLogoutBlockedAlert', (data) => {
+      if (!isContextValid()) return;
       if (data && data.showLogoutBlockedAlert) {
         triggerAlertAndReload(false);
       } else {
         // Fallback: if not set yet, listen for the changes dynamically for 2 seconds (in case background script was slow)
         const storageListener = (changes, namespace) => {
+          if (!isContextValid()) return;
           if (namespace === 'local' && changes.showLogoutBlockedAlert && changes.showLogoutBlockedAlert.newValue === true) {
             console.log('[INHACK Extension] Detected showLogoutBlockedAlert flag from dynamic listener.');
             chrome.storage.onChanged.removeListener(storageListener);
@@ -189,7 +220,9 @@ if (isDreamhackDomain) {
         chrome.storage.onChanged.addListener(storageListener);
         // Timeout after 2초 to avoid memory leaks
         setTimeout(() => {
-          chrome.storage.onChanged.removeListener(storageListener);
+          if (isContextValid()) {
+            chrome.storage.onChanged.removeListener(storageListener);
+          }
         }, 2000);
       }
     });
