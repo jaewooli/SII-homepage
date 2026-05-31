@@ -141,7 +141,7 @@ function renderUserUI(user){
     supportbtn.hidden = true;
     }
 
-    if (user.username === 'developer') {
+    if (user.isAdmin) {
       const renewbtn = document.createElement('button');
       renewbtn.id = 'renew-btn';
       renewbtn.textContent = 'Renew Session';

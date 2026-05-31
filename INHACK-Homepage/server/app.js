@@ -375,7 +375,9 @@ app.post('/login', validateLogin, (req, res) => {
                 });
             }
 
-            req.session.user = { id: row.id, username: row.username, name: row.name };
+            const adminUser = process.env.ADMIN_USERNAME || 'developer';
+            const isAdmin = (row.username === adminUser);
+            req.session.user = { id: row.id, username: row.username, name: row.name, isAdmin };
             sendJson(res, {
                 status: 200, ok: true, action: 'auth', resource: 'users',
                 message: 'Login Success!.',
@@ -405,7 +407,8 @@ app.get('/me', (req, res) => {
 });
 
 app.post('/dreamhack/regenerate', async (req, res) => {
-  if (!req.session.user || req.session.user.username !== 'developer') {
+  const adminUser = process.env.ADMIN_USERNAME || 'developer';
+  if (!req.session.user || (req.session.user.username !== adminUser && !req.session.user.isAdmin)) {
     return sendJson(res, {
       status: 403, ok: false, action: 'create', resource: 'dreamhack_regenerate',
       message: 'Only the administrator can regenerate shared sessions', code: 'FORBIDDEN'
@@ -486,8 +489,9 @@ app.get('/dreamhack/logs', async (req, res) => {
     });
   }
 
-  const { username } = req.session.user;
-  const isAdmin = (username === 'developer');
+  const { username, isAdmin: sessionIsAdmin } = req.session.user;
+  const adminUser = process.env.ADMIN_USERNAME || 'developer';
+  const isAdmin = (username === adminUser || sessionIsAdmin);
 
   let queryAccess = `SELECT username, ip_address, timestamp FROM dreamhack_access_logs ORDER BY timestamp DESC LIMIT 50`;
   let querySolves = `SELECT username, challenge_id, challenge_name, timestamp FROM dreamhack_solves ORDER BY timestamp DESC LIMIT 50`;
@@ -549,8 +553,9 @@ app.post('/logout', (req, res) => {
 });
 
 app.post('/dreamhack/login', async (req, res) => {
-    const { id, username } = req.session.user;
-    if (username !== 'developer') {
+    const { id, username, isAdmin: sessionIsAdmin } = req.session.user;
+    const adminUser = process.env.ADMIN_USERNAME || 'developer';
+    if (username !== adminUser && !sessionIsAdmin) {
       return sendJson(res, {
         status: 403, ok: false, action: 'auth', resource: 'dreamhack',
         message: 'Only the administrator can synchronize the shared session',
@@ -705,7 +710,8 @@ app.post('/dreamhack/invalidate-session', (req, res) => {
 });
 
 app.post('/dreamhack/clear-shared-session', (req, res) => {
-  if (!req.session.user || req.session.user.username !== 'developer') {
+  const adminUser = process.env.ADMIN_USERNAME || 'developer';
+  if (!req.session.user || (req.session.user.username !== adminUser && !req.session.user.isAdmin)) {
     return sendJson(res, {
       status: 403, ok: false, action: 'delete', resource: 'dreamhack',
       message: 'Only the administrator can clear the shared session', code: 'FORBIDDEN'
