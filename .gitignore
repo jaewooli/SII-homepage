@@ -10,6 +10,7 @@ node_modules/
 *.sqlite
 *.log
 *.pem
+package-lock.json
 
 
 .antigravitycli/
