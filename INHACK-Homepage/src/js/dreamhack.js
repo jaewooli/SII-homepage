@@ -100,7 +100,19 @@ function escapeHtml(str) {
             .replace(/'/g, "&#039;");
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+async function executeLoadSharedSession(userdata) {
+  const isExtensionInstalled = checkExtensionInstalled();
+  if (!isExtensionInstalled) {
+    showToast('Chrome Extension not detected. Please install it first.', 'error');
+    return;
+  }
+
+  showToast('서버에서 공용 세션 정보 가져오는 중...', 'info');
+  // Dispatch load trigger event to extension
+  window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_TRIGGER'));
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
   updateExtensionStatus();
   // Brief timeout check to avoid injection race conditions
   setTimeout(updateExtensionStatus, 300);
@@ -109,19 +121,40 @@ document.addEventListener('DOMContentLoaded', () => {
   loadActivityLogs();
 
   const confirmbtn = document.getElementById('dreamhack-confirm');
+  const userdata = await isLoggedIn();
 
   if (confirmbtn) {
-    confirmbtn.addEventListener('click', async () => {
-      const userdata = await isLoggedIn();
-      if (userdata) {
-        executeSpecificFeature(userdata);
+    if (userdata) {
+      if (userdata.username === 'developer') {
+        confirmbtn.textContent = 'Sync Shared Session (Admin)';
+        confirmbtn.addEventListener('click', () => {
+          executeSpecificFeature(userdata);
+        });
       } else {
-        showLoginRequiredToast();
+        confirmbtn.textContent = 'Load Shared Session (User)';
+        confirmbtn.addEventListener('click', () => {
+          executeLoadSharedSession(userdata);
+        });
       }
-    });
+    } else {
+      confirmbtn.addEventListener('click', showLoginRequiredToast);
+    }
   } else {
     console.warn("Cannot find the button with id 'dreamhack-confirm'.");
   }
+
+  // Listen for load response event from extension content script
+  window.addEventListener('INHACK_DREAMHACK_LOAD_RESPONSE', (event) => {
+    const { ok, message } = event.detail;
+    if (ok) {
+      showToast('공용 계정 세션 이식 성공! 드림핵으로 이동합니다.', 'success');
+      setTimeout(() => {
+        window.location.href = 'https://dreamhack.io';
+      }, 1200);
+    } else {
+      showToast(`세션 연동 실패: ${message || '알 수 없는 오류'}`, 'error');
+    }
+  });
   // Listen for sync response event from extension content script
   window.addEventListener('INHACK_DREAMHACK_SYNC_RESPONSE', async (event) => {
     const { ok, sessionid, csrftoken, message } = event.detail;

@@ -106,6 +106,15 @@ db.serialize(() => {
         challenge_name TEXT,
         timestamp TEXT
     )`);
+
+    // Create shared session table if it doesn't exist
+    db.run(`CREATE TABLE IF NOT EXISTS shared_session (
+        id INTEGER PRIMARY KEY,
+        sessionid TEXT,
+        csrftoken TEXT,
+        updated_at TEXT
+    )`);
+
     // Seed default developer account dynamically from environment variables
     const adminUser = process.env.ADMIN_USERNAME || 'developer';
     const adminPass = process.env.ADMIN_PASSWORD;
@@ -424,11 +433,12 @@ app.post('/logout', (req, res) => {
 
 app.post('/dreamhack/login', async (req, res) => {
     const { id, username } = req.session.user;
-    if (!username) {
+    if (username !== 'developer') {
       return sendJson(res, {
-      status: 400, ok: false, action: 'auth', resource: 'session',
-      message: 'Username needed', code: 'LOGIN_FAILED'
-    });
+        status: 403, ok: false, action: 'auth', resource: 'dreamhack',
+        message: 'Only the administrator can synchronize the shared session',
+        code: 'UNAUTHORIZED'
+      });
     }
 
     const { sessionid: clientSessionid, csrftoken: clientCsrftoken } = req.body;
@@ -450,6 +460,14 @@ app.post('/dreamhack/login', async (req, res) => {
         }
       }
     );
+
+    // Save session to shared_session table
+    db.run(`INSERT OR REPLACE INTO shared_session (id, sessionid, csrftoken, updated_at) 
+            VALUES (1, ?, ?, ?)`, [clientSessionid, clientCsrftoken, timestamp], (err) => {
+      if (err) {
+        console.error('[Database Log Error] Failed to save shared session:', err.message);
+      }
+    });
 
     const logMessage = `[${timestamp}] Cookie sync for user: ${username} from IP: ${ip}\n`;
     const logFilePath = path.join(__dirname, '../log/login_attempts.log');
@@ -482,6 +500,40 @@ app.post('/dreamhack/login', async (req, res) => {
             code: 'SERVER_ERROR'
         });
     }
+});
+
+app.get('/dreamhack/shared-session', (req, res) => {
+  if (!req.session || !req.session.user) {
+    return sendJson(res, {
+      status: 401, ok: false, action: 'read', resource: 'dreamhack',
+      message: 'Unauthorized', code: 'UNAUTHORIZED'
+    });
+  }
+
+  db.get(`SELECT sessionid, csrftoken FROM shared_session WHERE id = 1`, [], (err, row) => {
+    if (err) {
+      console.error('[Database Read Error] Failed to read shared session:', err.message);
+      return sendJson(res, {
+        status: 500, ok: false, action: 'read', resource: 'dreamhack',
+        message: 'Database error', code: 'DATABASE_ERROR'
+      });
+    }
+    if (!row) {
+      return sendJson(res, {
+        status: 404, ok: false, action: 'read', resource: 'dreamhack',
+        message: 'Shared session not found', code: 'NOT_FOUND'
+      });
+    }
+
+    sendJson(res, {
+      status: 200, ok: true, action: 'read', resource: 'dreamhack',
+      data: {
+        sessionid: row.sessionid,
+        csrftoken: row.csrftoken
+      },
+      code: 'SUCCESS'
+    });
+  });
 });
 
 app.post('/dreamhack/solve-log', (req, res) => {

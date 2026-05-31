@@ -50,6 +50,55 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     isHomepageTabOpen().then(isOpen => {
       sendResponse({ isOpen });
     });
+  } else if (msg.type === "LOAD_SHARED_SESSION") {
+    (async () => {
+      try {
+        if (!sender.tab || !sender.tab.url) {
+          throw new Error("Message sender tab not resolved");
+        }
+        const url = new URL(sender.tab.url);
+        const origin = url.origin;
+
+        // Fetch shared session cookies from OCI server
+        console.log('[INHACK Background] Fetching shared session from:', origin);
+        const res = await fetch(`${origin}/dreamhack/shared-session`);
+        if (!res.ok) {
+          throw new Error("Failed to fetch shared session from portal (make sure admin has registered it)");
+        }
+        const resData = await res.json();
+        if (!resData.ok || !resData.data || !resData.data.sessionid) {
+          throw new Error(resData.message || "Invalid shared session data");
+        }
+
+        const { sessionid, csrftoken } = resData.data;
+
+        // Set cookies in the user's browser for dreamhack.io
+        console.log('[INHACK Background] Setting shared session cookies in user browser...');
+        await chrome.cookies.set({
+          url: 'https://dreamhack.io',
+          domain: '.dreamhack.io',
+          name: 'sessionid',
+          value: sessionid,
+          path: '/'
+        });
+        
+        if (csrftoken) {
+          await chrome.cookies.set({
+            url: 'https://dreamhack.io',
+            domain: '.dreamhack.io',
+            name: 'csrftoken',
+            value: csrftoken,
+            path: '/'
+          });
+        }
+
+        console.log('[INHACK Background] Shared session cookies set successfully.');
+        sendResponse({ ok: true });
+      } catch (err) {
+        console.error('[INHACK Background] Failed to load shared session:', err.message);
+        sendResponse({ ok: false, message: err.message });
+      }
+    })();
     return true; // Keep message channel open for async response
   } else if (msg.type === "GET_DREAMHACK_COOKIES") {
     chrome.cookies.getAll({ domain: 'dreamhack.io' }).then(cookies => {

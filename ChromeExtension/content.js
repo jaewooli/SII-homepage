@@ -43,3 +43,25 @@ window.addEventListener('INHACK_DREAMHACK_SYNC_TRIGGER', () => {
     }
   });
 });
+
+// Listen for shared session load trigger from the webpage
+window.addEventListener('INHACK_DREAMHACK_LOAD_TRIGGER', () => {
+  console.log('[INHACK Extension] Received load shared session trigger from webpage...');
+  
+  chrome.runtime.sendMessage({ 
+    type: "LOAD_SHARED_SESSION"
+  }, (response) => {
+    if (response && response.ok) {
+      console.log('[INHACK Extension] Shared session cookies set successfully.');
+      window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_RESPONSE', {
+        detail: { ok: true }
+      }));
+    } else {
+      const errMsg = response?.message || 'unknown error';
+      console.error('[INHACK Extension] Shared session load failed:', errMsg);
+      window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_RESPONSE', {
+        detail: { ok: false, message: errMsg }
+      }));
+    }
+  });
+});
