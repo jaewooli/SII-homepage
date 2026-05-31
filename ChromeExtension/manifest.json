@@ -1,5 +1,5 @@
 {
-  "name": "SII auth Popup",
+  "name": "INHACK Auth Popup",
   "description": "로그인/회원가입 및 Dreamhack 로그인 버튼",
   "version": "1.0",
   "manifest_version": 3,
@@ -23,17 +23,17 @@
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "/images/sii-logo-16.png",
-      "32": "/images/sii-logo-32.png",
-      "64": "/images/sii-logo-64.png",
-      "128": "/images/sii-logo-128.png"
+      "16": "/images/inhack-logo-16.png",
+      "32": "/images/inhack-logo-32.png",
+      "64": "/images/inhack-logo-64.png",
+      "128": "/images/inhack-logo-128.png"
     }
   },
   "icons": {
-    "16": "/images/sii-logo-16.png",
-    "32": "/images/sii-logo-32.png",
-    "64": "/images/sii-logo-64.png",
-    "128": "/images/sii-logo-128.png"
+    "16": "/images/inhack-logo-16.png",
+    "32": "/images/inhack-logo-32.png",
+    "64": "/images/inhack-logo-64.png",
+    "128": "/images/inhack-logo-128.png"
   },
   "content_scripts": [
     {

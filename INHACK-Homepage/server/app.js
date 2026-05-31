@@ -470,7 +470,7 @@ app.post('/dreamhack/solve-log', (req, res) => {
       const logFilePath = path.join(__dirname, '../log/dreamhack_solves.log');
       fs.appendFileSync(logFilePath, logMessage);
       
-      console.log(`[SII Tracker] Solve recorded: User '${username}' solved '${challengeName}' (${challengeId})`);
+      console.log(`[INHACK Tracker] Solve recorded: User '${username}' solved '${challengeName}' (${challengeId})`);
 
       sendJson(res, {
         status: 200, ok: true, action: 'create', resource: 'dreamhack_solves',

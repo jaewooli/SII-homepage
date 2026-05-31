@@ -1,5 +1,5 @@
-# SII-homepage and Chrome-Extension
+# INHACK-homepage and Chrome-Extension
 
-It's a homepage and Chrome-Extension for SII, group for security study in Inha University.
+It's a homepage and Chrome-Extension for INHACK, group for security study in Inha University.
 
-인하대학교 SII 동아리 홈페이지 & 크롬 확장
+인하대학교 INHACK 동아리 홈페이지 & 크롬 확장

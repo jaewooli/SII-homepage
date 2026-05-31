@@ -13,7 +13,7 @@ function showLoginRequiredToast() {
 }
 
 function checkExtensionInstalled() {
-  return document.documentElement.dataset.siiExtensionInstalled === "true";
+  return document.documentElement.dataset.inhackExtensionInstalled === "true";
 }
 
 function updateExtensionStatus() {
@@ -39,7 +39,7 @@ async function executeSpecificFeature(userdata) {
   showToast('드림핵 세션 동기화 요청 중...', 'info');
 
   // Trigger cookie sync from Chrome Extension
-  window.dispatchEvent(new CustomEvent('SII_DREAMHACK_SYNC_TRIGGER'));
+  window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_SYNC_TRIGGER'));
 }
 
 async function loadActivityLogs() {
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Listen for sync response event from extension content script
-  window.addEventListener('SII_DREAMHACK_SYNC_RESPONSE', async (event) => {
+  window.addEventListener('INHACK_DREAMHACK_SYNC_RESPONSE', async (event) => {
     const { ok, sessionid, csrftoken, message } = event.detail;
     if (ok) {
       if (!sessionid) {
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } else {
       if (message === 'HOMEPAGE_TAB_CLOSED') {
-        showToast('연동 기능을 사용하려면 SII 홈페이지에서 DREAMHACK 기능을 이용해주세요.', 'error');
+        showToast('연동 기능을 사용하려면 INHACK 홈페이지에서 DREAMHACK 기능을 이용해주세요.', 'error');
       } else {
         showToast(`쿠키 동기화 실패: ${message}`, 'error');
       }

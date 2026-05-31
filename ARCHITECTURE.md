@@ -1,14 +1,14 @@
-# SII Homepage - System Architecture & Solve Tracking Flow
+# INHACK Homepage - System Architecture & Solve Tracking Flow
 
-This document details the system architecture and data flows of the SII Security Study Group homepage portal and browser extension.
+This document details the system architecture and data flows of the INHACK Security Study Group homepage portal and browser extension.
 
 ---
 
 ## 🏗️ System Overview
 
 The project is split into two core entities:
-1. **SII Web Portal**: A Node/Express web server running locally (`http://localhost:8080`) backed by a SQLite database (`users.db`) to manage sessions, curriculum, timeline logs, and scoring metrics.
-2. **SII Chrome Extension**: A browser extension equipped with background workers, popups, and page content injection scripts to integrate browser context with local server databases.
+1. **INHACK Web Portal**: A Node/Express web server running locally (`http://localhost:8080`) backed by a SQLite database (`users.db`) to manage sessions, curriculum, timeline logs, and scoring metrics.
+2. **INHACK Chrome Extension**: A browser extension equipped with background workers, popups, and page content injection scripts to integrate browser context with local server databases.
 
 ---
 

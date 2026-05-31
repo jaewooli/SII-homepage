@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="SII - Gateway Authorization">
-    <title>SII Gateway Auth</title>
+    <meta name="description" content="INHACK - Gateway Authorization">
+    <title>INHACK Gateway Auth</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fira+Code:wght@400;500;700&family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -13,20 +13,20 @@
     <script type="module" src="/assets/js/auth.js"></script>
 </head>
 <body>
-    <h1>GATEWAY_AUTHORIZATION // <a href="/">SII_PORTAL</a></h1>
+    <h1>Portal Login // <a href="/">INHACK</a></h1>
 
     <section id="login"> 
-        <h2>SECURE_LOGIN</h2>
+        <h2>Sign In</h2>
         <form id="login-form" action="/login" method="POST">
-            <label for="login-username">Operator Username:</label>
-            <input type="text" id="login-username" name="username" placeholder="developer" required>
+            <label for="login-username">Username:</label>
+            <input type="text" id="login-username" name="username" placeholder="Enter username" required>
 
-            <label for="login-password">Access Password:</label>
-            <input type="password" id="login-password" name="password" placeholder="••••••••" required>
+            <label for="login-password">Password:</label>
+            <input type="password" id="login-password" name="password" placeholder="Enter password" required>
 
-            <button id="login-btn" type="submit">> INITIATE_SESSION</button>
+            <button id="login-btn" type="submit">Sign In</button>
         </form>
-        <p>Credentials not registered? <a href="mailto:jaeu1341@naver.com?subject=[SII Homepage] Support / Account Request">Contact Lab Support</a></p>
+        <p>Not registered? <a href="mailto:jaeu1341@naver.com?subject=[INHACK Homepage] Support / Account Request">Contact Support</a></p>
     </section>
 </body>
 </html>

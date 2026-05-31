@@ -1,25 +1,25 @@
-# SII Homepage - Development & Design Guidelines
+# INHACK Homepage - Development & Design Guidelines
 
-This document outlines the strict guidelines for editing, developing, and maintaining the SII Homepage codebase. All developers (including AI assistants) must read and adhere to these directives.
+This document outlines the strict guidelines for editing, developing, and maintaining the INHACK Homepage codebase. All developers (including AI assistants) must read and adhere to these directives.
 
 ---
 
 ## 🎨 1. Design & UI/UX Principles
-The SII Homepage utilizes a high-performance developer console aesthetic, heavily inspired by the **official Unity and Unreal Engine websites**. 
+The INHACK Homepage utilizes a formal, institutional portal aesthetic. The design is structured, professional, and rigid, suitable for an official academic security research organization.
 
 ### 🚫 Prohibited Design Styles
-- **No Toss/KakaoBank Style**: Avoid soft rounded containers (`border-radius: 20px+`), bubble shapes, pastel/friendly gradients, or playful emojis.
+- **No Hacker/Cyber HUD Aesthetic**: Avoid neon glows, telemetry bars, retro-terminal headers, scanline grids, uppercase-tracked mono fonts, or CLI-style decorations (e.g. `// OVERVIEW`, `> TERMINAL_MENU`).
+- **No Playful/Friendly Styles**: Avoid Kakao/Toss styles with soft rounded containers (`border-radius: 20px+`), pastel colors, or playful emojis.
 - **No Old Bank Styles**: Avoid dated, cluttered, table-heavy light-themed designs.
-- **No "AI-Created" Look**: Avoid generic placeholder graphics, abstract wavy SVGs, or standard default template components.
 
 ### 🎯 Mandatory Design Tokens
-- **Base Theme**: Default dark mode. Base background is deep black/obsidian (`#040508`), and card surfaces use deep slate (`#0a0d16`).
-- **Accent Lighting**: Sharp electric cyan (`#00f0ff`), high-fidelity blue (`#0066ff`), neon green (`#00ff66`) for success indicators, and neon red (`#ff003c`) for security errors.
-- **Sharp Geometry**: Layout components must use sharp rect borders (`border-radius: 2px` or `4px` max) to maintain a structural, industrial feel.
+- **Base Theme**: Default dark mode. Base background is premium dark slate-blue (`#0b0f19`), and card surfaces use structured slate (`#151b2d`).
+- **Accent Lighting**: Elegant sapphire/indigo blue (`#3b82f6` primary, `#2563eb` hover) for primary interactions. Use forest green (`#10b981`) for success/secure indicators and muted crimson (`#ef4444`) for errors/warnings.
+- **Sharp Geometry & Rigid Layout**: Layout components must use clean, rigid borders (`border-radius: 4px` max) and structured grid structures. No decorative angled corners or background scanlines.
 - **Typography Stack**:
-  - **Headings**: `Space Grotesk`, sans-serif (bold, uppercase, tracked out).
-  - **HUD/Telemetry/Tags**: `Fira Code`, monospace (`[PHASE_01]`, `// PRESENTER`).
-  - **Body Content**: `Outfit`, sans-serif (clean, lightweight).
+  - **Headings & Navigation**: `Outfit`, sans-serif (clean, bold, Title Case, standard tracking).
+  - **Body Content**: `Outfit`, sans-serif (highly readable, lightweight).
+  - **Technical Logs/Data**: `Fira Code`, monospace (only for actual data values such as IP addresses, timestamps, hashes, or logs).
 
 ---
 

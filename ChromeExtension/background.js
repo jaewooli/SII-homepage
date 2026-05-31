@@ -10,7 +10,7 @@ async function isHomepageTabOpen() {
     });
     return tabs && tabs.length > 0;
   } catch (err) {
-    console.error('[SII Background] Error querying tabs:', err);
+    console.error('[INHACK Background] Error querying tabs:', err);
     return false;
   }
 }
@@ -35,7 +35,7 @@ function verifyMessageSender(sender) {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!verifyMessageSender(sender)) {
-    console.warn("[SII Security] Blocked message from untrusted sender:", sender.tab ? sender.tab.url : "unknown");
+    console.warn("[INHACK Security] Blocked message from untrusted sender:", sender.tab ? sender.tab.url : "unknown");
     return;
   }
 
@@ -61,10 +61,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const sessionid = sessionidCookie ? sessionidCookie.value : '';
         const csrftoken = csrftokenCookie ? csrftokenCookie.value : '';
 
-        console.log('[SII Background] Retracted Dreamhack sessionid:', sessionid ? 'FOUND' : 'MISSING');
+        console.log('[INHACK Background] Retracted Dreamhack sessionid:', sessionid ? 'FOUND' : 'MISSING');
         sendResponse({ ok: true, sessionid, csrftoken });
       }).catch(err => {
-        console.error('[SII Background] Failed to query cookies:', err);
+        console.error('[INHACK Background] Failed to query cookies:', err);
         sendResponse({ ok: false, message: err.message });
       });
     });

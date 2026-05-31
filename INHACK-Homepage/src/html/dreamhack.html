@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="SII - Dreamhack Session Synchronization Link">
-    <title>SII - Dreamhack Access Portal</title>
+    <meta name="description" content="INHACK - Dreamhack Session Synchronization Link">
+    <title>INHACK - Dreamhack Access Portal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fira+Code:wght@400;500;700&family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -13,10 +13,10 @@
     <script type="module" src="/assets/js/dreamhack.js"></script>
 </head>
 <body>
-    <h1>DREAMHACK_PROXY_SYNC // <a href="/">SII_PORTAL</a></h1>
+    <h1>Dreamhack Integration // <a href="/">INHACK Portal</a></h1>
 
     <section id="dreamhack">
-        <h2>DREAMHACK ACCESS</h2>
+        <h2>Dreamhack Access</h2>
         
         <div class="status-wrapper">
             <span id="ext-status" class="status-badge status-disconnected">
@@ -29,33 +29,33 @@
             <!-- Option 1: Chrome Extension Sync -->
             <div class="option-card">
                 <div class="option-title">
-                    <span>> SYNC_SESSION</span>
+                    <span>Sync Session</span>
                 </div>
                 <div class="option-desc">
-                    Synchronize your local authorization token directly to the Dreamhack portal utilizing the installed SII Chrome Extension interface.
+                    Synchronize your local authorization token directly to the Dreamhack portal utilizing the installed INHACK Chrome Extension interface.
                 </div>
-                <button id="dreamhack-confirm" class="action-btn" type="button">> INITIALIZE_SYNC</button>
+                <button id="dreamhack-confirm" class="action-btn" type="button">Initialize Sync</button>
             </div>
 
             <!-- Option 2: Download Extension -->
             <div class="option-card">
                 <div class="option-title">
-                    <span>> INSTALL_EXTENSION</span>
+                    <span>Install Extension</span>
                 </div>
                 <div class="option-desc">
-                    If the secure SII Chrome Extension is missing or disabled, download the installation package to mount it on your browser.
+                    If the secure INHACK Chrome Extension is missing or disabled, download the installation package to mount it on your browser.
                 </div>
-                <a href="/assets/SII-Extension.zip" download id="dreamhack-download" class="download-btn">> DOWNLOAD EXTENSION (.ZIP)</a>
+                <a href="/assets/INHACK-Extension.zip" download id="dreamhack-download" class="download-btn">Download Extension (.ZIP)</a>
             </div>
         </div>
     </section>
 
     <!-- Activity Logs Panel -->
     <section id="logs-panel" class="logs-container">
-        <h2>DREAMHACK ACTIVITY LOGS</h2>
+        <h2>Dreamhack Activity Logs</h2>
         <div class="logs-grid">
             <div class="log-card">
-                <div class="log-card-title">> SESSION_SYNC_ATTEMPTS</div>
+                <div class="log-card-title">Session Sync Attempts</div>
                 <div class="log-table-wrapper">
                     <table class="log-table" id="access-log-table">
                         <thead>
@@ -75,7 +75,7 @@
             </div>
             
             <div class="log-card">
-                <div class="log-card-title">> CHALLENGE_SOLVE_LOGS</div>
+                <div class="log-card-title">Challenge Solve Logs</div>
                 <div class="log-table-wrapper">
                     <table class="log-table" id="solve-log-table">
                         <thead>

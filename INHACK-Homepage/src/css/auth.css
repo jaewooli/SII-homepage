@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SII Security Portal - Auth & Redirect Panel Stylesheet
+   INHACK Security Portal - Auth & Redirect Panel Stylesheet
    Design Style: Inspired by Unity & Unreal Engine Official Portals
    Covers: Login & Dreamhack Redirection Layouts
    ========================================================================== */
@@ -7,21 +7,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fira+Code:wght@400;500;700&family=Outfit:wght@300;400;500;700&display=swap');
 
 :root {
-    --bg-base: #040508;
-    --bg-surface: #0a0d16;
-    --color-cyan: #00f0ff;
-    --color-cyan-glow: rgba(0, 240, 255, 0.25);
-    --color-blue: #0066ff;
-    --color-blue-glow: rgba(0, 102, 255, 0.35);
-    --color-green: #00ff66;
-    --color-red: #ff003c;
+    --bg-base: #0b0f19;
+    --bg-surface: #151b2d;
+    --color-cyan: #3b82f6;
+    --color-cyan-glow: rgba(59, 130, 246, 0.15);
+    --color-blue: #2563eb;
+    --color-blue-glow: rgba(37, 99, 235, 0.15);
+    --color-green: #10b981;
+    --color-red: #ef4444;
     
-    --font-heading: 'Space Grotesk', sans-serif;
-    --font-body: 'Outfit', sans-serif;
+    --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'Fira Code', monospace;
     
-    --border-dim: 1px solid rgba(255, 255, 255, 0.05);
-    --border-tech: 1px solid rgba(0, 240, 255, 0.15);
+    --border-dim: 1px solid rgba(255, 255, 255, 0.08);
+    --border-tech: 1px solid rgba(59, 130, 246, 0.2);
     
     --transition-fast: 0.15s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -46,26 +46,19 @@ body {
     align-items: center;
     min-height: 100vh;
     padding: 2rem;
-    /* Grid backdrop */
-    background-image: 
-        linear-gradient(rgba(18, 24, 43, 0.4) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(18, 24, 43, 0.4) 1px, transparent 1px);
-    background-size: 40px 40px;
-    background-attachment: fixed;
 }
 
 /* ==========================================================================
    Header Reference Label
    ========================================================================== */
 h1 {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    font-weight: 500;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 600;
     color: #475569;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     margin-bottom: 2.5rem;
     text-align: center;
-    text-transform: uppercase;
 }
 
 h1 a {
@@ -74,8 +67,8 @@ h1 a {
 }
 
 h1 a:hover {
-    color: #ffffff;
-    text-shadow: 0 0 8px var(--color-cyan-glow);
+    color: var(--color-blue);
+    text-decoration: underline;
 }
 
 /* ==========================================================================
@@ -89,6 +82,7 @@ section {
     padding: 3.5rem 2.5rem;
     position: relative;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
     animation: panelSlideUp 0.35s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
 }
 
@@ -103,15 +97,17 @@ section {
     }
 }
 
-/* Glowing top accent stripe on panels */
+/* Top accent stripe on panels */
 section::before {
     content: "";
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--color-blue), var(--color-cyan));
+    height: 3px;
+    background: var(--color-cyan);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
 }
 
 section h2 {
@@ -134,10 +130,10 @@ form {
 }
 
 label {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
     color: #64748b;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     margin-bottom: 6px;
     text-transform: uppercase;
 }
@@ -146,18 +142,17 @@ input {
     background-color: rgba(0, 0, 0, 0.35);
     border: var(--border-dim);
     color: #ffffff;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: 0.92rem;
     padding: 0.9rem 1.1rem;
     margin-bottom: 1.5rem;
     transition: all var(--transition-fast);
-    border-radius: 2px;
+    border-radius: 4px;
 }
 
 input:focus {
     outline: none;
     border-color: var(--color-cyan);
-    box-shadow: 0 0 10px var(--color-cyan-glow);
     background-color: rgba(0, 0, 0, 0.5);
 }
 
@@ -170,11 +165,11 @@ button, .action-btn {
     font-size: 0.88rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     padding: 1rem;
     cursor: pointer;
     transition: all var(--transition-fast);
-    border-radius: 2px;
+    border-radius: 4px;
     margin-top: 0.5rem;
     text-align: center;
     display: inline-block;
@@ -182,8 +177,7 @@ button, .action-btn {
 
 button:hover, .action-btn:hover {
     background-color: var(--color-cyan);
-    color: #000000;
-    box-shadow: 0 0 15px var(--color-cyan-glow);
+    color: #ffffff;
 }
 
 button:active, .action-btn:active {
@@ -203,8 +197,8 @@ p a {
 }
 
 p a:hover {
-    color: #ffffff;
-    text-shadow: 0 0 6px var(--color-cyan-glow);
+    color: var(--color-blue);
+    text-decoration: underline;
 }
 
 /* ==========================================================================

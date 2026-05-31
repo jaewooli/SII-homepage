@@ -94,7 +94,7 @@ function renderUserUI(user){
     });
 
     supportbtn.addEventListener('click', () =>{
-      window.location.href = 'mailto:jaeu1341@naver.com?subject=[SII Homepage] Support / Account Request';
+      window.location.href = 'mailto:jaeu1341@naver.com?subject=[INHACK Homepage] Support / Account Request';
     });
   }
 }

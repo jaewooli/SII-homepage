@@ -1,11 +1,11 @@
 {
-  "name": "sii-homepage-root",
+  "name": "inhack-homepage-root",
   "version": "1.0.0",
-  "description": "Root workspace package management for SII Homepage and Chrome Extension",
-  "main": "SII-Homepage/server/app.js",
+  "description": "Root workspace package management for INHACK Homepage and Chrome Extension",
+  "main": "INHACK-Homepage/server/app.js",
   "scripts": {
-    "start": "node SII-Homepage/server/app.js",
-    "dev": "nodemon SII-Homepage/server/app.js"
+    "start": "node INHACK-Homepage/server/app.js",
+    "dev": "nodemon INHACK-Homepage/server/app.js"
   },
   "dependencies": {
     "axios": "^1.6.0",

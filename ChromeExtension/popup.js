@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           document.getElementById('loggedin').classList.remove('hidden');
           document.getElementById('tab-closed-warning').classList.add('hidden');
           document.getElementById('username').textContent = payload.data.username;
-          await chrome.storage.local.set({ SIIuser: { username: payload.data.username } });
+          await chrome.storage.local.set({ INHACKuser: { username: payload.data.username } });
         } else {
           document.getElementById('login').classList.add('hidden');
           document.getElementById('loggedin').classList.add('hidden');
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // No active session
     document.getElementById('login').classList.remove('hidden');
     document.getElementById('loggedin').classList.add('hidden');
-    await chrome.storage.local.remove('SIIuser');
+    await chrome.storage.local.remove('INHACKuser');
   } catch (err) {
     console.error(err);
     showMsg('세션 조회 오류', false);
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       chrome.runtime.sendMessage({ 
         type: "URL_REDIRECT", 
-        url: 'mailto:jaeu1341@naver.com?subject=[SII Chrome Extension] Support / Account Request' 
+        url: 'mailto:jaeu1341@naver.com?subject=[INHACK Chrome Extension] Support / Account Request' 
       });
     });
   }
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       // Clear express session first
       await fetch(SERVER_BASE + '/logout', { method: 'POST' });
-      await chrome.storage.local.remove('SIIuser');
+      await chrome.storage.local.remove('INHACKuser');
       setTimeout(() => location.reload(), 800);
     } catch (err) {
       console.error(err);
