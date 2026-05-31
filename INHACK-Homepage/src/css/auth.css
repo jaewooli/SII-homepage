@@ -503,3 +503,53 @@ p a:hover {
         flex-direction: column;
     }
 }
+
+/* ==========================================================================
+   Dreamhack Header Layout & Typography
+   ========================================================================== */
+.dreamhack-header {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto 2rem auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 0;
+    border-bottom: var(--border-dim);
+}
+
+.dreamhack-header .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.dreamhack-header img {
+    height: 38px;
+    width: auto;
+}
+
+.dreamhack-header .logo-text {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.dreamhack-header .logo-main {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.45rem;
+    line-height: 1.1;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #ffffff 0%, var(--color-cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.dreamhack-header .logo-sub {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: #475569;
+    letter-spacing: 2px;
+    margin-top: 2px;
+}
