@@ -223,7 +223,7 @@ function showForcePasswordChangeModal() {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 99999;
+    z-index: 9998;
   `;
 
   const modal = document.createElement('div');
