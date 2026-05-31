@@ -35,7 +35,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "/images/", "http://127.0.0.1:8080", "http://localhost:8080", "https://dreamhack.io"],
+      imgSrc: ["'self'", "data:", "http://127.0.0.1:8080", "http://localhost:8080", "https://dreamhack.io"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
       connectSrc: ["'self'", "http://127.0.0.1:8080", "http://localhost:8080", "https://dreamhack.io"]
     }
