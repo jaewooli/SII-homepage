@@ -99,6 +99,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             value: csrftoken,
             path: '/'
           });
+          await chrome.cookies.set({
+            url: 'https://dreamhack.io',
+            domain: '.dreamhack.io',
+            name: 'csrftoken',
+            value: csrftoken,
+            path: '/'
+          });
         }
 
         console.log('[INHACK Background] Shared session cookies set successfully.');
@@ -172,7 +179,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 async function getCsrfToken() {
   for (let attempt = 0; attempt < 25; attempt++) {
     try {
-      const cookie = await chrome.cookies.get({ url: 'https://dreamhack.io', name: 'csrf_token' });
+      // Try both csrf_token and csrftoken names
+      let cookie = await chrome.cookies.get({ url: 'https://dreamhack.io', name: 'csrf_token' });
+      if (cookie && cookie.value) {
+        return cookie.value;
+      }
+      cookie = await chrome.cookies.get({ url: 'https://dreamhack.io', name: 'csrftoken' });
       if (cookie && cookie.value) {
         return cookie.value;
       }
@@ -188,21 +200,31 @@ async function getCsrfTokenWithRetry(tabId) {
   let token = await getCsrfToken();
   if (token) return token;
 
-  // Fallback: nudge the server via a quick API call in the tab context
-  console.log('[INHACK Background] CSRF token not found in cookie store. Triggering fallback API request in tab context...');
+  // Fallback: trigger fetch requests directly from the background service worker context (which is not throttled)
+  console.log('[INHACK Background] CSRF token not found in cookie store. Triggering fallback fetches from service worker...');
   try {
-    await chrome.scripting.executeScript({
-      target: { tabId: tabId },
-      func: async () => {
-        try {
-          await fetch('/api/v1/wargame/challenges/', { method: 'GET' });
-        } catch (e) {
-          console.warn('[INHACK Background] Fallback fetch failed:', e);
-        }
+    await fetch('https://dreamhack.io/login/', {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       }
     });
   } catch (e) {
-    console.warn('[INHACK Background] Failed to execute fallback script:', e);
+    console.warn('[INHACK Background] Fallback login page fetch failed:', e);
+  }
+
+  token = await getCsrfToken();
+  if (token) return token;
+
+  try {
+    await fetch('https://dreamhack.io/api/v1/wargame/challenges/', {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+  } catch (e) {
+    console.warn('[INHACK Background] Fallback API fetch failed:', e);
   }
 
   // Poll again
@@ -220,6 +242,7 @@ async function loginToDreamhackAndSync(email, password, origin) {
     try {
       await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'sessionid' });
       await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrf_token' });
+      await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrftoken' });
     } catch (e) {}
 
     // Add a small delay to let Chrome process cookie deletions
@@ -296,7 +319,7 @@ async function loginToDreamhackAndSync(email, password, origin) {
 
       const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
       const sessionidCookie = cookies.find(c => c.name === 'sessionid');
-      const csrftokenCookie = cookies.find(c => c.name === 'csrf_token');
+      const csrftokenCookie = cookies.find(c => c.name === 'csrf_token') || cookies.find(c => c.name === 'csrftoken');
 
       if (!sessionidCookie) {
         throw new Error(`Session ${i + 1} sessionid cookie not found.`);
@@ -372,11 +395,13 @@ async function logoutDreamhackSharedSession(sessionid, csrftoken) {
           // Clear current page cookies first
           document.cookie = 'sessionid=; Path=/; Domain=.dreamhack.io; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
           document.cookie = 'csrf_token=; Path=/; Domain=.dreamhack.io; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+          document.cookie = 'csrftoken=; Path=/; Domain=.dreamhack.io; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
 
           // Set the cookies we want to invalidate
           document.cookie = `sessionid=${sessVal}; Path=/; Domain=.dreamhack.io; Secure; SameSite=Lax;`;
           if (csrfVal) {
             document.cookie = `csrf_token=${csrfVal}; Path=/; Domain=.dreamhack.io; Secure; SameSite=Lax;`;
+            document.cookie = `csrftoken=${csrfVal}; Path=/; Domain=.dreamhack.io; Secure; SameSite=Lax;`;
           }
 
           const logoutRes = await fetch('/users/logout/', {
@@ -394,6 +419,7 @@ async function logoutDreamhackSharedSession(sessionid, csrftoken) {
           // Clean up cookies again
           document.cookie = 'sessionid=; Path=/; Domain=.dreamhack.io; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
           document.cookie = 'csrf_token=; Path=/; Domain=.dreamhack.io; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+          document.cookie = 'csrftoken=; Path=/; Domain=.dreamhack.io; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
 
           return { ok: true };
         } catch (e) {
@@ -509,6 +535,7 @@ chrome.webRequest.onBeforeRequest.addListener(
     try {
       await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'sessionid' });
       await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrf_token' });
+      await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrftoken' });
     } catch (err) {
       console.warn('[INHACK Background] Failed to remove local cookies during intercept:', err);
     }
