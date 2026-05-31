@@ -218,7 +218,7 @@ if (isDreamhackDomain) {
           }
         };
         chrome.storage.onChanged.addListener(storageListener);
-        // Timeout after 2초 to avoid memory leaks
+        // Timeout after 2 seconds to avoid memory leaks
         setTimeout(() => {
           if (isContextValid()) {
             chrome.storage.onChanged.removeListener(storageListener);
@@ -234,4 +234,62 @@ if (isDreamhackDomain) {
     // If DOM is already loaded, check with a slight delay
     setTimeout(checkAlertFlag, 400);
   }
+
+  // Helper to trigger alert and run background intercept tasks on the current page immediately (preventing blank screen)
+  const performClientSideLogoutBlock = async () => {
+    if (!isContextValid()) {
+      window.location.reload();
+      return;
+    }
+
+    console.log('[INHACK Extension] Performing client-side logout interception...');
+    
+    // 1. Immediately alert the user on the current page before navigation starts
+    alert('[INHACK 디버그] 드림핵 로그아웃 시도가 감지되어 차단되었습니다. 다른 사용자의 공용 세션을 보호하기 위해 서버 로그아웃을 방지하고 로컬 브라우저 쿠키만 삭제합니다.');
+
+    // 2. Tell background worker to discard cookies and log to portal
+    chrome.runtime.sendMessage({ type: "STUDENT_LOGOUT_INTERCEPT" }, () => {
+      // 3. Clear storage flag just in case
+      chrome.storage.local.remove('showLogoutBlockedAlert', () => {
+        // 4. Redirect to main page only after cookies are cleared
+        window.location.href = 'https://dreamhack.io/';
+      });
+    });
+  };
+
+  // Intercept anchor clicks
+  document.addEventListener('click', (e) => {
+    let target = e.target;
+    while (target && target !== document.documentElement) {
+      if (target.tagName === 'A' && target.href) {
+        try {
+          const url = new URL(target.href);
+          if (url.pathname.includes('/users/logout')) {
+            // Stop the navigation
+            e.preventDefault();
+            e.stopPropagation();
+            performClientSideLogoutBlock();
+            return;
+          }
+        } catch (err) {}
+      }
+      target = target.parentNode;
+    }
+  }, true);
+
+  // Intercept form submissions
+  document.addEventListener('submit', (e) => {
+    const form = e.target;
+    if (form && form.action) {
+      try {
+        const url = new URL(form.action);
+        if (url.pathname.includes('/users/logout')) {
+          // Stop form submission
+          e.preventDefault();
+          e.stopPropagation();
+          performClientSideLogoutBlock();
+        }
+      } catch (err) {}
+    }
+  }, true);
 }

@@ -198,6 +198,30 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     chrome.storage.local.remove('INHACKuser');
     console.log('[INHACK Background] Logged-in user cleared.');
     sendResponse({ ok: true });
+  } else if (msg.type === "STUDENT_LOGOUT_INTERCEPT") {
+    (async () => {
+      try {
+        console.log('[INHACK Background] Intercepted student logout via client-side trigger. Discarding cookies locally...');
+        
+        // Clear cookies locally
+        await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'sessionid' });
+        await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrf_token' });
+        await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrftoken' });
+
+        // Notify portal for logs
+        const storageData = await chrome.storage.local.get('portalOrigin');
+        const portalOrigin = storageData.portalOrigin || 'http://localhost:8080';
+        fetch(`${portalOrigin}/dreamhack/intercept-logout`, {
+          method: 'POST'
+        }).catch(e => console.warn('[INHACK Background] Failed to log intercept:', e));
+
+        sendResponse({ ok: true });
+      } catch (err) {
+        console.error('[INHACK Background] Error handling client logout intercept:', err);
+        sendResponse({ ok: false, error: err.message });
+      }
+    })();
+    return true; // Keep message channel open for async response
   } else if (msg.type === "GET_DREAMHACK_COOKIES") {
     chrome.cookies.getAll({ domain: 'dreamhack.io' }).then(cookies => {
       const sessionidCookie = cookies.find(c => c.name === 'sessionid');
