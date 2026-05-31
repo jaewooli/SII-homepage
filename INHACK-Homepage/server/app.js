@@ -148,12 +148,14 @@ app.use(session({
 
 // Global Password Change Enforcer Middleware for initial users
 app.use((req, res, next) => {
-  const isAuthOrStatic = req.path.startsWith('/login') || 
+  const isAuthOrStatic = req.path === '/' ||
+                         req.path.startsWith('/login') || 
                          req.path.startsWith('/logout') || 
                          req.path.startsWith('/me') || 
                          req.path.startsWith('/change-password') || 
                          req.path.startsWith('/assets') || 
-                         req.path.startsWith('/images');
+                         req.path.startsWith('/images') ||
+                         req.path === '/frags/home.html';
 
   if (req.session && req.session.user && !req.session.user.isAdmin) {
     if (req.session.user.passwordChanged === 0 && !isAuthOrStatic) {
