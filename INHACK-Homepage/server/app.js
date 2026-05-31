@@ -44,6 +44,56 @@ app.use(helmet({
 
 let sessionid = "";
 
+// Shared session validation cache
+let lastSessionCheck = {
+  sessionid: "",
+  timestamp: 0,
+  isValid: false
+};
+
+async function isSessionValid(sid, csrf) {
+  if (!sid) return false;
+  try {
+    const response = await fetch('https://dreamhack.io/api/v1/wargame/challenges/', {
+      method: 'GET',
+      headers: {
+        'Cookie': `sessionid=${sid}${csrf ? `; csrf_token=${csrf}` : ''}`,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+
+    const cookies = response.headers.getSetCookie();
+    let isCleared = false;
+    cookies.forEach(cookie => {
+      if (cookie.includes('sessionid=""') || cookie.includes('sessionid=;') || (cookie.includes('sessionid=') && cookie.includes('1970'))) {
+        isCleared = true;
+      }
+    });
+
+    return !isCleared;
+  } catch (err) {
+    console.error('[Session Validation] Error checking session validity:', err.message);
+    // Fallback: If verification request fails due to network/server issue, assume it is valid to avoid false deletion.
+    return true;
+  }
+}
+
+async function checkAndUpdateSession(row) {
+  const { sessionid: sid, csrftoken: csrf } = row;
+  const now = Date.now();
+  if (lastSessionCheck.sessionid === sid && (now - lastSessionCheck.timestamp < 120000)) {
+    return lastSessionCheck.isValid;
+  }
+
+  const isValid = await isSessionValid(sid, csrf);
+  lastSessionCheck = {
+    sessionid: sid,
+    timestamp: now,
+    isValid: isValid
+  };
+  return isValid;
+}
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
@@ -483,6 +533,13 @@ app.post('/dreamhack/login', async (req, res) => {
         process.env.DREAMHACK_CSRF = clientCsrftoken;
       }
 
+      // Update validation cache
+      lastSessionCheck = {
+        sessionid: clientSessionid,
+        timestamp: Date.now(),
+        isValid: true
+      };
+
       console.log(`[Dreamhack Sync] Successfully synchronized session cookies for user: ${username}`);
 
       sendJson(res, {
@@ -525,14 +582,46 @@ app.get('/dreamhack/shared-session', (req, res) => {
       });
     }
 
-    sendJson(res, {
-      status: 200, ok: true, action: 'read', resource: 'dreamhack',
-      data: {
-        sessionid: row.sessionid,
-        csrftoken: row.csrftoken,
-        updated_at: row.updated_at
-      },
-      code: 'SUCCESS'
+    checkAndUpdateSession(row).then(isValid => {
+      if (!isValid) {
+        console.log('[Dreamhack Session Validation] Shared session is invalid. Clearing from database...');
+        db.run(`DELETE FROM shared_session WHERE id = 1`, [], (delErr) => {
+          if (delErr) {
+            console.error('[Database Error] Failed to delete invalid shared session:', delErr.message);
+          }
+        });
+        
+        // Clear global variables and environment variables
+        sessionid = "";
+        process.env.DREAMHACK_SESSIONID = "";
+        process.env.DREAMHACK_CSRF = "";
+        
+        return sendJson(res, {
+          status: 404, ok: false, action: 'read', resource: 'dreamhack',
+          message: 'Shared session is invalid and has been cleared', code: 'NOT_FOUND'
+        });
+      }
+
+      sendJson(res, {
+        status: 200, ok: true, action: 'read', resource: 'dreamhack',
+        data: {
+          sessionid: row.sessionid,
+          csrftoken: row.csrftoken,
+          updated_at: row.updated_at
+        },
+        code: 'SUCCESS'
+      });
+    }).catch(checkErr => {
+      console.error('[Dreamhack Session Check Error] Fallback to database value:', checkErr);
+      sendJson(res, {
+        status: 200, ok: true, action: 'read', resource: 'dreamhack',
+        data: {
+          sessionid: row.sessionid,
+          csrftoken: row.csrftoken,
+          updated_at: row.updated_at
+        },
+        code: 'SUCCESS'
+      });
     });
   });
 });
@@ -558,6 +647,13 @@ app.post('/dreamhack/clear-shared-session', (req, res) => {
     sessionid = "";
     process.env.DREAMHACK_SESSIONID = "";
     process.env.DREAMHACK_CSRF = "";
+
+    // Clear validation cache
+    lastSessionCheck = {
+      sessionid: "",
+      timestamp: 0,
+      isValid: false
+    };
 
     console.log('[Dreamhack Sync] Shared session cleared by admin.');
     sendJson(res, {

@@ -29,6 +29,27 @@ function updateExtensionStatus() {
   }
 }
 
+async function updateSharedSessionStatus() {
+  const badge = document.getElementById('session-status');
+  if (!badge) return;
+
+  try {
+    const res = await apiRequest('/dreamhack/shared-session', 'GET');
+    if (res.ok && res.data && res.data.sessionid) {
+      const timeStr = res.data.updated_at ? new Date(res.data.updated_at).toLocaleString() : 'N/A';
+      badge.className = 'status-badge status-connected';
+      badge.innerHTML = `<span class="status-dot"></span>Session: Active (Updated: ${timeStr})`;
+    } else {
+      badge.className = 'status-badge status-disconnected';
+      badge.innerHTML = '<span class="status-dot"></span>Session: Inactive (재발급 필요)';
+    }
+  } catch (err) {
+    console.error('Failed to fetch shared session status:', err);
+    badge.className = 'status-badge status-disconnected';
+    badge.innerHTML = '<span class="status-dot"></span>Session: Error Checking';
+  }
+}
+
 async function executeSpecificFeature(userdata) {
   const isExtensionInstalled = checkExtensionInstalled();
   if (!isExtensionInstalled) {
@@ -119,6 +140,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load activity logs list
   loadActivityLogs();
+  
+  // Load shared session status badge
+  updateSharedSessionStatus();
 
   const confirmbtn = document.getElementById('dreamhack-confirm');
   const userdata = await isLoggedIn();
@@ -142,6 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (ok) {
       showToast('드림핵 공용 계정 세션 재발급 및 동기화 완료!', 'success');
       loadActivityLogs();
+      updateSharedSessionStatus();
     } else {
       showToast(`드림핵 세션 재발급 실패: ${message || '알 수 없는 오류'}`, 'error');
     }
