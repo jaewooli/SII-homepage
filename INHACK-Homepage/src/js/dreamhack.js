@@ -197,10 +197,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('INHACK_DREAMHACK_LOAD_RESPONSE', (event) => {
     const { ok, message } = event.detail;
     if (ok) {
-      showToast('공용 계정 세션 이식 성공! 드림핵으로 이동합니다.', 'success');
-      setTimeout(() => {
-        window.location.href = 'https://dreamhack.io';
-      }, 1200);
+      showToast('공용 계정 세션 이식 성공! 새 탭에 드림핵이 열립니다.', 'success');
     } else {
       showToast(`세션 연동 실패: ${message || '알 수 없는 오류'}`, 'error');
     }

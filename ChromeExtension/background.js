@@ -151,6 +151,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           throw new Error('선택된 공유 세션이 만료되었습니다. 포털에서 자동 삭제 처리되었으니 세션 발급을 다시 시도해주세요.');
         }
 
+        // Open Dreamhack in a new tab upon successful session load
+        chrome.tabs.create({ url: 'https://dreamhack.io/', active: true });
+
         sendResponse({ ok: true });
       } catch (err) {
         console.error('[INHACK Background] Failed to load shared session:', err.message);
@@ -551,6 +554,16 @@ chrome.webRequest.onBeforeRequest.addListener(
         method: 'POST'
       }).catch(e => console.warn('[INHACK Background] Failed to log intercept:', e));
     });
+
+    // Force the tab to redirect to the dreamhack main page immediately
+    if (details.tabId && details.tabId !== chrome.tabs.TAB_ID_NONE) {
+      try {
+        await chrome.tabs.update(details.tabId, { url: 'https://dreamhack.io/' });
+        console.log('[INHACK Background] Tab redirected to main page.');
+      } catch (err) {
+        console.warn('[INHACK Background] Failed to redirect tab:', err);
+      }
+    }
   },
   { urls: ["https://dreamhack.io/users/logout", "https://dreamhack.io/users/logout/"] }
 );

@@ -216,6 +216,7 @@ p a:hover {
     border: var(--border-dim);
     padding: 1.5rem;
     transition: all var(--transition-fast);
+    text-align: center;
 }
 
 .option-card:hover {
@@ -231,6 +232,7 @@ p a:hover {
     margin-bottom: 0.5rem;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
 }
 
@@ -239,6 +241,15 @@ p a:hover {
     color: #64748b;
     line-height: 1.5;
     margin-bottom: 1.25rem;
+}
+
+.option-card .action-btn,
+.option-card .download-btn {
+    display: block;
+    margin: 1.25rem auto 0 auto;
+    width: 100%;
+    max-width: 260px;
+    text-align: center;
 }
 
 .status-wrapper {
