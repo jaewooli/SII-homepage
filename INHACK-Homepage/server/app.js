@@ -175,44 +175,48 @@ async function loginDreamhack(force = false){
     };
   }
 
-  const form = JSON.stringify({
-    email: process.env.DREAMHACKEMAIL,
-    password: process.env.DREAMHACKPASSWORD,
-    loginSave: false,
-  });
-
-  const res = await axios.post('https://dreamhack.io/api/v1/auth/login/', form, {
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Origin': 'https://dreamhack.io',
-      'Referer': 'https://dreamhack.io/login',
-      'Accept': 'application/json, text/plain, */*',
-      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
-    },
-  });
-
-  if (res.status === 200){
-    const cookies = res.headers['set-cookie'] || [];
-    let csrfToken = '';
-    let sessId = '';
-    
-    cookies.forEach(cookie => {
-      if (cookie.startsWith('csrftoken=')) {
-        csrfToken = cookie.split(';')[0].split('=')[1];
-      } else if (cookie.startsWith('sessionid=')) {
-        sessId = cookie.split(';')[0].split('=')[1];
-      }
+  try {
+    const loginRes = await fetch('https://dreamhack.io/api/v1/auth/login/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      body: JSON.stringify({
+        email: process.env.DREAMHACKEMAIL,
+        password: process.env.DREAMHACKPASSWORD,
+        loginSave: false
+      })
     });
 
-    if (sessId) {
-      sessionid = sessId;
-      process.env.DREAMHACK_SESSIONID = sessId;
-      if (csrfToken) {
-        process.env.DREAMHACK_CSRF = csrfToken;
+    if (loginRes.ok) {
+      const cookies = loginRes.headers.getSetCookie();
+      let csrfToken = '';
+      let sessId = '';
+      
+      cookies.forEach(cookie => {
+        if (cookie.startsWith('csrftoken=')) {
+          csrfToken = cookie.split(';')[0].split('=')[1];
+        } else if (cookie.startsWith('sessionid=')) {
+          sessId = cookie.split(';')[0].split('=')[1];
+        }
+      });
+
+      if (sessId) {
+        sessionid = sessId;
+        process.env.DREAMHACK_SESSIONID = sessId;
+        if (csrfToken) {
+          process.env.DREAMHACK_CSRF = csrfToken;
+        }
+        return { 'csrf_token': csrfToken, 'sessionid': sessId };
       }
-      return { 'csrf_token': csrfToken, 'sessionid': sessId };
+    } else {
+      const errText = await loginRes.text();
+      console.error('[Dreamhack Server Login] Login failed with status:', loginRes.status, errText);
     }
+  } catch (err) {
+    console.error('[Dreamhack Server Login] Error during fetch:', err.message);
   }
   return null;
 }
