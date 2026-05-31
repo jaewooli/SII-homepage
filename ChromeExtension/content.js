@@ -19,14 +19,11 @@ function setInstalledFlag() {
 setInstalledFlag();
 
 // Listen for custom trigger events from the webpage
-window.addEventListener('INHACK_DREAMHACK_SYNC_TRIGGER', (event) => {
+window.addEventListener('INHACK_DREAMHACK_SYNC_TRIGGER', () => {
   console.log('[INHACK Extension] Received cookie sync trigger from webpage. Querying background worker...');
-  const { email, password } = event.detail || {};
   
   chrome.runtime.sendMessage({ 
-    type: "GET_DREAMHACK_COOKIES",
-    email,
-    password
+    type: "GET_DREAMHACK_COOKIES"
   }, (response) => {
     if (response && response.ok) {
       console.log('[INHACK Extension] Cookie retraction completed successfully.');

@@ -407,24 +407,6 @@ app.get('/dreamhack/logs', async (req, res) => {
   }
 });
 
-app.get('/dreamhack/credentials', (req, res) => {
-  if (!req.session || !req.session.user) {
-    return sendJson(res, {
-      status: 401, ok: false, action: 'read', resource: 'dreamhack',
-      message: 'Unauthorized', code: 'UNAUTHORIZED'
-    });
-  }
-  sendJson(res, {
-    status: 200, ok: true, action: 'read', resource: 'dreamhack',
-    message: 'Credentials fetched',
-    data: {
-      email: process.env.DREAMHACKEMAIL,
-      password: process.env.DREAMHACKPASSWORD
-    },
-    code: 'OK'
-  });
-});
-
 app.post('/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) {  
@@ -499,60 +481,6 @@ app.post('/dreamhack/login', async (req, res) => {
             message: `Dreamhack API Error: ${error.message}`,
             code: 'SERVER_ERROR'
         });
-    }
-});
-
-app.post('/dreamhack/server-login', async (req, res) => {
-    if (!req.session || !req.session.user) {
-      return sendJson(res, {
-        status: 401, ok: false, action: 'auth', resource: 'dreamhack',
-        message: 'Unauthorized', code: 'UNAUTHORIZED'
-      });
-    }
-
-    const { id, username } = req.session.user;
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
-    const timestamp = new Date().toISOString();
-
-    try {
-      console.log('[Dreamhack Server Login] Initiating login request directly from OCI server...');
-      const result = await loginDreamhack(true);
-      
-      if (result && result.sessionid) {
-        // Log to database
-        db.run(`INSERT INTO dreamhack_access_logs (user_id, username, ip_address, timestamp) VALUES (?, ?, ?, ?)`, 
-          [id, username, ip, timestamp], (err) => {
-            if (err) console.error('[Database Log Error] Failed to log server login:', err.message);
-          }
-        );
-
-        // Log to file
-        const logMessage = `[${timestamp}] Server login for user: ${username} from IP: ${ip}\n`;
-        const logFilePath = path.join(__dirname, '../log/login_attempts.log');
-        fs.appendFileSync(logFilePath, logMessage);
-
-        console.log('[Dreamhack Server Login] Successfully logged in directly from server!');
-        return sendJson(res, {
-          status: 200, ok: true, action: 'auth', resource: 'dreamhack',
-          message: 'Server-side Dreamhack login successful',
-          data: result,
-          code: 'LOGIN_SUCCESS'
-        });
-      } else {
-        console.warn('[Dreamhack Server Login] Direct login failed.');
-        return sendJson(res, {
-          status: 400, ok: false, action: 'auth', resource: 'dreamhack',
-          message: 'Direct login failed (possibly blocked by Cloudflare)',
-          code: 'LOGIN_FAILED'
-        });
-      }
-    } catch (err) {
-      console.error('[Dreamhack Server Login] Error during direct login:', err.message);
-      return sendJson(res, {
-        status: 500, ok: false, action: 'auth', resource: 'dreamhack',
-        message: `Dreamhack API Error: ${err.message}`,
-        code: 'SERVER_ERROR'
-      });
     }
 });
 

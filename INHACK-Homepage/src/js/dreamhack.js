@@ -36,26 +36,10 @@ async function executeSpecificFeature(userdata) {
     return;
   }
 
-  showToast('드림핵 계정 정보 가져오는 중...', 'info');
-  try {
-    const credsRes = await apiRequest('/dreamhack/credentials', 'GET');
-    if (!credsRes.ok || !credsRes.data) {
-      showToast('포탈로부터 드림핵 계정 정보를 가져오는데 실패했습니다.', 'error');
-      return;
-    }
-    
-    showToast('드림핵 세션 동기화 요청 중...', 'info');
-    // Pass credentials to the extension via custom event
-    window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_SYNC_TRIGGER', {
-      detail: {
-        email: credsRes.data.email,
-        password: credsRes.data.password
-      }
-    }));
-  } catch (err) {
-    console.error(err);
-    showToast('계정 정보 조회 중 오류가 발생했습니다.', 'error');
-  }
+  showToast('드림핵 세션 동기화 요청 중...', 'info');
+
+  // Trigger cookie sync from Chrome Extension
+  window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_SYNC_TRIGGER'));
 }
 
 async function loadActivityLogs() {
@@ -138,32 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     console.warn("Cannot find the button with id 'dreamhack-confirm'.");
   }
-
-  const serverLoginBtn = document.getElementById('dreamhack-server-login');
-  if (serverLoginBtn) {
-    serverLoginBtn.addEventListener('click', async () => {
-      const userdata = await isLoggedIn();
-      if (!userdata) {
-        showLoginRequiredToast();
-        return;
-      }
-      
-      showToast('서버에서 드림핵 로그인 시도 중...', 'info');
-      try {
-        const syncRes = await apiRequest('/dreamhack/server-login', 'POST');
-        if (syncRes.ok) {
-          showToast('서버 드림핵 로그인 성공!', 'success');
-          loadActivityLogs();
-        } else {
-          showToast(`서버 로그인 실패: ${syncRes.message || '로그인 실패'}`, 'error');
-        }
-      } catch (err) {
-        console.error(err);
-        showToast('서버 통신 오류', 'error');
-      }
-    });
-  }
-
   // Listen for sync response event from extension content script
   window.addEventListener('INHACK_DREAMHACK_SYNC_RESPONSE', async (event) => {
     const { ok, sessionid, csrftoken, message } = event.detail;

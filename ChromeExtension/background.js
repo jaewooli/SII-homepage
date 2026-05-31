@@ -52,49 +52,24 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
     return true; // Keep message channel open for async response
   } else if (msg.type === "GET_DREAMHACK_COOKIES") {
-    (async () => {
-      try {
-        const { email, password } = msg;
-        if (!email || !password) {
-          throw new Error('Dreamhack credentials not provided by webpage');
-        }
+    chrome.cookies.getAll({ domain: 'dreamhack.io' }).then(cookies => {
+      const sessionidCookie = cookies.find(c => c.name === 'sessionid');
+      const csrftokenCookie = cookies.find(c => c.name === 'csrftoken');
 
-        // 2. Perform login request to dreamhack.io from browser
-        console.log('[INHACK Background] Logging in to Dreamhack on behalf of user...');
-        const loginRes = await fetch('https://dreamhack.io/api/v1/auth/login/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({ email, password, loginSave: false })
-        });
+      const sessionid = sessionidCookie ? sessionidCookie.value : '';
+      const csrftoken = csrftokenCookie ? csrftokenCookie.value : '';
 
-        if (!loginRes.ok) {
-          const errText = await loginRes.text();
-          console.error('[INHACK Background] Dreamhack login failed response:', errText);
-          throw new Error('Dreamhack authentication failed');
-        }
-
-        // 3. Extract cookies (the browser automatically stores cookies from the fetch response)
-        const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
-        const sessionidCookie = cookies.find(c => c.name === 'sessionid');
-        const csrftokenCookie = cookies.find(c => c.name === 'csrftoken');
-
-        const sessionid = sessionidCookie ? sessionidCookie.value : '';
-        const csrftoken = csrftokenCookie ? csrftokenCookie.value : '';
-
-        if (!sessionid) {
-          throw new Error('Dreamhack session cookie was not set after login');
-        }
-
-        console.log('[INHACK Background] Cookie sync successful.');
-        sendResponse({ ok: true, sessionid, csrftoken });
-      } catch (err) {
-        console.error('[INHACK Background] Sync failed:', err.message);
-        sendResponse({ ok: false, message: err.message });
+      if (!sessionid) {
+        sendResponse({ ok: false, message: "드림핵 로그인 세션이 발견되지 않았습니다. 드림핵(dreamhack.io)에 먼저 로그인해주세요." });
+        return;
       }
-    })();
+
+      console.log('[INHACK Background] Cookie sync successful.');
+      sendResponse({ ok: true, sessionid, csrftoken });
+    }).catch(err => {
+      console.error('[INHACK Background] Failed to query cookies:', err);
+      sendResponse({ ok: false, message: err.message });
+    });
     return true; // Keep message channel open for async response
   }
 });
