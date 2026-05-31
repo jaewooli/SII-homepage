@@ -368,6 +368,8 @@ async function pollForLoggedInCookies(sessionNum) {
 }
 
 async function loginToDreamhackAndSync(email, password, origin) {
+  const cleanEmail = email ? email.trim() : '';
+  console.log(`[INHACK Background] Attempting login. Email: "${cleanEmail}" (length: ${cleanEmail.length})`);
   const sessions = [];
 
   for (let i = 0; i < 3; i++) {
@@ -431,7 +433,7 @@ async function loginToDreamhackAndSync(email, password, origin) {
             return { ok: false, error: e.message };
           }
         },
-        args: [email, password]
+        args: [cleanEmail, password]
       });
 
       const runResult = injectionResults[0]?.result;

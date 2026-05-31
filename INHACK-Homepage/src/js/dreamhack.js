@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const saveBtn = document.getElementById('dh-admin-save-btn');
       if (saveBtn) {
         saveBtn.addEventListener('click', async () => {
-          const email = document.getElementById('dh-admin-email').value;
+          const email = document.getElementById('dh-admin-email').value.trim();
           const password = document.getElementById('dh-admin-password').value;
           if (!email || !password) {
             showToast('이메일과 비밀번호를 모두 입력해 주세요.', 'error');
