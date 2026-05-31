@@ -84,6 +84,15 @@ db.serialize(() => {
         name TEXT
     )`);
     
+    // Create dreamhack access tracking log table
+    db.run(`CREATE TABLE IF NOT EXISTS dreamhack_access_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        username TEXT,
+        ip_address TEXT,
+        timestamp TEXT
+    )`);
+    
     // Seed default developer account (password: 'developer_password')
     db.run(`INSERT OR IGNORE INTO users (username, password, name) 
             VALUES ('developer', '$2a$10$1MqylMlV2ta6UBokSD5e7OsadhRAq9Puecv3Z3VX606Ts4OYoTe6S', 'Developer')`);
@@ -266,6 +275,25 @@ app.get('/dreamhack/credentials', (req, res) => {
       message: 'Unauthorized', code: 'UNAUTHORIZED'
     });
   }
+  
+  const { id, username } = req.session.user;
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+  const timestamp = new Date().toISOString();
+  
+  // 1. Log to SQLite database
+  db.run(`INSERT INTO dreamhack_access_logs (user_id, username, ip_address, timestamp) VALUES (?, ?, ?, ?)`, 
+    [id, username, ip, timestamp], (err) => {
+      if (err) {
+        console.error('[Database Log Error] Failed to log dreamhack credential fetch:', err.message);
+      }
+    }
+  );
+  
+  // 2. Log to log file
+  const logMessage = `[${timestamp}] User '${username}' (ID: ${id}) requested Dreamhack credentials from IP: ${ip}\n`;
+  const logFilePath = path.join(__dirname, '../log/dreamhack_sync.log');
+  fs.appendFileSync(logFilePath, logMessage);
+
   sendJson(res, {
     status: 200, ok: true, action: 'read', resource: 'dreamhack',
     data: {
@@ -292,7 +320,7 @@ app.post('/logout', (req, res) => {
 });
 
 app.post('/dreamhack/login', async (req, res) => {
-    const { username } = req.session.user;
+    const { id, username } = req.session.user;
     if (!username) {
       return sendJson(res, {
       status: 400, ok: false, action: 'auth', resource: 'session',
@@ -300,7 +328,19 @@ app.post('/dreamhack/login', async (req, res) => {
     });
     }
 
-    const logMessage = `[${new Date().toISOString()}] Login attempt for user: ${username}\n`;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+    const timestamp = new Date().toISOString();
+    
+    // 1. Log to SQLite database
+    db.run(`INSERT INTO dreamhack_access_logs (user_id, username, ip_address, timestamp) VALUES (?, ?, ?, ?)`, 
+      [id, username, ip, timestamp], (err) => {
+        if (err) {
+          console.error('[Database Log Error] Failed to log dreamhack login attempt:', err.message);
+        }
+      }
+    );
+
+    const logMessage = `[${timestamp}] Login attempt for user: ${username} from IP: ${ip}\n`;
     const logFilePath = path.join(__dirname, '../log/login_attempts.log');
 
     fs.appendFileSync(logFilePath, logMessage);
