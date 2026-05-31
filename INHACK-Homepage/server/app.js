@@ -100,73 +100,7 @@ app.use(helmet({
 
 let sessionid = "";
 
-// Shared session validation cache
-let sessionCache = {};
 
-async function isSessionValid(sid, csrf) {
-  if (!sid) {
-    console.log('[Session Validation] Invalid check: Session ID is missing.');
-    return false;
-  }
-  try {
-    // Fetch a public API endpoint to bypass Cloudflare 405/403 blocks on page routes
-    const response = await fetch('https://dreamhack.io/api/v1/wargame/challenges/', {
-      method: 'GET',
-      headers: {
-        'Cookie': `sessionid=${sid}${csrf ? `; csrf_token=${csrf}` : ''}`,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
-    });
-
-    if (!response.ok) {
-      console.warn(`[Session Validation] Validation request returned status ${response.status}. Assuming session is valid to prevent false deletion.`);
-      return true;
-    }
-
-    // Check if the Django session middleware explicitly deleted/expired the invalid session cookie
-    let isCleared = false;
-    let cookieHeaders = [];
-    if (typeof response.headers.getSetCookie === 'function') {
-      cookieHeaders = response.headers.getSetCookie();
-    } else {
-      const rawCookie = response.headers.get('set-cookie');
-      if (rawCookie) cookieHeaders = [rawCookie];
-    }
-
-    cookieHeaders.forEach(cookie => {
-      if (cookie.includes('sessionid=""') || cookie.includes('sessionid=;') || (cookie.includes('sessionid=') && cookie.includes('1970'))) {
-        isCleared = true;
-      }
-    });
-
-    if (isCleared) {
-      console.log(`[Session Validation] Session ${sid.substring(0, 8)}... is INVALID: Server sent Set-Cookie to clear sessionid. Headers:`, cookieHeaders);
-      return false;
-    }
-
-    // Since the API responded with 200 OK and did NOT delete the cookie, the session is 100% valid
-    return true;
-  } catch (err) {
-    console.error('[Session Validation] Error checking session validity:', err.message, err.stack);
-    // Fallback: If verification request fails due to network/server issue, assume it is valid to avoid false deletion.
-    return true;
-  }
-}
-
-async function checkAndUpdateSession(row) {
-  const { sessionid: sid, csrftoken: csrf } = row;
-  const now = Date.now();
-  if (sessionCache[sid] && (now - sessionCache[sid].timestamp < 120000)) {
-    return sessionCache[sid].isValid;
-  }
-
-  const isValid = await isSessionValid(sid, csrf);
-  sessionCache[sid] = {
-    timestamp: now,
-    isValid: isValid
-  };
-  return isValid;
-}
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -531,14 +465,7 @@ app.post('/dreamhack/regenerate', async (req, res) => {
     process.env.DREAMHACK_CSRF = primarySession.csrftoken;
   }
 
-  // Clear and update validation cache
-  sessionCache = {};
-  sessions.forEach(s => {
-    sessionCache[s.sessionid] = {
-      timestamp: Date.now(),
-      isValid: true
-    };
-  });
+
 
   console.log(`[Dreamhack Connect] Session pool regenerated successfully. Count: ${sessions.length}`);
 
@@ -679,14 +606,7 @@ app.post('/dreamhack/login', async (req, res) => {
         process.env.DREAMHACK_CSRF = primarySession.csrftoken;
       }
 
-      // Update validation cache
-      sessionCache = {};
-      sessions.forEach(s => {
-        sessionCache[s.sessionid] = {
-          timestamp: Date.now(),
-          isValid: true
-        };
-      });
+
 
       console.log(`[Dreamhack Sync] Successfully synchronized ${sessions.length} session cookies for user: ${username}`);
 
@@ -715,7 +635,7 @@ app.get('/dreamhack/shared-session', (req, res) => {
     });
   }
 
-  db.all(`SELECT id, sessionid, csrftoken, updated_at FROM shared_session`, [], async (err, rows) => {
+  db.all(`SELECT id, sessionid, csrftoken, updated_at FROM shared_session`, [], (err, rows) => {
     if (err) {
       console.error('[Database Read Error] Failed to read shared sessions:', err.message);
       return sendJson(res, {
@@ -730,77 +650,21 @@ app.get('/dreamhack/shared-session', (req, res) => {
       });
     }
 
-    // Check validity of all sessions in the pool
-    try {
-      const checkPromises = rows.map(async (row) => {
-        const isValid = await checkAndUpdateSession(row);
-        return { row, isValid };
-      });
-      const results = await Promise.all(checkPromises);
-      
-      const validRows = [];
-      const invalidIds = [];
-      
-      results.forEach(resObj => {
-        if (resObj.isValid) {
-          validRows.push(resObj.row);
-        } else {
-          invalidIds.push(resObj.row.id);
-        }
-      });
+    // Assign a random session from the pool to distribute the load, bypassing active verification
+    const randomIndex = Math.floor(Math.random() * rows.length);
+    const chosenSession = rows[randomIndex];
 
-      // Async cleanup of invalid sessions from database
-      if (invalidIds.length > 0) {
-        console.log(`[Dreamhack Session Validation] Clearing invalid sessions from DB: IDs ${invalidIds.join(', ')}`);
-        const placeholders = invalidIds.map(() => '?').join(',');
-        db.run(`DELETE FROM shared_session WHERE id IN (${placeholders})`, invalidIds, (delErr) => {
-          if (delErr) {
-            console.error('[Database Error] Failed to delete invalid sessions:', delErr.message);
-          }
-        });
-      }
-
-      if (validRows.length === 0) {
-        // Reset server-side global variables if no sessions are left
-        sessionid = "";
-        process.env.DREAMHACK_SESSIONID = "";
-        process.env.DREAMHACK_CSRF = "";
-        return sendJson(res, {
-          status: 404, ok: false, action: 'read', resource: 'dreamhack',
-          message: 'All shared sessions are invalid and have been cleared', code: 'NOT_FOUND'
-        });
-      }
-
-      // Assign a random valid session to distribute the load
-      const randomIndex = Math.floor(Math.random() * validRows.length);
-      const chosenSession = validRows[randomIndex];
-
-      sendJson(res, {
-        status: 200, ok: true, action: 'read', resource: 'dreamhack',
-        data: {
-          sessionid: chosenSession.sessionid,
-          csrftoken: chosenSession.csrftoken,
-          updated_at: chosenSession.updated_at,
-          total_sessions: rows.length,
-          valid_sessions: validRows.length
-        },
-        code: 'SUCCESS'
-      });
-    } catch (checkErr) {
-      console.error('[Dreamhack Session Pool Check Error] Fallback to first database row:', checkErr);
-      const row = rows[0];
-      sendJson(res, {
-        status: 200, ok: true, action: 'read', resource: 'dreamhack',
-        data: {
-          sessionid: row.sessionid,
-          csrftoken: row.csrftoken,
-          updated_at: row.updated_at,
-          total_sessions: rows.length,
-          valid_sessions: rows.length
-        },
-        code: 'SUCCESS'
-      });
-    }
+    sendJson(res, {
+      status: 200, ok: true, action: 'read', resource: 'dreamhack',
+      data: {
+        sessionid: chosenSession.sessionid,
+        csrftoken: chosenSession.csrftoken,
+        updated_at: chosenSession.updated_at,
+        total_sessions: rows.length,
+        valid_sessions: rows.length
+      },
+      code: 'SUCCESS'
+    });
   });
 });
 
@@ -829,8 +693,7 @@ app.post('/dreamhack/invalidate-session', (req, res) => {
       });
     }
 
-    // Clear validation cache for this session
-    delete sessionCache[targetSessionid];
+
     console.log(`[Dreamhack Sync] Invalid session deleted from DB via client report: ${targetSessionid.substring(0, 8)}...`);
 
     sendJson(res, {
@@ -862,8 +725,7 @@ app.post('/dreamhack/clear-shared-session', (req, res) => {
     process.env.DREAMHACK_SESSIONID = "";
     process.env.DREAMHACK_CSRF = "";
 
-    // Clear validation cache
-    sessionCache = {};
+
 
     console.log('[Dreamhack Sync] Shared session cleared by admin.');
     sendJson(res, {
