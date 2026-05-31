@@ -8,6 +8,55 @@ async function isLoggedIn() {
   return r.data;
 }
 
+// Auto-seed E2E credentials if plain text exists in env and database is empty
+async function autoSeedE2ECredentials(plainEmail, plainPassword) {
+  console.log('[E2E Setup] Plain text credentials detected in env. Auto-seeding E2E environment...');
+  try {
+    // 1. Generate AES-GCM Key (JWK)
+    const key = await window.crypto.subtle.generateKey(
+      { name: "AES-GCM", length: 256 },
+      true,
+      ["encrypt", "decrypt"]
+    );
+    const jwk = await window.crypto.subtle.exportKey("jwk", key);
+
+    // 2. Encrypt Password
+    const enc = new TextEncoder();
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await window.crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: iv },
+      key,
+      enc.encode(plainPassword)
+    );
+
+    const ciphertextBase64 = btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+    const ivBase64 = btoa(String.fromCharCode(...iv));
+
+    // 3. Dispatch master key save to chrome extension
+    window.dispatchEvent(new CustomEvent('INHACK_SAVE_MASTER_KEY', {
+      detail: { jwk }
+    }));
+
+    // Delay to let extension save the key
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    // 4. Save encrypted credentials to server
+    const saveRes = await apiRequest('/dreamhack/encrypted-credentials', 'POST', {
+      encryptedPassword: ciphertextBase64,
+      iv: ivBase64
+    });
+
+    if (saveRes.ok) {
+      console.log('[E2E Setup] E2E Auto-seeding completed successfully.');
+      showToast('E2E 보안 환경이 자동으로 안전하게 구축되었습니다!', 'success');
+    } else {
+      console.error('[E2E Setup] Auto-seeding server save failed:', saveRes.message);
+    }
+  } catch (err) {
+    console.error('[E2E Setup] Fatal error during E2E auto-seeding:', err);
+  }
+}
+
 function showLoginRequiredToast() {
   showToast('You need to Login first', 'error');
 }
@@ -183,6 +232,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Render Admin E2E Credential Setup UI if user is admin
   if (userdata && userdata.isAdmin) {
+    // E2E Auto-seeding check
+    try {
+      const credRes = await apiRequest('/dreamhack/encrypted-credentials', 'GET');
+      if (credRes.ok && credRes.data && credRes.data.isPlain) {
+        await autoSeedE2ECredentials(credRes.data.email, credRes.data.plainPassword);
+      }
+    } catch (e) {
+      console.warn('[E2E Check] Error checking credentials state:', e);
+    }
+
     const container = document.querySelector('.option-container');
     if (container) {
       const adminCard = document.createElement('div');

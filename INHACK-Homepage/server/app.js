@@ -454,16 +454,31 @@ app.get('/dreamhack/encrypted-credentials', (req, res) => {
         message: 'Database error', code: 'DATABASE_ERROR'
       });
     }
+
     if (!row) {
+      // Fallback: If E2E is not seeded yet, check if plaintext credentials exist in env
+      if (process.env.DREAMHACKPASSWORD) {
+        return sendJson(res, {
+          status: 200, ok: true, action: 'read', resource: 'dreamhack_credentials',
+          data: {
+            isPlain: true,
+            email: process.env.DREAMHACKEMAIL || '',
+            plainPassword: process.env.DREAMHACKPASSWORD
+          },
+          code: 'PLAINTEXT_FALLBACK'
+        });
+      }
+
       return sendJson(res, {
         status: 404, ok: false, action: 'read', resource: 'dreamhack_credentials',
-        message: 'No encrypted credentials found', code: 'NOT_FOUND'
+        message: 'No credentials found in database or environment', code: 'NOT_FOUND'
       });
     }
 
     sendJson(res, {
       status: 200, ok: true, action: 'read', resource: 'dreamhack_credentials',
       data: {
+        isPlain: false,
         email: process.env.DREAMHACKEMAIL || '',
         encryptedPassword: row.encrypted_password,
         iv: row.iv
