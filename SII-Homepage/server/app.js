@@ -321,10 +321,20 @@ app.get('/dreamhack/logs', (req, res) => {
     });
   }
 
-  const queryAccess = `SELECT username, ip_address, timestamp FROM dreamhack_access_logs ORDER BY timestamp DESC LIMIT 50`;
-  const querySolves = `SELECT username, challenge_id, challenge_name, timestamp FROM dreamhack_solves ORDER BY timestamp DESC LIMIT 50`;
+  const { username } = req.session.user;
+  const isAdmin = (username === 'developer');
 
-  db.all(queryAccess, [], (err, accessLogs) => {
+  let queryAccess = `SELECT username, ip_address, timestamp FROM dreamhack_access_logs ORDER BY timestamp DESC LIMIT 50`;
+  let querySolves = `SELECT username, challenge_id, challenge_name, timestamp FROM dreamhack_solves ORDER BY timestamp DESC LIMIT 50`;
+  let queryParams = [];
+
+  if (!isAdmin) {
+    queryAccess = `SELECT username, ip_address, timestamp FROM dreamhack_access_logs WHERE username = ? ORDER BY timestamp DESC LIMIT 50`;
+    querySolves = `SELECT username, challenge_id, challenge_name, timestamp FROM dreamhack_solves WHERE username = ? ORDER BY timestamp DESC LIMIT 50`;
+    queryParams = [username];
+  }
+
+  db.all(queryAccess, queryParams, (err, accessLogs) => {
     if (err) {
       console.error('[Database Read Error] Failed to read dreamhack access logs:', err.message);
       return sendJson(res, {
@@ -333,7 +343,7 @@ app.get('/dreamhack/logs', (req, res) => {
       });
     }
 
-    db.all(querySolves, [], (err, solveLogs) => {
+    db.all(querySolves, queryParams, (err, solveLogs) => {
       if (err) {
         console.error('[Database Read Error] Failed to read dreamhack solve logs:', err.message);
         return sendJson(res, {
