@@ -37,8 +37,10 @@ async function updateSharedSessionStatus() {
     const res = await apiRequest('/dreamhack/shared-session', 'GET');
     if (res.ok && res.data && res.data.sessionid) {
       const timeStr = res.data.updated_at ? new Date(res.data.updated_at).toLocaleString() : 'N/A';
+      const valid = res.data.valid_sessions || 1;
+      const total = res.data.total_sessions || 1;
       badge.className = 'status-badge status-connected';
-      badge.innerHTML = `<span class="status-dot"></span>Session: Active (Updated: ${timeStr})`;
+      badge.innerHTML = `<span class="status-dot"></span>Session: Active (Pool: ${valid}/${total}, Updated: ${timeStr})`;
     } else {
       badge.className = 'status-badge status-disconnected';
       badge.innerHTML = '<span class="status-dot"></span>Session: Inactive (재발급 필요)';
@@ -67,7 +69,7 @@ async function loadActivityLogs() {
   try {
     const res = await apiRequest('/dreamhack/logs', 'GET');
     if (res.ok && res.data) {
-      const { accessLogs, solveLogs } = res.data;
+      const { accessLogs, solveLogs, interceptLogs } = res.data;
       
       // Render access logs
       const accessBody = document.querySelector('#access-log-table tbody');
@@ -104,6 +106,25 @@ async function loadActivityLogs() {
           }).join('');
         } else {
           solveBody.innerHTML = `<tr><td colspan="3" class="log-empty">No solved challenges logged yet.</td></tr>`;
+        }
+      }
+
+      // Render logout interception logs
+      const interceptBody = document.querySelector('#intercept-log-table tbody');
+      if (interceptBody) {
+        if (interceptLogs && interceptLogs.length > 0) {
+          interceptBody.innerHTML = interceptLogs.map(log => {
+            const timeStr = new Date(log.timestamp).toLocaleString();
+            return `
+              <tr>
+                <td>${escapeHtml(log.username)}</td>
+                <td>${escapeHtml(log.ip_address)}</td>
+                <td>${timeStr}</td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          interceptBody.innerHTML = `<tr><td colspan="3" class="log-empty">No logout attempts intercepted yet.</td></tr>`;
         }
       }
     }

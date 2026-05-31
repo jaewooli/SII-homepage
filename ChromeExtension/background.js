@@ -44,6 +44,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return;
   }
 
+  // Cache portal origin in local storage when message is received from portal
+  if (sender.tab && sender.tab.url) {
+    try {
+      const url = new URL(sender.tab.url);
+      chrome.storage.local.set({ 'portalOrigin': url.origin });
+    } catch (e) {}
+  }
+
   if (msg.type === "URL_REDIRECT") {
     chrome.tabs.create({ url: msg.url });
   } else if (msg.type === "CHECK_HOMEPAGE_TAB") {
@@ -154,156 +162,133 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 async function loginToDreamhackAndSync(email, password, origin) {
-  // Clear existing sessionid cookie for dreamhack.io to force Django to generate a fresh session
-  console.log('[INHACK Background] Clearing existing sessionid cookie to force a new session...');
-  try {
-    await chrome.cookies.remove({
-      url: 'https://dreamhack.io',
-      name: 'sessionid'
+  const sessions = [];
+
+  for (let i = 0; i < 5; i++) {
+    console.log(`[INHACK Background] Generating session ${i + 1}/5...`);
+
+    // Clear existing cookies locally to force Django to generate a fresh session ID
+    try {
+      await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'sessionid' });
+      await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrf_token' });
+    } catch (e) {}
+
+    // Create background tab
+    const tab = await chrome.tabs.create({
+      url: 'https://dreamhack.io/login/',
+      active: false
     });
-  } catch (e) {
-    console.warn('[INHACK Background] Failed to clear sessionid cookie (it might not exist):', e);
-  }
 
-  console.log('[INHACK Background] Creating background tab for Dreamhack first-party login...');
-  
-  // 1. Create a background tab pointing to Dreamhack login page
-  const tab = await chrome.tabs.create({
-    url: 'https://dreamhack.io/login/',
-    active: false
-  });
-
-  try {
-    // 2. Wait for the tab to complete loading
-    console.log('[INHACK Background] Waiting for login page to load in tab:', tab.id);
-    await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        chrome.tabs.onUpdated.removeListener(listener);
-        reject(new Error('Dreamhack login page load timeout'));
-      }, 10000); // 10s timeout
-
-      function listener(tabId, changeInfo) {
-        if (tabId === tab.id && changeInfo.status === 'complete') {
-          clearTimeout(timeout);
+    try {
+      // Wait load
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
           chrome.tabs.onUpdated.removeListener(listener);
-          resolve();
-        }
-      }
-      chrome.tabs.onUpdated.addListener(listener);
-    });
+          reject(new Error(`Session ${i + 1} login page load timeout`));
+        }, 10000);
 
-    // 3. Execute login fetch script inside the tab context
-    console.log('[INHACK Background] Executing login request within first-party tab context...');
-    const injectionResults = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: async (userEmail, userPassword) => {
-        try {
-          // Read CSRF token from page cookie
-          const getCookie = (name) => {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return parts.pop().split(';').shift();
-            return '';
-          };
-
-          const csrfToken = getCookie('csrf_token');
-          if (!csrfToken) {
-            return { ok: false, error: 'CSRF cookie not found in page document.cookie: ' + document.cookie };
+        function listener(tabId, changeInfo) {
+          if (tabId === tab.id && changeInfo.status === 'complete') {
+            clearTimeout(timeout);
+            chrome.tabs.onUpdated.removeListener(listener);
+            resolve();
           }
+        }
+        chrome.tabs.onUpdated.addListener(listener);
+      });
 
-          // 1. Invalidate old session on Dreamhack server by calling logout
-          console.log('[INHACK Tab] Logging out old session to invalidate it...');
+      // Execute login request inside tab context
+      const injectionResults = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: async (userEmail, userPassword) => {
           try {
-            await fetch('/users/logout/', {
+            const getCookie = (name) => {
+              const value = `; ${document.cookie}`;
+              const parts = value.split(`; ${name}=`);
+              if (parts.length === 2) return parts.pop().split(';').shift();
+              return '';
+            };
+
+            const csrfToken = getCookie('csrf_token');
+            if (!csrfToken) {
+              return { ok: false, error: 'CSRF cookie not found in page document.cookie' };
+            }
+
+            const loginRes = await fetch('/api/v1/auth/login/', {
               method: 'POST',
               headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 'X-CSRFToken': csrfToken
-              }
+              },
+              body: JSON.stringify({
+                email: userEmail,
+                password: userPassword,
+                loginSave: false
+              })
             });
+
+            if (!loginRes.ok) {
+              const errText = await loginRes.text();
+              return { ok: false, error: `Login API responded with status ${loginRes.status}: ${errText}` };
+            }
+
+            return { ok: true };
           } catch (e) {
-            console.warn('[INHACK Tab] Failed to logout old session:', e);
+            return { ok: false, error: e.message };
           }
+        },
+        args: [email, password]
+      });
 
-          // 2. Perform new login
-          const loginRes = await fetch('/api/v1/auth/login/', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify({
-              email: userEmail,
-              password: userPassword,
-              loginSave: false
-            })
-          });
+      const runResult = injectionResults[0]?.result;
+      if (!runResult || !runResult.ok) {
+        throw new Error(runResult?.error || `Session ${i + 1} login execution failed.`);
+      }
 
-          if (!loginRes.ok) {
-            const errText = await loginRes.text();
-            return { ok: false, error: `Login API responded with status ${loginRes.status}: ${errText}` };
-          }
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-          return { ok: true };
-        } catch (e) {
-          return { ok: false, error: e.message };
-        }
-      },
-      args: [email, password]
-    });
+      const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
+      const sessionidCookie = cookies.find(c => c.name === 'sessionid');
+      const csrftokenCookie = cookies.find(c => c.name === 'csrf_token');
 
-    // Verify result
-    const runResult = injectionResults[0]?.result;
-    if (!runResult || !runResult.ok) {
-      throw new Error(runResult?.error || 'First-party login execution failed with empty result.');
-    }
+      if (!sessionidCookie) {
+        throw new Error(`Session ${i + 1} sessionid cookie not found.`);
+      }
 
-    // 4. Wait a moment for cookies to be committed by the browser
-    console.log('[INHACK Background] Login succeeded inside tab. Retrieving session cookies...');
-    await new Promise(resolve => setTimeout(resolve, 800));
+      sessions.push({
+        sessionid: sessionidCookie.value,
+        csrftoken: csrftokenCookie ? csrftokenCookie.value : ''
+      });
 
-    const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
-    const sessionidCookie = cookies.find(c => c.name === 'sessionid');
-    const csrftokenCookie = cookies.find(c => c.name === 'csrf_token');
-
-    if (!sessionidCookie) {
-      throw new Error("드림핵 로그인에는 성공했으나 sessionid 쿠키를 획득하지 못했습니다.");
-    }
-
-    const sessionid = sessionidCookie.value;
-    const csrftoken = csrftokenCookie ? csrftokenCookie.value : '';
-
-    // 5. Synchronize session back to portal
-    console.log('[INHACK Background] Synchronizing cookies back to portal...');
-    const syncRes = await fetch(`${origin}/dreamhack/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ sessionid, csrftoken })
-    });
-
-    if (!syncRes.ok) {
-      const syncErr = await syncRes.text();
-      throw new Error(`포털 서버 동기화 실패: ${syncErr}`);
-    }
-
-    const syncData = await syncRes.json();
-    if (!syncData.ok) {
-      throw new Error(syncData.message || '포털 서버 동기화 응답 오류');
-    }
-
-    return { sessionid, csrftoken };
-
-  } finally {
-    // 6. Always clean up the tab
-    console.log('[INHACK Background] Cleaning up background tab...');
-    try {
-      await chrome.tabs.remove(tab.id);
-    } catch (e) {
-      console.warn('[INHACK Background] Failed to remove background tab:', e);
+    } finally {
+      console.log(`[INHACK Background] Cleaning up background tab for session ${i + 1}...`);
+      try {
+        await chrome.tabs.remove(tab.id);
+      } catch (e) {}
     }
   }
+
+  console.log('[INHACK Background] Generated 5 sessions. Synchronizing sessions back to portal...');
+  const syncRes = await fetch(`${origin}/dreamhack/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ sessions })
+  });
+
+  if (!syncRes.ok) {
+    const syncErr = await syncRes.text();
+    throw new Error(`포털 서버 동기화 실패: ${syncErr}`);
+  }
+
+  const syncData = await syncRes.json();
+  if (!syncData.ok) {
+    throw new Error(syncData.message || '포털 서버 동기화 응답 오류');
+  }
+
+  return { sessionid: sessions[0].sessionid, csrftoken: sessions[0].csrftoken };
 }
 
 async function logoutDreamhackSharedSession(sessionid, csrftoken) {
@@ -471,13 +456,27 @@ chrome.webRequest.onBeforeRequest.addListener(
       console.warn('[INHACK Background] Failed to remove local cookies during intercept:', err);
     }
 
-    // Reload the tab to reflect logged-out state
+    // Notify portal about interception for debugging logs
+    chrome.storage.local.get('portalOrigin').then(res => {
+      const portalOrigin = res.portalOrigin || 'http://localhost:8080';
+      console.log('[INHACK Background] Logging logout interception to portal:', portalOrigin);
+      fetch(`${portalOrigin}/dreamhack/intercept-logout`, {
+        method: 'POST'
+      }).catch(e => console.warn('[INHACK Background] Failed to log intercept:', e));
+    });
+
+    // Alert the student that the logout was intercepted and reload tab
     if (details.tabId && details.tabId !== chrome.tabs.TAB_ID_NONE) {
-      try {
-        chrome.tabs.reload(details.tabId);
-      } catch (e) {
-        console.warn('[INHACK Background] Failed to reload tab:', e);
-      }
+      chrome.scripting.executeScript({
+        target: { tabId: details.tabId },
+        func: () => {
+          alert('[INHACK 디버그] 드림핵 로그아웃 시도가 감지되어 차단되었습니다. 다른 사용자의 공용 세션을 보호하기 위해 서버 로그아웃을 방지하고 로컬 브라우저 쿠키만 삭제합니다.');
+        }
+      }).catch(e => console.warn('[INHACK Background] Alert injection failed:', e)).finally(() => {
+        try {
+          chrome.tabs.reload(details.tabId);
+        } catch (e) {}
+      });
     }
   },
   { urls: ["https://dreamhack.io/users/logout", "https://dreamhack.io/users/logout/"] }

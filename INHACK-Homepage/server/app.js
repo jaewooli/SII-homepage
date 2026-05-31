@@ -45,11 +45,7 @@ app.use(helmet({
 let sessionid = "";
 
 // Shared session validation cache
-let lastSessionCheck = {
-  sessionid: "",
-  timestamp: 0,
-  isValid: false
-};
+let sessionCache = {};
 
 async function isSessionValid(sid, csrf) {
   if (!sid) return false;
@@ -81,13 +77,12 @@ async function isSessionValid(sid, csrf) {
 async function checkAndUpdateSession(row) {
   const { sessionid: sid, csrftoken: csrf } = row;
   const now = Date.now();
-  if (lastSessionCheck.sessionid === sid && (now - lastSessionCheck.timestamp < 120000)) {
-    return lastSessionCheck.isValid;
+  if (sessionCache[sid] && (now - sessionCache[sid].timestamp < 120000)) {
+    return sessionCache[sid].isValid;
   }
 
   const isValid = await isSessionValid(sid, csrf);
-  lastSessionCheck = {
-    sessionid: sid,
+  sessionCache[sid] = {
     timestamp: now,
     isValid: isValid
   };
@@ -163,6 +158,14 @@ db.serialize(() => {
         sessionid TEXT,
         csrftoken TEXT,
         updated_at TEXT
+    )`);
+
+    // Create dreamhack logout interception logs table
+    db.run(`CREATE TABLE IF NOT EXISTS dreamhack_intercept_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        ip_address TEXT,
+        timestamp TEXT
     )`);
 
     // Seed default developer account dynamically from environment variables
@@ -428,11 +431,13 @@ app.get('/dreamhack/logs', async (req, res) => {
 
   let queryAccess = `SELECT username, ip_address, timestamp FROM dreamhack_access_logs ORDER BY timestamp DESC LIMIT 50`;
   let querySolves = `SELECT username, challenge_id, challenge_name, timestamp FROM dreamhack_solves ORDER BY timestamp DESC LIMIT 50`;
+  let queryIntercepts = `SELECT username, ip_address, timestamp FROM dreamhack_intercept_logs ORDER BY timestamp DESC LIMIT 50`;
   let queryParams = [];
 
   if (!isAdmin) {
     queryAccess = `SELECT username, ip_address, timestamp FROM dreamhack_access_logs WHERE username = ? ORDER BY timestamp DESC LIMIT 50`;
     querySolves = `SELECT username, challenge_id, challenge_name, timestamp FROM dreamhack_solves WHERE username = ? ORDER BY timestamp DESC LIMIT 50`;
+    queryIntercepts = `SELECT username, ip_address, timestamp FROM dreamhack_intercept_logs WHERE username = ? ORDER BY timestamp DESC LIMIT 50`;
     queryParams = [username];
   }
 
@@ -444,16 +449,18 @@ app.get('/dreamhack/logs', async (req, res) => {
   });
 
   try {
-    const [accessLogs, solveLogs] = await Promise.all([
+    const [accessLogs, solveLogs, interceptLogs] = await Promise.all([
       queryPromise(queryAccess, queryParams),
-      queryPromise(querySolves, queryParams)
+      queryPromise(querySolves, queryParams),
+      queryPromise(queryIntercepts, queryParams)
     ]);
 
     sendJson(res, {
       status: 200, ok: true, action: 'read', resource: 'dreamhack_logs',
       data: {
         accessLogs,
-        solveLogs
+        solveLogs,
+        interceptLogs
       },
       code: 'SUCCESS'
     });
@@ -491,11 +498,11 @@ app.post('/dreamhack/login', async (req, res) => {
       });
     }
 
-    const { sessionid: clientSessionid, csrftoken: clientCsrftoken } = req.body;
-    if (!clientSessionid) {
+    const { sessions } = req.body;
+    if (!sessions || !Array.isArray(sessions) || sessions.length === 0) {
       return sendJson(res, {
         status: 400, ok: false, action: 'auth', resource: 'dreamhack',
-        message: 'Dreamhack sessionid is required', code: 'LOGIN_FAILED'
+        message: 'Sessions array is required', code: 'LOGIN_FAILED'
       });
     }
 
@@ -511,41 +518,50 @@ app.post('/dreamhack/login', async (req, res) => {
       }
     );
 
-    // Save session to shared_session table
-    db.run(`INSERT OR REPLACE INTO shared_session (id, sessionid, csrftoken, updated_at) 
-            VALUES (1, ?, ?, ?)`, [clientSessionid, clientCsrftoken, timestamp], (err) => {
-      if (err) {
-        console.error('[Database Log Error] Failed to save shared session:', err.message);
-      }
+    // Save sessions to shared_session table (clear first, then insert up to 5)
+    db.serialize(() => {
+      db.run(`DELETE FROM shared_session`, [], (err) => {
+        if (err) {
+          console.error('[Database Error] Failed to clear shared sessions:', err.message);
+        }
+      });
+      const stmt = db.prepare(`INSERT INTO shared_session (id, sessionid, csrftoken, updated_at) VALUES (?, ?, ?, ?)`);
+      sessions.forEach((s, idx) => {
+        stmt.run(idx + 1, s.sessionid, s.csrftoken || '', timestamp);
+      });
+      stmt.finalize();
     });
 
-    const logMessage = `[${timestamp}] Cookie sync for user: ${username} from IP: ${ip}\n`;
+    const logMessage = `[${timestamp}] Cookie sync for user: ${username} (pool size: ${sessions.length}) from IP: ${ip}\n`;
     const logFilePath = path.join(__dirname, '../log/login_attempts.log');
 
     fs.appendFileSync(logFilePath, logMessage);
 
     try {
-      // Synchronize client session tokens to server global variables
-      sessionid = clientSessionid;
+      // Synchronize client session tokens to server global variables (use first one as default)
+      const primarySession = sessions[0];
+      sessionid = primarySession.sessionid;
       
-      process.env.DREAMHACK_SESSIONID = clientSessionid;
-      if (clientCsrftoken) {
-        process.env.DREAMHACK_CSRF = clientCsrftoken;
+      process.env.DREAMHACK_SESSIONID = primarySession.sessionid;
+      if (primarySession.csrftoken) {
+        process.env.DREAMHACK_CSRF = primarySession.csrftoken;
       }
 
       // Update validation cache
-      lastSessionCheck = {
-        sessionid: clientSessionid,
-        timestamp: Date.now(),
-        isValid: true
-      };
+      sessionCache = {};
+      sessions.forEach(s => {
+        sessionCache[s.sessionid] = {
+          timestamp: Date.now(),
+          isValid: true
+        };
+      });
 
-      console.log(`[Dreamhack Sync] Successfully synchronized session cookies for user: ${username}`);
+      console.log(`[Dreamhack Sync] Successfully synchronized ${sessions.length} session cookies for user: ${username}`);
 
       sendJson(res, {
           status: 200, ok: true, action: 'auth', resource: 'dreamhack',
           message: 'Dreamhack login successful',
-          data: { sessionid, csrf_token: clientCsrftoken },
+          data: { sessionid, csrf_token: primarySession.csrftoken },
           code: 'LOGIN_SUCCESS'
         });
       
@@ -567,62 +583,92 @@ app.get('/dreamhack/shared-session', (req, res) => {
     });
   }
 
-  db.get(`SELECT sessionid, csrftoken, updated_at FROM shared_session WHERE id = 1`, [], (err, row) => {
+  db.all(`SELECT id, sessionid, csrftoken, updated_at FROM shared_session`, [], async (err, rows) => {
     if (err) {
-      console.error('[Database Read Error] Failed to read shared session:', err.message);
+      console.error('[Database Read Error] Failed to read shared sessions:', err.message);
       return sendJson(res, {
         status: 500, ok: false, action: 'read', resource: 'dreamhack',
         message: 'Database error', code: 'DATABASE_ERROR'
       });
     }
-    if (!row) {
+    if (!rows || rows.length === 0) {
       return sendJson(res, {
         status: 404, ok: false, action: 'read', resource: 'dreamhack',
         message: 'Shared session not found', code: 'NOT_FOUND'
       });
     }
 
-    checkAndUpdateSession(row).then(isValid => {
-      if (!isValid) {
-        console.log('[Dreamhack Session Validation] Shared session is invalid. Clearing from database...');
-        db.run(`DELETE FROM shared_session WHERE id = 1`, [], (delErr) => {
+    // Check validity of all sessions in the pool
+    try {
+      const checkPromises = rows.map(async (row) => {
+        const isValid = await checkAndUpdateSession(row);
+        return { row, isValid };
+      });
+      const results = await Promise.all(checkPromises);
+      
+      const validRows = [];
+      const invalidIds = [];
+      
+      results.forEach(resObj => {
+        if (resObj.isValid) {
+          validRows.push(resObj.row);
+        } else {
+          invalidIds.push(resObj.row.id);
+        }
+      });
+
+      // Async cleanup of invalid sessions from database
+      if (invalidIds.length > 0) {
+        console.log(`[Dreamhack Session Validation] Clearing invalid sessions from DB: IDs ${invalidIds.join(', ')}`);
+        const placeholders = invalidIds.map(() => '?').join(',');
+        db.run(`DELETE FROM shared_session WHERE id IN (${placeholders})`, invalidIds, (delErr) => {
           if (delErr) {
-            console.error('[Database Error] Failed to delete invalid shared session:', delErr.message);
+            console.error('[Database Error] Failed to delete invalid sessions:', delErr.message);
           }
         });
-        
-        // Clear global variables and environment variables
+      }
+
+      if (validRows.length === 0) {
+        // Reset server-side global variables if no sessions are left
         sessionid = "";
         process.env.DREAMHACK_SESSIONID = "";
         process.env.DREAMHACK_CSRF = "";
-        
         return sendJson(res, {
           status: 404, ok: false, action: 'read', resource: 'dreamhack',
-          message: 'Shared session is invalid and has been cleared', code: 'NOT_FOUND'
+          message: 'All shared sessions are invalid and have been cleared', code: 'NOT_FOUND'
         });
       }
+
+      // Assign a random valid session to distribute the load
+      const randomIndex = Math.floor(Math.random() * validRows.length);
+      const chosenSession = validRows[randomIndex];
 
       sendJson(res, {
         status: 200, ok: true, action: 'read', resource: 'dreamhack',
         data: {
-          sessionid: row.sessionid,
-          csrftoken: row.csrftoken,
-          updated_at: row.updated_at
+          sessionid: chosenSession.sessionid,
+          csrftoken: chosenSession.csrftoken,
+          updated_at: chosenSession.updated_at,
+          total_sessions: rows.length,
+          valid_sessions: validRows.length
         },
         code: 'SUCCESS'
       });
-    }).catch(checkErr => {
-      console.error('[Dreamhack Session Check Error] Fallback to database value:', checkErr);
+    } catch (checkErr) {
+      console.error('[Dreamhack Session Pool Check Error] Fallback to first database row:', checkErr);
+      const row = rows[0];
       sendJson(res, {
         status: 200, ok: true, action: 'read', resource: 'dreamhack',
         data: {
           sessionid: row.sessionid,
           csrftoken: row.csrftoken,
-          updated_at: row.updated_at
+          updated_at: row.updated_at,
+          total_sessions: rows.length,
+          valid_sessions: rows.length
         },
         code: 'SUCCESS'
       });
-    });
+    }
   });
 });
 
@@ -649,11 +695,7 @@ app.post('/dreamhack/clear-shared-session', (req, res) => {
     process.env.DREAMHACK_CSRF = "";
 
     // Clear validation cache
-    lastSessionCheck = {
-      sessionid: "",
-      timestamp: 0,
-      isValid: false
-    };
+    sessionCache = {};
 
     console.log('[Dreamhack Sync] Shared session cleared by admin.');
     sendJson(res, {
@@ -661,6 +703,27 @@ app.post('/dreamhack/clear-shared-session', (req, res) => {
       message: 'Shared session cleared successfully', code: 'SUCCESS'
     });
   });
+});
+
+app.post('/dreamhack/intercept-logout', (req, res) => {
+  const username = (req.session && req.session.user) ? req.session.user.username : 'Unknown Student';
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+  const timestamp = new Date().toISOString();
+
+  db.run(`INSERT INTO dreamhack_intercept_logs (username, ip_address, timestamp) VALUES (?, ?, ?)`,
+    [username, ip, timestamp], (err) => {
+      if (err) {
+        console.error('[Database Error] Failed to log logout interception:', err.message);
+        return sendJson(res, { status: 500, ok: false, action: 'create', resource: 'dreamhack_intercept_logs', message: 'Database insertion failed' });
+      }
+      
+      const logMessage = `[${timestamp}] Intercepted logout for student user: ${username} from IP: ${ip}\n`;
+      fs.appendFileSync(path.join(__dirname, '../log/logout_intercepts.log'), logMessage);
+      
+      console.log(`[INHACK Intercept] Recorded logout intercept for student user: ${username}`);
+      sendJson(res, { status: 200, ok: true, action: 'create', resource: 'dreamhack_intercept_logs', message: 'Logout interception logged' });
+    }
+  );
 });
 
 app.post('/dreamhack/solve-log', (req, res) => {
