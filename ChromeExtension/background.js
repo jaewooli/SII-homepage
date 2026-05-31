@@ -40,16 +40,20 @@ chrome.runtime.onStartup.addListener(() => {
 });
 
 async function isHomepageTabOpen() {
-  const tabs = await chrome.tabs.query({});
-  return tabs.some(tab => {
-    if (!tab.url) return false;
-    try {
-      const url = new URL(tab.url);
-      return (url.hostname === 'localhost' || url.hostname === '127.0.0.1') && url.port === '8080';
-    } catch (_) {
-      return false;
-    }
-  });
+  try {
+    const tabs = await chrome.tabs.query({
+      url: [
+        "http://localhost:8080/*",
+        "https://localhost:8080/*",
+        "http://127.0.0.1:8080/*",
+        "https://127.0.0.1:8080/*"
+      ]
+    });
+    return tabs && tabs.length > 0;
+  } catch (err) {
+    console.error('[SII Background] Error querying tabs:', err);
+    return false;
+  }
 }
 
 function verifyMessageSender(sender) {
