@@ -156,10 +156,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   } else if (msg.type === "GET_DREAMHACK_COOKIES") {
     chrome.cookies.getAll({ domain: 'dreamhack.io' }).then(cookies => {
       const sessionidCookie = cookies.find(c => c.name === 'sessionid');
-      const csrftokenCookie = cookies.find(c => c.name === 'csrf_token');
 
       const sessionid = sessionidCookie ? sessionidCookie.value : '';
-      const csrftoken = csrftokenCookie ? csrftokenCookie.value : '';
+      const csrftoken = ''; // Do not retrieve csrftoken
 
       if (!sessionid) {
         sendResponse({ ok: false, message: "드림핵 로그인 세션이 발견되지 않았습니다. 드림핵(dreamhack.io)에 먼저 로그인해주세요." });
@@ -181,12 +180,11 @@ async function pollForLoggedInCookies(sessionNum) {
     try {
       const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
       const sessionidCookie = cookies.find(c => c.name === 'sessionid');
-      const csrftokenCookie = cookies.find(c => c.name === 'csrf_token') || cookies.find(c => c.name === 'csrftoken');
 
       if (sessionidCookie && sessionidCookie.value) {
         return {
           sessionid: sessionidCookie.value,
-          csrftoken: csrftokenCookie ? csrftokenCookie.value : ''
+          csrftoken: '' // Do not retrieve csrftoken
         };
       }
     } catch (e) {
