@@ -50,6 +50,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     isHomepageTabOpen().then(isOpen => {
       sendResponse({ isOpen });
     });
+    return true; // Keep message channel open for async response
   } else if (msg.type === "LOAD_SHARED_SESSION") {
     (async () => {
       try {
