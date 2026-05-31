@@ -1,3 +1,44 @@
+// Register declarativeNetRequest rules on startup/install to spoof Origin/Referer headers
+async function setupDNRRules() {
+  const rules = [
+    {
+      id: 1,
+      priority: 1,
+      action: {
+        type: "modifyHeaders",
+        requestHeaders: [
+          { header: "origin", operation: "set", value: "https://dreamhack.io" },
+          { header: "referer", operation: "set", value: "https://dreamhack.io/login" }
+        ]
+      },
+      condition: {
+        urlFilter: "https://dreamhack.io/api/v1/auth/login/",
+        resourceTypes: ["xmlhttprequest", "other"]
+      }
+    }
+  ];
+  try {
+    await chrome.declarativeNetRequest.updateSessionRules({
+      removeRuleIds: [1],
+      addRules: rules
+    });
+    console.log('[SII Background] DeclarativeNetRequest session rules registered.');
+  } catch (err) {
+    console.error('[SII Background] Failed to register DNR rules:', err);
+  }
+}
+
+// Call on worker load
+setupDNRRules();
+
+chrome.runtime.onInstalled.addListener(() => {
+  setupDNRRules();
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  setupDNRRules();
+});
+
 function verifyMessageSender(sender) {
   // Allow messages from the extension popup itself
   if (!sender.tab) {
