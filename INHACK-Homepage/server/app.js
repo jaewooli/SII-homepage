@@ -703,6 +703,42 @@ app.get('/dreamhack/shared-session', (req, res) => {
   });
 });
 
+app.post('/dreamhack/invalidate-session', (req, res) => {
+  if (!req.session || !req.session.user) {
+    return sendJson(res, {
+      status: 401, ok: false, action: 'delete', resource: 'dreamhack',
+      message: 'Unauthorized', code: 'UNAUTHORIZED'
+    });
+  }
+
+  const { sessionid: targetSessionid } = req.body;
+  if (!targetSessionid) {
+    return sendJson(res, {
+      status: 400, ok: false, action: 'delete', resource: 'dreamhack',
+      message: 'sessionid is required', code: 'BAD_REQUEST'
+    });
+  }
+
+  db.run(`DELETE FROM shared_session WHERE sessionid = ?`, [targetSessionid], (err) => {
+    if (err) {
+      console.error('[Database Error] Failed to delete invalid shared session:', err.message);
+      return sendJson(res, {
+        status: 500, ok: false, action: 'delete', resource: 'dreamhack',
+        message: 'Database error', code: 'DATABASE_ERROR'
+      });
+    }
+
+    // Clear validation cache for this session
+    delete sessionCache[targetSessionid];
+    console.log(`[Dreamhack Sync] Invalid session deleted from DB via client report: ${targetSessionid.substring(0, 8)}...`);
+
+    sendJson(res, {
+      status: 200, ok: true, action: 'delete', resource: 'dreamhack',
+      message: 'Invalid session cleared successfully', code: 'SUCCESS'
+    });
+  });
+});
+
 app.post('/dreamhack/clear-shared-session', (req, res) => {
   if (!req.session.user || req.session.user.username !== 'developer') {
     return sendJson(res, {

@@ -109,6 +109,48 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
 
         console.log('[INHACK Background] Shared session cookies set successfully.');
+
+        // Verify session validity from the client-side browser context (bypasses Cloudflare block on OCI)
+        console.log('[INHACK Background] Verifying session validity from client browser...');
+        let isValid = false;
+        try {
+          const verifyRes = await fetch('https://dreamhack.io/', {
+            method: 'GET',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+          });
+          if (verifyRes.ok) {
+            const html = await verifyRes.text();
+            isValid = html.includes('/users/logout');
+          }
+        } catch (verifyErr) {
+          console.warn('[INHACK Background] Client-side verification fetch failed:', verifyErr.message);
+          // If the network request itself fails in the client browser, assume valid to avoid false deletion
+          isValid = true;
+        }
+
+        if (!isValid) {
+          console.warn('[INHACK Background] Loaded session is inactive. Invalidating on server...');
+          // Delete from portal database
+          await fetch(`${origin}/dreamhack/invalidate-session`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ sessionid })
+          }).catch(e => console.warn('[INHACK Background] Invalidation request failed:', e.message));
+
+          // Clear cookies locally so they don't linger
+          try {
+            await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'sessionid' });
+            await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrf_token' });
+            await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrftoken' });
+          } catch (e) {}
+
+          throw new Error('선택된 공유 세션이 만료되었습니다. 포털에서 자동 삭제 처리되었으니 세션 발급을 다시 시도해주세요.');
+        }
+
         sendResponse({ ok: true });
       } catch (err) {
         console.error('[INHACK Background] Failed to load shared session:', err.message);
