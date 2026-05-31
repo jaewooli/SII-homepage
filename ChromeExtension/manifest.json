@@ -8,8 +8,6 @@
   },
   "permissions": [
     "storage",
-    "cookies",
-    "webRequest",
     "declarativeNetRequest",
     "tabs"
   ],
@@ -35,7 +33,6 @@
     "64": "/images/sii-logo-64.png",
     "128": "/images/sii-logo-128.png"
   },
-  "options_page": "options.html",
   "content_scripts": [
     {
       "matches": [
@@ -45,13 +42,6 @@
         "https://127.0.0.1:8080/*"
       ],
       "js": ["content.js"],
-      "run_at": "document_start"
-    },
-    {
-      "matches": [
-        "https://dreamhack.io/*"
-      ],
-      "js": ["dreamhack_content.js"],
       "run_at": "document_start"
     }
   ]
