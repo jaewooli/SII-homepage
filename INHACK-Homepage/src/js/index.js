@@ -116,54 +116,7 @@ async function triggerAdminSessionRenewal() {
   }
 }
 
-async function triggerAdminSessionTermination() {
-  const isExtensionInstalled = document.documentElement.dataset.inhackExtensionInstalled === "true";
-  if (!isExtensionInstalled) {
-    showToast('Chrome Extension이 감지되지 않아 공용 세션을 로그아웃하지 못했습니다.', 'error');
-    return;
-  }
 
-  showToast('드림핵 공용 계정 세션 파기 및 로그아웃 요청 중...', 'info');
-
-  try {
-    const sharedRes = await fetch('/dreamhack/shared-session');
-    if (!sharedRes.ok) {
-      throw new Error('서버에서 공용 세션 정보를 가져오는데 실패했습니다.');
-    }
-    const sharedData = await sharedRes.json();
-    if (!sharedData.ok || !sharedData.data || !sharedData.data.sessionid) {
-      await fetch('/dreamhack/clear-shared-session', { method: 'POST' });
-      showToast('이미 등록된 공용 세션이 없습니다. 서버 데이터를 초기화했습니다.', 'success');
-      return;
-    }
-
-    const handleResponse = async (event) => {
-      const { ok, message } = event.detail;
-      if (ok) {
-        const clearRes = await fetch('/dreamhack/clear-shared-session', { method: 'POST' });
-        if (clearRes.ok) {
-          showToast('드림핵 공용 계정 세션 파기 및 일괄 로그아웃 완료!', 'success');
-        } else {
-          showToast('드림핵 세션은 파기되었으나 서버 데이터 초기화에 실패했습니다.', 'warning');
-        }
-      } else {
-        showToast(`드림핵 세션 파기 실패: ${message || '알 수 없는 오류'}`, 'error');
-      }
-      window.removeEventListener('INHACK_ADMIN_LOGOUT_SHARED_RESPONSE', handleResponse);
-    };
-    window.addEventListener('INHACK_ADMIN_LOGOUT_SHARED_RESPONSE', handleResponse);
-
-    window.dispatchEvent(new CustomEvent('INHACK_ADMIN_LOGOUT_SHARED_TRIGGER', {
-      detail: {
-        sessionid: sharedData.data.sessionid,
-        csrftoken: sharedData.data.csrftoken || ''
-      }
-    }));
-  } catch (err) {
-    console.error('[Admin Session Logout] Error:', err);
-    showToast(`드림핵 공용 세션 로그아웃 실패: ${err.message}`, 'error');
-  }
-}
 
 function renderUserUI(user){
   let loginbtn = document.getElementById('login-btn');
@@ -193,15 +146,7 @@ function renderUserUI(user){
       });
       document.querySelector('nav').appendChild(renewbtn);
 
-      const logoutSharedBtn = document.createElement('button');
-      logoutSharedBtn.id = 'logout-shared-btn';
-      logoutSharedBtn.textContent = 'Logout Shared';
-      logoutSharedBtn.addEventListener('click', async () => {
-        if (confirm('정말로 공용 드림핵 세션을 서버 및 드림핵 서비스에서 로그아웃하여 모든 사용자의 연동을 끊으시겠습니까?')) {
-          await triggerAdminSessionTermination();
-        }
-      });
-      document.querySelector('nav').appendChild(logoutSharedBtn);
+
     }
 
     logoutbtn = document.createElement('button');
