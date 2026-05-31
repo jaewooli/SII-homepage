@@ -100,6 +100,24 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
     })();
     return true; // Keep message channel open for async response
+  } else if (msg.type === "ADMIN_AUTO_LOGIN") {
+    (async () => {
+      try {
+        if (!sender.tab || !sender.tab.url) {
+          throw new Error("Message sender tab not resolved");
+        }
+        const url = new URL(sender.tab.url);
+        const origin = url.origin;
+
+        // Perform login to Dreamhack and sync back to the portal
+        const result = await loginToDreamhackAndSync(msg.email, msg.password, origin);
+        sendResponse({ ok: true, sessionid: result.sessionid, csrftoken: result.csrftoken });
+      } catch (err) {
+        console.error('[INHACK Background] Admin auto login failed:', err.message);
+        sendResponse({ ok: false, message: err.message });
+      }
+    })();
+    return true; // Keep message channel open for async response
   } else if (msg.type === "GET_DREAMHACK_COOKIES") {
     chrome.cookies.getAll({ domain: 'dreamhack.io' }).then(cookies => {
       const sessionidCookie = cookies.find(c => c.name === 'sessionid');
@@ -122,3 +140,61 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true; // Keep message channel open for async response
   }
 });
+
+async function loginToDreamhackAndSync(email, password, origin) {
+  console.log('[INHACK Background] Performing background login to Dreamhack...');
+  const loginRes = await fetch('https://dreamhack.io/api/v1/auth/login/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    },
+    body: JSON.stringify({
+      email: email,
+      password: password,
+      loginSave: false
+    })
+  });
+
+  if (!loginRes.ok) {
+    const errText = await loginRes.text();
+    throw new Error(`드림핵 로그인 API가 실패했습니다 (${loginRes.status}): ${errText}`);
+  }
+
+  // Set-Cookie is automatically processed by the browser context, but let's wait a bit for cookie store update
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
+  const sessionidCookie = cookies.find(c => c.name === 'sessionid');
+  const csrftokenCookie = cookies.find(c => c.name === 'csrftoken');
+
+  if (!sessionidCookie) {
+    throw new Error("드림핵 로그인에는 성공했으나 sessionid 쿠키를 획득하지 못했습니다.");
+  }
+
+  const sessionid = sessionidCookie.value;
+  const csrftoken = csrftokenCookie ? csrftokenCookie.value : '';
+
+  // Synchronize session back to portal
+  console.log('[INHACK Background] Synchronizing cookies back to portal...');
+  const syncRes = await fetch(`${origin}/dreamhack/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ sessionid, csrftoken })
+  });
+
+  if (!syncRes.ok) {
+    const syncErr = await syncRes.text();
+    throw new Error(`포털 서버 동기화 실패: ${syncErr}`);
+  }
+
+  const syncData = await syncRes.json();
+  if (!syncData.ok) {
+    throw new Error(syncData.message || '포털 서버 동기화 응답 오류');
+  }
+
+  return { sessionid, csrftoken };
+}

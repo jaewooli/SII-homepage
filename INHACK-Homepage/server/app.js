@@ -330,10 +330,10 @@ app.get('/me', (req, res) => {
 });
 
 app.get('/dreamhack/credentials', (req, res) => {
-  if (!req.session.user) {
+  if (!req.session.user || req.session.user.username !== 'developer') {
     return sendJson(res, {
-      status: 401, ok: false, action: 'read', resource: 'dreamhack',
-      message: 'Unauthorized', code: 'UNAUTHORIZED'
+      status: 403, ok: false, action: 'read', resource: 'dreamhack',
+      message: 'Only the administrator can access credentials', code: 'FORBIDDEN'
     });
   }
   
@@ -510,7 +510,7 @@ app.get('/dreamhack/shared-session', (req, res) => {
     });
   }
 
-  db.get(`SELECT sessionid, csrftoken FROM shared_session WHERE id = 1`, [], (err, row) => {
+  db.get(`SELECT sessionid, csrftoken, updated_at FROM shared_session WHERE id = 1`, [], (err, row) => {
     if (err) {
       console.error('[Database Read Error] Failed to read shared session:', err.message);
       return sendJson(res, {
@@ -529,7 +529,8 @@ app.get('/dreamhack/shared-session', (req, res) => {
       status: 200, ok: true, action: 'read', resource: 'dreamhack',
       data: {
         sessionid: row.sessionid,
-        csrftoken: row.csrftoken
+        csrftoken: row.csrftoken,
+        updated_at: row.updated_at
       },
       code: 'SUCCESS'
     });

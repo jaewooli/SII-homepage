@@ -65,3 +65,28 @@ window.addEventListener('INHACK_DREAMHACK_LOAD_TRIGGER', () => {
     }
   });
 });
+
+// Listen for admin auto login trigger from the webpage
+window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', (event) => {
+  console.log('[INHACK Extension] Received admin auto login trigger from webpage...');
+  const { email, password } = event.detail;
+
+  chrome.runtime.sendMessage({ 
+    type: "ADMIN_AUTO_LOGIN",
+    email,
+    password
+  }, (response) => {
+    if (response && response.ok) {
+      console.log('[INHACK Extension] Admin auto login and sync completed successfully.');
+      window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', {
+        detail: { ok: true }
+      }));
+    } else {
+      const errMsg = response?.message || 'unknown error';
+      console.error('[INHACK Extension] Admin auto login failed:', errMsg);
+      window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', {
+        detail: { ok: false, message: errMsg }
+      }));
+    }
+  });
+});
