@@ -176,57 +176,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-async function getCsrfToken() {
+async function pollForLoggedInCookies(sessionNum) {
   for (let attempt = 0; attempt < 25; attempt++) {
     try {
-      // Use chrome.cookies.getAll for maximum compatibility with domain/path variations
       const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
-      const csrfCookie = cookies.find(c => c.name === 'csrf_token' || c.name === 'csrftoken');
-      if (csrfCookie && csrfCookie.value) {
-        return csrfCookie.value;
+      const sessionidCookie = cookies.find(c => c.name === 'sessionid');
+      const csrftokenCookie = cookies.find(c => c.name === 'csrf_token') || cookies.find(c => c.name === 'csrftoken');
+
+      if (sessionidCookie && sessionidCookie.value) {
+        return {
+          sessionid: sessionidCookie.value,
+          csrftoken: csrftokenCookie ? csrftokenCookie.value : ''
+        };
       }
     } catch (e) {
-      console.warn('[INHACK Background] Error getting cookie:', e);
+      console.warn('[INHACK Background] Error polling cookies:', e);
     }
     await new Promise(resolve => setTimeout(resolve, 200));
   }
-  return null;
-}
-
-async function getCsrfTokenWithRetry(tabId) {
-  let token = await getCsrfToken();
-  if (token) return token;
-
-  // Fallback: trigger fetch requests directly from the background service worker context (which is not throttled)
-  console.log('[INHACK Background] CSRF token not found in cookie store. Triggering fallback fetches from service worker...');
-  try {
-    await fetch('https://dreamhack.io/login/', {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
-    });
-  } catch (e) {
-    console.warn('[INHACK Background] Fallback login page fetch failed:', e);
-  }
-
-  token = await getCsrfToken();
-  if (token) return token;
-
-  try {
-    await fetch('https://dreamhack.io/api/v1/wargame/challenges/', {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
-    });
-  } catch (e) {
-    console.warn('[INHACK Background] Fallback API fetch failed:', e);
-  }
-
-  // Poll again
-  token = await getCsrfToken();
-  return token;
+  throw new Error(`Session ${sessionNum} sessionid cookie not found after login.`);
 }
 
 async function loginToDreamhackAndSync(email, password, origin) {
@@ -269,23 +237,16 @@ async function loginToDreamhackAndSync(email, password, origin) {
         chrome.tabs.onUpdated.addListener(listener);
       });
 
-      // Retrieve CSRF token from Chrome cookie store directly in the service worker context
-      const csrfToken = await getCsrfTokenWithRetry(tab.id);
-      if (!csrfToken) {
-        throw new Error(`Session ${i + 1} login failed: CSRF cookie not found in Chrome cookie store.`);
-      }
-
-      // Execute login request inside tab context
+      // Execute login request inside tab context (no X-CSRFToken header needed pre-login since guest cookies are clean)
       const injectionResults = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        func: async (userEmail, userPassword, token) => {
+        func: async (userEmail, userPassword) => {
           try {
             const loginRes = await fetch('/api/v1/auth/login/', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRFToken': token
+                'Accept': 'application/json'
               },
               body: JSON.stringify({
                 email: userEmail,
@@ -304,7 +265,7 @@ async function loginToDreamhackAndSync(email, password, origin) {
             return { ok: false, error: e.message };
           }
         },
-        args: [email, password, csrfToken]
+        args: [email, password]
       });
 
       const runResult = injectionResults[0]?.result;
@@ -312,20 +273,9 @@ async function loginToDreamhackAndSync(email, password, origin) {
         throw new Error(runResult?.error || `Session ${i + 1} login execution failed.`);
       }
 
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
-      const sessionidCookie = cookies.find(c => c.name === 'sessionid');
-      const csrftokenCookie = cookies.find(c => c.name === 'csrf_token') || cookies.find(c => c.name === 'csrftoken');
-
-      if (!sessionidCookie) {
-        throw new Error(`Session ${i + 1} sessionid cookie not found.`);
-      }
-
-      sessions.push({
-        sessionid: sessionidCookie.value,
-        csrftoken: csrftokenCookie ? csrftokenCookie.value : ''
-      });
+      // Poll the cookie store to wait for the session and newly issued CSRF cookie
+      const sessionData = await pollForLoggedInCookies(i + 1);
+      sessions.push(sessionData);
 
     } finally {
       console.log(`[INHACK Background] Cleaning up background tab for session ${i + 1}...`);
