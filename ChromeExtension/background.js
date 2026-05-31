@@ -93,6 +93,9 @@ function verifyMessageSender(sender) {
       if (url.hostname === 'ddyoru.duckdns.org') {
         return true;
       }
+      if (url.hostname === 'dreamhack.io' || url.hostname.endsWith('.dreamhack.io')) {
+        return true;
+      }
     } catch (e) {
       return false;
     }
