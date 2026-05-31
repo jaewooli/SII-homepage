@@ -23,14 +23,29 @@ async function loadContent(fragmentID){
   }
 }
 
+function updateActiveNavLink(fragmentID) {
+  const links = document.querySelectorAll('aside ul li a');
+  links.forEach(link => {
+    const hash = link.getAttribute('href');
+    // If empty fragmentID, defaults to home/first link if it represents it
+    if (hash === `#${fragmentID}` || (!fragmentID && hash === '#')) {
+      link.classList.add('active');
+    } else {
+      link.classList.remove('active');
+    }
+  });
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   const initialFragment = window.location.hash.substring(1);
   loadContent(initialFragment);
+  updateActiveNavLink(initialFragment);
 });
 
 window.addEventListener('hashchange', () => {
   const fragmentID = window.location.hash.substring(1);
   loadContent(fragmentID);
+  updateActiveNavLink(fragmentID);
 });
 
 function renderUserUI(user){

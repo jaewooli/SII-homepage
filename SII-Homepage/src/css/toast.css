@@ -1,15 +1,37 @@
 .toast {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 15px 18px;
-  border-radius: 8px;
-  background: #333;
-  color: #fff;
-  transition: opacity 0.3s ease;
+  top: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: 2px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
   z-index: 9999;
   opacity: 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition: opacity 0.3s cubic-bezier(0.19, 1, 0.22, 1), transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+  transform: translateY(-8px);
 }
-.toast--success { background: #2e7d32; }
-.toast--error { background: #c62828; }
-.toast--info { background: #333; }
+
+.toast--success { 
+  background-color: #050a0a; 
+  border: 1px solid #00ff66; 
+  color: #00ff66; 
+  text-shadow: 0 0 4px rgba(0, 255, 102, 0.2);
+}
+
+.toast--error { 
+  background-color: #0a0507; 
+  border: 1px solid #ff003c; 
+  color: #ff003c; 
+  text-shadow: 0 0 4px rgba(255, 0, 60, 0.2);
+}
+
+.toast--info { 
+  background-color: #05080c; 
+  border: 1px solid #00f0ff; 
+  color: #00f0ff; 
+  text-shadow: 0 0 4px rgba(0, 240, 255, 0.2);
+}
