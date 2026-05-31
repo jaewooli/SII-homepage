@@ -18,11 +18,16 @@ const rateLimit = require('express-rate-limit');
 
 const helmet = require("helmet");
 const axios = require('axios');
-
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
 const app = express();
+
+// Ensure log directory exists
+const logDir = path.join(__dirname, '../log');
+if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+}
 
 app.use(helmet({
   contentSecurityPolicy: {
