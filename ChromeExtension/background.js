@@ -209,9 +209,16 @@ async function loginToDreamhackAndSync(email, password, origin) {
               return '';
             };
 
-            const csrfToken = getCookie('csrf_token');
+            // Poll for CSRF token for up to 5 seconds to handle async hydration
+            let csrfToken = '';
+            for (let attempt = 0; attempt < 25; attempt++) {
+              csrfToken = getCookie('csrf_token');
+              if (csrfToken) break;
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+
             if (!csrfToken) {
-              return { ok: false, error: 'CSRF cookie not found in page document.cookie' };
+              return { ok: false, error: 'CSRF cookie not found in page document.cookie: ' + document.cookie };
             }
 
             const loginRes = await fetch('/api/v1/auth/login/', {
