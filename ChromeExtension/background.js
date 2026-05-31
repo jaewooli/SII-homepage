@@ -138,6 +138,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
     })();
     return true; // Keep message channel open for async response
+  } else if (msg.type === "SET_USER") {
+    chrome.storage.local.set({ INHACKuser: { username: msg.username } });
+    console.log('[INHACK Background] Logged-in user set to:', msg.username);
+    sendResponse({ ok: true });
+  } else if (msg.type === "CLEAR_USER") {
+    chrome.storage.local.remove('INHACKuser');
+    console.log('[INHACK Background] Logged-in user cleared.');
+    sendResponse({ ok: true });
   } else if (msg.type === "GET_DREAMHACK_COOKIES") {
     chrome.cookies.getAll({ domain: 'dreamhack.io' }).then(cookies => {
       const sessionidCookie = cookies.find(c => c.name === 'sessionid');
@@ -451,7 +459,16 @@ updateLogoutBlockRule();
 chrome.webRequest.onBeforeRequest.addListener(
   async (details) => {
     const isAdmin = await isCurrentUserAdmin();
-    if (isAdmin) return; // Do nothing for admin (let them logout on the server)
+    if (isAdmin) {
+      console.log('[INHACK Background] Admin logged out of Dreamhack. Clearing shared sessions on portal...');
+      chrome.storage.local.get('portalOrigin').then(res => {
+        const portalOrigin = res.portalOrigin || 'http://localhost:8080';
+        fetch(`${portalOrigin}/dreamhack/clear-shared-session`, {
+          method: 'POST'
+        }).catch(e => console.warn('[INHACK Background] Failed to clear shared sessions on admin logout:', e));
+      });
+      return; // Let them logout on the server
+    }
 
     console.log('[INHACK Background] Intercepted student logout request. Discarding cookies locally...');
     

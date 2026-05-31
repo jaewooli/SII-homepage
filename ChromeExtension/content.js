@@ -115,3 +115,33 @@ window.addEventListener('INHACK_ADMIN_LOGOUT_SHARED_TRIGGER', (event) => {
     }
   });
 });
+
+// Automatically update user session state in the extension on page load
+async function syncUserSession() {
+  try {
+    const res = await fetch('/me');
+    if (res.ok) {
+      const payload = await res.json();
+      if (payload && payload.ok && payload.data && payload.data.username) {
+        console.log('[INHACK Extension] Syncing logged-in user to background:', payload.data.username);
+        chrome.runtime.sendMessage({
+          type: "SET_USER",
+          username: payload.data.username
+        });
+        return;
+      }
+    }
+    console.log('[INHACK Extension] Syncing logged-out user to background.');
+    chrome.runtime.sendMessage({ type: "CLEAR_USER" });
+  } catch (e) {
+    console.warn('[INHACK Extension] Failed to sync user session:', e);
+  }
+}
+
+// Run session sync if we are on the portal origin
+const isPortalOrigin = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1' || 
+                       window.location.hostname === 'ddyoru.duckdns.org';
+if (isPortalOrigin) {
+  syncUserSession();
+}
