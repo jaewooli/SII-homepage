@@ -198,8 +198,8 @@ async function pollForLoggedInCookies(sessionNum) {
 async function loginToDreamhackAndSync(email, password, origin) {
   const sessions = [];
 
-  for (let i = 0; i < 1; i++) {
-    console.log(`[INHACK Background] Generating session ${i + 1}/1...`);
+  for (let i = 0; i < 3; i++) {
+    console.log(`[INHACK Background] Generating session ${i + 1}/3...`);
 
     // Clear existing cookies locally to force Django to generate a fresh session ID
     try {
@@ -285,7 +285,7 @@ async function loginToDreamhackAndSync(email, password, origin) {
     }
   }
 
-  console.log('[INHACK Background] Generated 1 session. Synchronizing sessions back to portal...');
+  console.log('[INHACK Background] Generated 3 sessions. Synchronizing sessions back to portal...');
   const syncRes = await fetch(`${origin}/dreamhack/login`, {
     method: 'POST',
     headers: {
