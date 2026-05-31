@@ -247,8 +247,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     })();
     return true; // Keep message channel open for async response
   } else if (msg.type === "SET_USER") {
-    chrome.storage.local.set({ INHACKuser: { username: msg.username } });
-    console.log('[INHACK Background] Logged-in user set to:', msg.username);
+    chrome.storage.local.set({ INHACKuser: { username: msg.username, isAdmin: msg.isAdmin || false } });
+    console.log('[INHACK Background] Logged-in user set to:', msg.username, 'isAdmin:', msg.isAdmin);
     sendResponse({ ok: true });
   } else if (msg.type === "CLEAR_USER") {
     chrome.storage.local.remove('INHACKuser');
@@ -636,7 +636,7 @@ async function updateLogoutBlockRule() {
 async function isCurrentUserAdmin() {
   try {
     const data = await chrome.storage.local.get('INHACKuser');
-    return data && data.INHACKuser && data.INHACKuser.username === 'developer';
+    return data && data.INHACKuser && (data.INHACKuser.isAdmin === true || data.INHACKuser.username === 'developer');
   } catch (e) {
     return false;
   }

@@ -23,6 +23,25 @@ function setInstalledFlag() {
 
 setInstalledFlag();
 
+let isCachedAdmin = false;
+
+// Initial sync of cached admin status
+if (isContextValid()) {
+  chrome.storage.local.get('INHACKuser', (data) => {
+    if (data && data.INHACKuser) {
+      isCachedAdmin = (data.INHACKuser.isAdmin === true || data.INHACKuser.username === 'developer');
+    }
+  });
+  
+  // Listen for changes dynamically
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.INHACKuser) {
+      const newUser = changes.INHACKuser.newValue;
+      isCachedAdmin = newUser && (newUser.isAdmin === true || newUser.username === 'developer');
+    }
+  });
+}
+
 // Listen for custom trigger events from the webpage
 window.addEventListener('INHACK_DREAMHACK_SYNC_TRIGGER', () => {
   if (!isContextValid()) {
@@ -126,7 +145,8 @@ async function syncUserSession() {
         console.log('[INHACK Extension] Syncing logged-in user to background:', payload.data.username);
         chrome.runtime.sendMessage({
           type: "SET_USER",
-          username: payload.data.username
+          username: payload.data.username,
+          isAdmin: payload.data.isAdmin || false
         });
         return;
       }
@@ -232,6 +252,7 @@ if (isDreamhackDomain) {
 
   // Intercept anchor clicks
   document.addEventListener('click', (e) => {
+    if (isCachedAdmin) return;
     let target = e.target;
     while (target && target !== document.documentElement) {
       if (target.tagName === 'A' && target.href) {
@@ -252,6 +273,7 @@ if (isDreamhackDomain) {
 
   // Intercept form submissions
   document.addEventListener('submit', (e) => {
+    if (isCachedAdmin) return;
     const form = e.target;
     if (form && form.action) {
       try {

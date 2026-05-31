@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           document.getElementById('loggedin').classList.remove('hidden');
           document.getElementById('tab-closed-warning').classList.add('hidden');
           document.getElementById('username').textContent = payload.data.username;
-          await chrome.storage.local.set({ INHACKuser: { username: payload.data.username } });
+          await chrome.storage.local.set({ INHACKuser: { username: payload.data.username, isAdmin: payload.data.isAdmin || false } });
         } else {
           document.getElementById('login').classList.add('hidden');
           document.getElementById('loggedin').classList.add('hidden');
