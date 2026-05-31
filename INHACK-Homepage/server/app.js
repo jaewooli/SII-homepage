@@ -50,7 +50,7 @@ let sessionCache = {};
 async function isSessionValid(sid, csrf) {
   if (!sid) return false;
   try {
-    const response = await fetch('https://dreamhack.io/api/v1/wargame/challenges/', {
+    const response = await fetch('https://dreamhack.io/', {
       method: 'GET',
       headers: {
         'Cookie': `sessionid=${sid}${csrf ? `; csrf_token=${csrf}` : ''}`,
@@ -58,6 +58,7 @@ async function isSessionValid(sid, csrf) {
       }
     });
 
+    // 1. Check if server explicitly deletes the sessionid cookie
     const cookies = response.headers.getSetCookie();
     let isCleared = false;
     cookies.forEach(cookie => {
@@ -65,8 +66,11 @@ async function isSessionValid(sid, csrf) {
         isCleared = true;
       }
     });
+    if (isCleared) return false;
 
-    return !isCleared;
+    // 2. Check if the returned server-rendered HTML contains the logout link (which indicates active session)
+    const html = await response.text();
+    return html.includes('/users/logout');
   } catch (err) {
     console.error('[Session Validation] Error checking session validity:', err.message);
     // Fallback: If verification request fails due to network/server issue, assume it is valid to avoid false deletion.
