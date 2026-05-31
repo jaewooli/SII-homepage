@@ -11,11 +11,18 @@ async function clearDreamhackCookiesLocally() {
         const domainStr = cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain;
         const cookieUrl = prefix + domainStr + cookie.path;
         
-        await chrome.cookies.remove({
+        const removeParams = {
           url: cookieUrl,
           name: cookie.name,
           storeId: cookie.storeId
-        });
+        };
+        
+        // Pass partitionKey if it exists on the cookie to allow removing partitioned cookies
+        if (cookie.partitionKey) {
+          removeParams.partitionKey = cookie.partitionKey;
+        }
+        
+        await chrome.cookies.remove(removeParams);
         console.log(`[INHACK Background] Cleared local cookie: ${cookie.name} from url: ${cookieUrl}`);
       }
     }
