@@ -74,6 +74,41 @@ function verifyMessageSender(sender) {
   return false;
 }
 
+async function registerDreamhackLoginRules(csrfToken) {
+  const requestHeaders = [
+    { header: "origin", operation: "set", value: "https://dreamhack.io" },
+    { header: "referer", operation: "set", value: "https://dreamhack.io/login" }
+  ];
+  if (csrfToken) {
+    requestHeaders.push({ header: "x-csrftoken", operation: "set", value: csrfToken });
+  }
+
+  const rules = [
+    {
+      id: 1,
+      priority: 1,
+      action: {
+        type: "modifyHeaders",
+        requestHeaders: requestHeaders
+      },
+      condition: {
+        urlFilter: "https://dreamhack.io/api/v1/auth/login/",
+        resourceTypes: ["xmlhttprequest", "other"]
+      }
+    }
+  ];
+
+  try {
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds: [1],
+      addRules: rules
+    });
+    console.log('[SII Background] Active login rules updated with CSRF Token:', csrfToken);
+  } catch (err) {
+    console.error('[SII Background] Failed to update active login rules:', err);
+  }
+}
+
 async function performDreamhackLogin(email, password) {
   console.log('[SII Background] Performing direct browser-context Dreamhack login...');
   
@@ -104,45 +139,47 @@ async function performDreamhackLogin(email, password) {
   const csrfToken = csrfCookie ? csrfCookie.value : '';
   console.log('[SII Background] Retracted csrftoken:', csrfToken);
 
-  const headers = {
-    'Content-Type': 'application/json',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Origin': 'https://dreamhack.io',
-    'Referer': 'https://dreamhack.io/login',
-    'Accept': 'application/json, text/plain, */*',
-    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
-  };
+  // Register dynamic rules to inject X-CSRFToken and spoof headers at network layer
+  await registerDreamhackLoginRules(csrfToken);
 
-  if (csrfToken) {
-    headers['X-CSRFToken'] = csrfToken;
-  }
+  try {
+    // Send POST request without X-CSRFToken in JS headers to prevent Preflight OPTIONS request
+    const response = await fetch('https://dreamhack.io/api/v1/auth/login/', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+        // Origin, Referer, and X-CSRFToken are injected at the network layer by declarativeNetRequest
+      },
+      body: JSON.stringify({ email, password, loginSave: false })
+    });
 
-  const response = await fetch('https://dreamhack.io/api/v1/auth/login/', {
-    method: 'POST',
-    credentials: 'include',
-    headers: headers,
-    body: JSON.stringify({ email, password, loginSave: false })
-  });
-
-  if (!response.ok) {
-    let errData = '';
-    try { errData = await response.text(); } catch(_) {}
-    
-    // Identify invalid credentials first (status 401 is always invalid credentials)
-    if (response.status === 401 || (response.status === 400 && (errData.includes('이메일') || errData.includes('비밀번호') || errData.includes('password') || errData.includes('email') || errData.includes('login_failed') || errData.includes('credentials')))) {
-      throw new Error("INVALID_CREDENTIALS");
+    if (!response.ok) {
+      let errData = '';
+      try { errData = await response.text(); } catch(_) {}
+      
+      // Identify invalid credentials first (status 401 is always invalid credentials)
+      if (response.status === 401 || (response.status === 400 && (errData.includes('이메일') || errData.includes('비밀번호') || errData.includes('password') || errData.includes('email') || errData.includes('login_failed') || errData.includes('credentials')))) {
+        throw new Error("INVALID_CREDENTIALS");
+      }
+      
+      // Strictly isolate real ReCAPTCHA requirements
+      if (errData.toLowerCase().includes('recaptcha')) {
+        throw new Error("RECAPTCHA_REQUIRED");
+      }
+      
+      throw new Error(`Dreamhack status ${response.status}: ${errData}`);
     }
     
-    // Strictly isolate real ReCAPTCHA requirements
-    if (errData.toLowerCase().includes('recaptcha')) {
-      throw new Error("RECAPTCHA_REQUIRED");
-    }
-    
-    throw new Error(`Dreamhack status ${response.status}: ${errData}`);
+    console.log('[SII Background] Direct login succeeded. Cookies updated automatically.');
+    return true;
+  } finally {
+    // Restore default Origin/Referer spoofing rules (without CSRF token value)
+    await setupDNRRules();
   }
-  
-  console.log('[SII Background] Direct login succeeded. Cookies updated automatically.');
-  return true;
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
