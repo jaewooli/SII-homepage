@@ -101,14 +101,27 @@ db.serialize(() => {
         challenge_name TEXT,
         timestamp TEXT
     )`);
+    // Seed default developer account dynamically from environment variables
+    const adminUser = process.env.ADMIN_USERNAME || 'developer';
+    const adminPass = process.env.ADMIN_PASSWORD;
     
-    // Seed default developer account (password: 'developer_password')
-    db.run(`INSERT OR IGNORE INTO users (username, password, name) 
-            VALUES ('developer', '$2a$10$1MqylMlV2ta6UBokSD5e7OsadhRAq9Puecv3Z3VX606Ts4OYoTe6S', 'Developer')`);
+    if (adminPass) {
+        const hashedPassword = bcrypt.hashSync(adminPass, 10);
+        db.run(`INSERT OR IGNORE INTO users (username, password, name) 
+                VALUES (?, ?, 'Developer')`, [adminUser, hashedPassword], (err) => {
+            if (err) {
+                console.error('[Database Seed Error] Failed to seed admin user:', err.message);
+            }
+        });
+    } else {
+        console.warn('WARNING: ADMIN_PASSWORD environment variable is not set. Default admin seeding skipped.');
+    }
 
-    // Seed test account (username: '123', password: '123')
-    db.run(`INSERT OR IGNORE INTO users (username, password, name) 
-            VALUES ('123', '$2a$10$eTZ.B/MOrL.i7qceTaDnM.fLD627Xp/yFhTqQZaeFbgNGPBhWyXay', 'TestUser123')`);
+    // Only seed test account if NOT in production
+    if (process.env.NODE_ENV !== 'production') {
+        db.run(`INSERT OR IGNORE INTO users (username, password, name) 
+                VALUES ('123', '$2a$10$eTZ.B/MOrL.i7qceTaDnM.fLD627Xp/yFhTqQZaeFbgNGPBhWyXay', 'TestUser123')`);
+    }
 });
 
 function sendJson(res, {

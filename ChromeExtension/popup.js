@@ -1,4 +1,26 @@
-const SERVER_BASE = 'http://localhost:8080';
+let SERVER_BASE = 'http://localhost:8080';
+
+async function detectServerBase() {
+  try {
+    const tabs = await chrome.tabs.query({
+      url: [
+        "http://localhost:8080/*",
+        "https://localhost:8080/*",
+        "http://127.0.0.1:8080/*",
+        "https://127.0.0.1:8080/*",
+        "http://ddyoru.duckdns.org/*",
+        "https://ddyoru.duckdns.org/*"
+      ]
+    });
+    if (tabs && tabs.length > 0) {
+      const url = new URL(tabs[0].url);
+      SERVER_BASE = url.origin;
+      console.log('[INHACK Extension] Detected Server Base:', SERVER_BASE);
+    }
+  } catch (err) {
+    console.error('[INHACK Extension] Failed to query tabs for server base:', err);
+  }
+}
 
 function showMsg(text, ok = true) {
   const messages = document.querySelectorAll('.msg');
@@ -13,6 +35,7 @@ function showMsg(text, ok = true) {
 
 // Common POST utility
 async function postJson(path, body) {
+  await detectServerBase();
   const res = await fetch(SERVER_BASE + path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -30,6 +53,7 @@ async function postJson(path, body) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  await detectServerBase();
   // Session check on load
   try {
     const r = await fetch(SERVER_BASE + '/me', {

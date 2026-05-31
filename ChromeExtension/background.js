@@ -5,7 +5,9 @@ async function isHomepageTabOpen() {
         "http://localhost:8080/*",
         "https://localhost:8080/*",
         "http://127.0.0.1:8080/*",
-        "https://127.0.0.1:8080/*"
+        "https://127.0.0.1:8080/*",
+        "http://ddyoru.duckdns.org/*",
+        "https://ddyoru.duckdns.org/*"
       ]
     });
     return tabs && tabs.length > 0;
@@ -23,7 +25,10 @@ function verifyMessageSender(sender) {
   if (sender.tab && sender.tab.url) {
     try {
       const url = new URL(sender.tab.url);
-      if ((url.hostname === 'localhost' || url.hostname === '127.0.0.1') && url.port === '8080') {
+      if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+        return url.port === '8080';
+      }
+      if (url.hostname === 'ddyoru.duckdns.org') {
         return true;
       }
     } catch (e) {
