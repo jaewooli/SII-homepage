@@ -21,7 +21,9 @@
     "https://127.0.0.1:8080/*",
     "http://ddyoru.duckdns.org/*",
     "https://ddyoru.duckdns.org/*",
+    "http://dreamhack.io/*",
     "https://dreamhack.io/*",
+    "http://*.dreamhack.io/*",
     "https://*.dreamhack.io/*"
   ],
   "action": {
@@ -48,7 +50,9 @@
         "https://127.0.0.1:8080/*",
         "http://ddyoru.duckdns.org/*",
         "https://ddyoru.duckdns.org/*",
+        "http://dreamhack.io/*",
         "https://dreamhack.io/*",
+        "http://*.dreamhack.io/*",
         "https://*.dreamhack.io/*"
       ],
       "js": ["content.js"],

@@ -1,33 +1,62 @@
 // Helper to thoroughly clear all dreamhack-related local authorization cookies
 async function clearDreamhackCookiesLocally() {
   try {
-    const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
+    // 1. Collect all target urls to try removing from
+    const urlsToTry = new Set([
+      'https://dreamhack.io',
+      'http://dreamhack.io',
+      'https://www.dreamhack.io',
+      'http://www.dreamhack.io'
+    ]);
+
+    // Add active tabs matching dreamhack.io to the URLs list
+    try {
+      const tabs = await chrome.tabs.query({ url: '*://*.dreamhack.io/*' });
+      if (tabs) {
+        for (const tab of tabs) {
+          if (tab.url) {
+            try {
+              const parsedUrl = new URL(tab.url);
+              urlsToTry.add(`${parsedUrl.protocol}//${parsedUrl.hostname}`);
+              urlsToTry.add(`${parsedUrl.protocol}//${parsedUrl.hostname}/`);
+            } catch (e) {}
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[INHACK Background] Failed to query tabs for URLs:', err);
+    }
+
+    // Add URLs resolved from actual existing cookies
+    try {
+      const allCookies = await chrome.cookies.getAll({});
+      const dhCookies = allCookies.filter(c => c.domain.includes('dreamhack.io'));
+      for (const cookie of dhCookies) {
+        const prefix = cookie.secure ? 'https://' : 'http://';
+        const domainStr = cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain;
+        urlsToTry.add(prefix + domainStr + cookie.path);
+        urlsToTry.add(prefix + domainStr);
+      }
+    } catch (err) {
+      console.warn('[INHACK Background] Failed to fetch cookies for dynamic URLs:', err);
+    }
+
     const targetNames = ['sessionid', 'csrf_token'];
     
-    for (const cookie of cookies) {
-      if (targetNames.includes(cookie.name)) {
-        const prefix = cookie.secure ? 'https://' : 'http://';
-        // strip leading dot from domain for URL formation
-        const domainStr = cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain;
-        const cookieUrl = prefix + domainStr + cookie.path;
-        
-        const removeParams = {
-          url: cookieUrl,
-          name: cookie.name,
-          storeId: cookie.storeId
-        };
-        
-        // Pass partitionKey if it exists on the cookie to allow removing partitioned cookies
-        if (cookie.partitionKey) {
-          removeParams.partitionKey = cookie.partitionKey;
+    // 2. Iterate through all targets and execute removals
+    for (const url of urlsToTry) {
+      for (const name of targetNames) {
+        try {
+          // Attempt standard removal
+          await chrome.cookies.remove({ url: url, name: name });
+          console.log(`[INHACK Background] Cleared cookie: ${name} from url: ${url}`);
+        } catch (e) {
+          // Ignore failure
         }
-        
-        await chrome.cookies.remove(removeParams);
-        console.log(`[INHACK Background] Cleared local cookie: ${cookie.name} from url: ${cookieUrl}`);
       }
     }
   } catch (err) {
-    console.warn('[INHACK Background] Failed to clear local cookies:', err.message);
+    console.warn('[INHACK Background] Fatal error in cookie clearing:', err);
   }
 }
 
