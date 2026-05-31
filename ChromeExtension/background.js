@@ -143,6 +143,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 async function loginToDreamhackAndSync(email, password, origin) {
+  // Clear existing sessionid cookie for dreamhack.io to force Django to generate a fresh session
+  console.log('[INHACK Background] Clearing existing sessionid cookie to force a new session...');
+  try {
+    await chrome.cookies.remove({
+      url: 'https://dreamhack.io',
+      name: 'sessionid'
+    });
+  } catch (e) {
+    console.warn('[INHACK Background] Failed to clear sessionid cookie (it might not exist):', e);
+  }
+
   console.log('[INHACK Background] Creating background tab for Dreamhack first-party login...');
   
   // 1. Create a background tab pointing to Dreamhack login page
