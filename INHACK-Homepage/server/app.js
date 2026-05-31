@@ -78,6 +78,7 @@ async function loginDreamhackWithPuppeteer() {
 }
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Ensure log directory exists
 const logDir = path.join(__dirname, '../log');
