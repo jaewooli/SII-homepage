@@ -100,6 +100,38 @@ function escapeHtml(str) {
             .replace(/'/g, "&#039;");
 }
 
+async function executeRenewSharedSession(userdata) {
+  const isExtensionInstalled = checkExtensionInstalled();
+  if (!isExtensionInstalled) {
+    showToast('Chrome Extension not detected. Please install it first.', 'error');
+    return;
+  }
+
+  showToast('드림핵 공용 계정 세션 재발급 요청 중...', 'info');
+
+  try {
+    const credRes = await apiRequest('/dreamhack/credentials', 'GET');
+    if (!credRes.ok) {
+      throw new Error('드림핵 계정 정보를 가져오는데 실패했습니다.');
+    }
+    const credData = credRes.data;
+    if (!credData || !credData.email || !credData.password) {
+      throw new Error('올바르지 않은 계정 데이터 형식입니다.');
+    }
+
+    // Dispatch the auto login trigger to extension
+    window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', {
+      detail: {
+        email: credData.email,
+        password: credData.password
+      }
+    }));
+  } catch (err) {
+    console.error('[Admin Session Renewal] Error:', err);
+    showToast(`드림핵 세션 재발급 실패: ${err.message}`, 'error');
+  }
+}
+
 async function executeLoadSharedSession(userdata) {
   const isExtensionInstalled = checkExtensionInstalled();
   if (!isExtensionInstalled) {
@@ -126,9 +158,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (confirmbtn) {
     if (userdata) {
       if (userdata.username === 'developer') {
-        confirmbtn.textContent = 'Sync Shared Session (Admin)';
+        confirmbtn.textContent = 'Renew Shared Session (Admin)';
         confirmbtn.addEventListener('click', () => {
-          executeSpecificFeature(userdata);
+          executeRenewSharedSession(userdata);
         });
       } else {
         confirmbtn.textContent = 'Load Shared Session (User)';
@@ -142,6 +174,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else {
     console.warn("Cannot find the button with id 'dreamhack-confirm'.");
   }
+
+  // Listen for admin auto login response from extension content script
+  window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', (event) => {
+    const { ok, message } = event.detail;
+    if (ok) {
+      showToast('드림핵 공용 계정 세션 재발급 및 동기화 완료!', 'success');
+      loadActivityLogs();
+    } else {
+      showToast(`드림핵 세션 재발급 실패: ${message || '알 수 없는 오류'}`, 'error');
+    }
+  });
 
   // Listen for load response event from extension content script
   window.addEventListener('INHACK_DREAMHACK_LOAD_RESPONSE', (event) => {

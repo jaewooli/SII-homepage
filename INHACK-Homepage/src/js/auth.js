@@ -40,9 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
       sessionStorage.setItem('toastMessage', msg);
       sessionStorage.setItem('toastType', type);
       if (r.ok) {
-        if (body.username === 'developer') {
-          sessionStorage.setItem('adminJustLoggedIn', 'true');
-        }
         location.href = '/';
       }
       else{
