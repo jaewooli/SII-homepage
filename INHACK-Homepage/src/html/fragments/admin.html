@@ -55,5 +55,21 @@
 
             <button type="button" id="admin-save-content-btn" class="action-btn" style="border-color: var(--color-cyan); color: var(--color-cyan); margin-top: 1.5rem; width: 100%;">변경 사항 저장</button>
         </div>
+
+        <!-- Card 3: User List and Deletion -->
+        <div class="log-card" style="padding: 2rem; background-color: var(--bg-surface); border: 1px solid rgba(168, 85, 247, 0.15); display: flex; flex-direction: column;">
+            <div class="log-card-title" style="color: #a855f7; font-size: 0.95rem; margin-bottom: 1.5rem;">등록된 사용자 목록 및 삭제</div>
+            <div style="flex: 1; display: flex; flex-direction: column;">
+                <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; font-size: 0.75rem; color: #64748b; font-weight: 600;">
+                    <div style="flex: 1;">아이디 (Username)</div>
+                    <div style="flex: 1;">이름 (Name)</div>
+                    <div style="width: 60px; text-align: center;">작업</div>
+                </div>
+                <div id="admin-user-list-container" style="max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                    <!-- Dynamically populated via JS -->
+                    <div style="text-align: center; color: #64748b; padding: 20px; font-size: 0.8rem;">사용자 목록 불러오는 중...</div>
+                </div>
+            </div>
+        </div>
     </div>
 </section>

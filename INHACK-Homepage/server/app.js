@@ -676,6 +676,95 @@ app.post('/admin/register-user', (req, res) => {
   });
 });
 
+// Admin Route: Get list of all users
+app.get('/admin/users', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+
+  db.all(`SELECT id, username, name FROM users ORDER BY id DESC`, [], (err, rows) => {
+    if (err) {
+      console.error('[Database Error] Failed to list users:', err.message);
+      return sendJson(res, { status: 500, ok: false, message: '사용자 목록 조회 실패', code: 'DB_ERROR' });
+    }
+    sendJson(res, {
+      status: 200,
+      ok: true,
+      data: rows,
+      code: 'SUCCESS'
+    });
+  });
+});
+
+// Admin Route: Delete a user
+app.post('/admin/delete-user', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+
+  const { id, username } = req.body;
+  if (!id && !username) {
+    return sendJson(res, { status: 400, ok: false, message: '사용자 ID 또는 Username이 필요합니다.', code: 'BAD_REQUEST' });
+  }
+
+  const currentUsername = req.session.user.username;
+  const targetUsername = username || '';
+
+  if (targetUsername === 'developer' || targetUsername === currentUsername) {
+    return sendJson(res, {
+      status: 400,
+      ok: false,
+      message: '시스템 관리자 계정 및 본인의 계정은 삭제할 수 없습니다.',
+      code: 'NOT_ALLOWED'
+    });
+  }
+
+  // Double check user detail if ID is sent
+  if (id) {
+    db.get(`SELECT username FROM users WHERE id = ?`, [id], (err, row) => {
+      if (err) {
+        console.error('[Database Error] Failed to fetch user during deletion check:', err.message);
+        return sendJson(res, { status: 500, ok: false, message: '데이터베이스 에러', code: 'DB_ERROR' });
+      }
+      if (!row) {
+        return sendJson(res, { status: 404, ok: false, message: '해당 사용자를 찾을 수 없습니다.', code: 'NOT_FOUND' });
+      }
+      if (row.username === 'developer' || row.username === currentUsername) {
+        return sendJson(res, {
+          status: 400,
+          ok: false,
+          message: '시스템 관리자 계정 및 본인의 계정은 삭제할 수 없습니다.',
+          code: 'NOT_ALLOWED'
+        });
+      }
+      performDelete(id, null);
+    });
+  } else {
+    performDelete(null, username);
+  }
+
+  function performDelete(userId, userNm) {
+    const query = userId ? `DELETE FROM users WHERE id = ?` : `DELETE FROM users WHERE username = ?`;
+    const param = userId || userNm;
+
+    db.run(query, [param], function(err) {
+      if (err) {
+        console.error('[Database Error] Failed to delete user:', err.message);
+        return sendJson(res, { status: 500, ok: false, message: '사용자 삭제 실패', code: 'DB_ERROR' });
+      }
+      if (this.changes === 0) {
+        return sendJson(res, { status: 404, ok: false, message: '해당 사용자를 찾을 수 없습니다.', code: 'NOT_FOUND' });
+      }
+      sendJson(res, {
+        status: 200,
+        ok: true,
+        message: `사용자가 성공적으로 삭제되었습니다.`,
+        code: 'SUCCESS'
+      });
+    });
+  }
+});
+
 // Admin Route: Update site section content HTML
 app.post('/admin/update-content', (req, res) => {
   if (!req.session.user || !req.session.user.isAdmin) {

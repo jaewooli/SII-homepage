@@ -321,6 +321,7 @@ async function initializeAdminPanel() {
         if (res.ok && data.ok) {
           showToast(data.message, 'success');
           registerForm.reset();
+          loadUserList();
         } else {
           showToast(data.message || '등록 실패', 'error');
         }
@@ -330,4 +331,72 @@ async function initializeAdminPanel() {
       }
     });
   }
+
+  // Load and render user list
+  const userListContainer = document.getElementById('admin-user-list-container');
+  
+  async function loadUserList() {
+    if (!userListContainer) return;
+    try {
+      const res = await fetch('/admin/users');
+      if (!res.ok) throw new Error('Failed to fetch users');
+      const payload = await res.json();
+      if (!payload.ok || !payload.data) {
+        userListContainer.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px; font-size: 0.8rem;">목록 로드 실패: ${payload.message || '오류'}</div>`;
+        return;
+      }
+
+      const users = payload.data;
+      if (users.length === 0) {
+        userListContainer.innerHTML = `<div style="text-align: center; color: #64748b; padding: 20px; font-size: 0.8rem;">등록된 사용자가 없습니다.</div>`;
+        return;
+      }
+
+      userListContainer.innerHTML = '';
+      users.forEach(user => {
+        const userRow = document.createElement('div');
+        userRow.style.cssText = "display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 0.8rem; color: #e2e8f0;";
+        
+        userRow.innerHTML = `
+          <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px;">${user.username}</div>
+          <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px;">${user.name}</div>
+          <div style="width: 60px; display: flex; justify-content: center;">
+            <button class="delete-user-btn action-btn" style="margin: 0; padding: 4px 8px; font-size: 0.7rem; border-color: #ef4444; color: #ef4444; background: transparent; cursor: pointer;">삭제</button>
+          </div>
+        `;
+
+        const deleteBtn = userRow.querySelector('.delete-user-btn');
+        deleteBtn.addEventListener('click', async () => {
+          if (confirm(`정말로 사용자 '${user.username}' (${user.name}) 계정을 삭제하시겠습니까?`)) {
+            showToast('사용자 삭제 중...', 'info', 0);
+            try {
+              const delRes = await fetch('/admin/delete-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: user.id, username: user.username })
+              });
+              const delData = await delRes.json();
+              if (delRes.ok && delData.ok) {
+                showToast('사용자 계정이 삭제되었습니다.', 'success');
+                loadUserList();
+              } else {
+                showToast(delData.message || '삭제 실패', 'error');
+              }
+            } catch (err) {
+              console.error(err);
+              showToast('서버 통신 오류', 'error');
+            }
+          }
+        });
+
+        userListContainer.appendChild(userRow);
+      });
+    } catch (e) {
+      console.error(e);
+      userListContainer.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px; font-size: 0.8rem;">서버 통신 오류 발생</div>`;
+    }
+  }
+
+  // Trigger initial list load
+  loadUserList();
 }
