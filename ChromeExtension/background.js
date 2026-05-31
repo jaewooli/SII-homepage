@@ -12,7 +12,7 @@ async function setupDNRRules() {
         ]
       },
       condition: {
-        urlFilter: "https://dreamhack.io/api/v1/auth/login/",
+        urlFilter: "dreamhack.io/api/v1/auth/login/",
         resourceTypes: ["xmlhttprequest", "other"]
       }
     }
@@ -92,7 +92,7 @@ async function registerDreamhackLoginRules(csrfToken) {
         requestHeaders: requestHeaders
       },
       condition: {
-        urlFilter: "https://dreamhack.io/api/v1/auth/login/",
+        urlFilter: "dreamhack.io/api/v1/auth/login/",
         resourceTypes: ["xmlhttprequest", "other"]
       }
     }
