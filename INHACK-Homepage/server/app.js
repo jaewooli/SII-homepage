@@ -165,9 +165,9 @@ function validateLogin(req, res, next) {
   next();
 }
 
-async function loginDreamhack(){
+async function loginDreamhack(force = false){
   // Bypasses ReCAPTCHA by returning pre-configured session cookies if they exist in .env
-  if (process.env.DREAMHACK_CSRF && process.env.DREAMHACK_SESSIONID) {
+  if (!force && process.env.DREAMHACK_CSRF && process.env.DREAMHACK_SESSIONID) {
     console.log('[Dreamhack Connect] Using pre-configured session cookies.');
     return {
       'csrf_token': process.env.DREAMHACK_CSRF,
@@ -190,14 +190,31 @@ async function loginDreamhack(){
       'Accept': 'application/json, text/plain, */*',
       'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
     },
-  })
-  if (res.status == 200){
-    const csrfToken = res.headers['set-cookie'][0];
-    sessionid = res.headers['set-cookie'][1];
-    return {'csrf_token':csrfToken, 'sessionid':sessionid}
-  }else{
-    return null;
+  });
+
+  if (res.status === 200){
+    const cookies = res.headers['set-cookie'] || [];
+    let csrfToken = '';
+    let sessId = '';
+    
+    cookies.forEach(cookie => {
+      if (cookie.startsWith('csrftoken=')) {
+        csrfToken = cookie.split(';')[0].split('=')[1];
+      } else if (cookie.startsWith('sessionid=')) {
+        sessId = cookie.split(';')[0].split('=')[1];
+      }
+    });
+
+    if (sessId) {
+      sessionid = sessId;
+      process.env.DREAMHACK_SESSIONID = sessId;
+      if (csrfToken) {
+        process.env.DREAMHACK_CSRF = csrfToken;
+      }
+      return { 'csrf_token': csrfToken, 'sessionid': sessId };
+    }
   }
+  return null;
 }
 
 app.get('/', (req, res) => {
@@ -478,6 +495,60 @@ app.post('/dreamhack/login', async (req, res) => {
             message: `Dreamhack API Error: ${error.message}`,
             code: 'SERVER_ERROR'
         });
+    }
+});
+
+app.post('/dreamhack/server-login', async (req, res) => {
+    if (!req.session || !req.session.user) {
+      return sendJson(res, {
+        status: 401, ok: false, action: 'auth', resource: 'dreamhack',
+        message: 'Unauthorized', code: 'UNAUTHORIZED'
+      });
+    }
+
+    const { id, username } = req.session.user;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+    const timestamp = new Date().toISOString();
+
+    try {
+      console.log('[Dreamhack Server Login] Initiating login request directly from OCI server...');
+      const result = await loginDreamhack(true);
+      
+      if (result && result.sessionid) {
+        // Log to database
+        db.run(`INSERT INTO dreamhack_access_logs (user_id, username, ip_address, timestamp) VALUES (?, ?, ?, ?)`, 
+          [id, username, ip, timestamp], (err) => {
+            if (err) console.error('[Database Log Error] Failed to log server login:', err.message);
+          }
+        );
+
+        // Log to file
+        const logMessage = `[${timestamp}] Server login for user: ${username} from IP: ${ip}\n`;
+        const logFilePath = path.join(__dirname, '../log/login_attempts.log');
+        fs.appendFileSync(logFilePath, logMessage);
+
+        console.log('[Dreamhack Server Login] Successfully logged in directly from server!');
+        return sendJson(res, {
+          status: 200, ok: true, action: 'auth', resource: 'dreamhack',
+          message: 'Server-side Dreamhack login successful',
+          data: result,
+          code: 'LOGIN_SUCCESS'
+        });
+      } else {
+        console.warn('[Dreamhack Server Login] Direct login failed.');
+        return sendJson(res, {
+          status: 400, ok: false, action: 'auth', resource: 'dreamhack',
+          message: 'Direct login failed (possibly blocked by Cloudflare)',
+          code: 'LOGIN_FAILED'
+        });
+      }
+    } catch (err) {
+      console.error('[Dreamhack Server Login] Error during direct login:', err.message);
+      return sendJson(res, {
+        status: 500, ok: false, action: 'auth', resource: 'dreamhack',
+        message: `Dreamhack API Error: ${err.message}`,
+        code: 'SERVER_ERROR'
+      });
     }
 });
 

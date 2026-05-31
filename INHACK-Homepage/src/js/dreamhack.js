@@ -139,6 +139,31 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn("Cannot find the button with id 'dreamhack-confirm'.");
   }
 
+  const serverLoginBtn = document.getElementById('dreamhack-server-login');
+  if (serverLoginBtn) {
+    serverLoginBtn.addEventListener('click', async () => {
+      const userdata = await isLoggedIn();
+      if (!userdata) {
+        showLoginRequiredToast();
+        return;
+      }
+      
+      showToast('서버에서 드림핵 로그인 시도 중...', 'info');
+      try {
+        const syncRes = await apiRequest('/dreamhack/server-login', 'POST');
+        if (syncRes.ok) {
+          showToast('서버 드림핵 로그인 성공!', 'success');
+          loadActivityLogs();
+        } else {
+          showToast(`서버 로그인 실패: ${syncRes.message || '로그인 실패'}`, 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('서버 통신 오류', 'error');
+      }
+    });
+  }
+
   // Listen for sync response event from extension content script
   window.addEventListener('INHACK_DREAMHACK_SYNC_RESPONSE', async (event) => {
     const { ok, sessionid, csrftoken, message } = event.detail;
