@@ -10,7 +10,8 @@
     "storage",
     "declarativeNetRequest",
     "tabs",
-    "cookies"
+    "cookies",
+    "scripting"
   ],
   "host_permissions": [
     "http://localhost:8080/*",

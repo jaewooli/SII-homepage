@@ -141,107 +141,98 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-const RULE_ID = 1001;
-
-async function setupHeadersRule() {
-  try {
-    await chrome.declarativeNetRequest.updateSessionRules({
-      removeRuleIds: [RULE_ID],
-      addRules: [
-        {
-          id: RULE_ID,
-          priority: 1,
-          action: {
-            type: 'modifyHeaders',
-            requestHeaders: [
-              { header: 'origin', operation: 'set', value: 'https://dreamhack.io' },
-              { header: 'referer', operation: 'set', value: 'https://dreamhack.io/' }
-            ]
-          },
-          condition: {
-            urlFilter: 'https://dreamhack.io/api/v1/auth/login/',
-            resourceTypes: ['xmlhttprequest']
-          }
-        }
-      ]
-    });
-    console.log('[INHACK Background] DeclarativeNetRequest session rule for headers setup successfully.');
-  } catch (err) {
-    console.error('[INHACK Background] Failed to setup DNR rules:', err);
-  }
-}
-
-async function removeHeadersRule() {
-  try {
-    await chrome.declarativeNetRequest.updateSessionRules({
-      removeRuleIds: [RULE_ID]
-    });
-    console.log('[INHACK Background] DeclarativeNetRequest session rule removed.');
-  } catch (err) {
-    console.error('[INHACK Background] Failed to remove DNR rules:', err);
-  }
-}
-
 async function loginToDreamhackAndSync(email, password, origin) {
-  console.log('[INHACK Background] Setting up header modifications for Dreamhack login...');
-  await setupHeadersRule();
+  console.log('[INHACK Background] Creating background tab for Dreamhack first-party login...');
+  
+  // 1. Create a background tab pointing to Dreamhack login page
+  const tab = await chrome.tabs.create({
+    url: 'https://dreamhack.io/login/',
+    active: false
+  });
 
   try {
-    // 1. Fetch login page to establish/renew the csrftoken cookie in the browser's cookie jar
-    console.log('[INHACK Background] Warming up CSRF session by fetching Dreamhack login page...');
-    await fetch('https://dreamhack.io/login/', { credentials: 'include' });
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // 2. Wait for the tab to complete loading
+    console.log('[INHACK Background] Waiting for login page to load in tab:', tab.id);
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        chrome.tabs.onUpdated.removeListener(listener);
+        reject(new Error('Dreamhack login page load timeout'));
+      }, 10000); // 10s timeout
 
-    console.log('[INHACK Background] Checking cookies for CSRF token...');
-    const cookiesList = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
-    console.log('[INHACK Background] Retrieved cookies:', cookiesList.map(c => c.name));
-    const csrftokenCookie = cookiesList.find(c => c.name === 'csrftoken');
-    
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    };
-
-    if (csrftokenCookie && csrftokenCookie.value) {
-      console.log('[INHACK Background] Attaching CSRF token to request headers:', csrftokenCookie.value);
-      headers['X-CSRFToken'] = csrftokenCookie.value;
-    } else {
-      console.warn('[INHACK Background] No csrftoken cookie found even after warmup!');
-    }
-
-    console.log('[INHACK Background] Performing background login to Dreamhack...');
-    const loginRes = await fetch('https://dreamhack.io/api/v1/auth/login/', {
-      method: 'POST',
-      headers: headers,
-      credentials: 'include', // Crucial to send and receive cookies
-      body: JSON.stringify({
-        email: email,
-        password: password,
-        loginSave: false
-      })
+      function listener(tabId, changeInfo) {
+        if (tabId === tab.id && changeInfo.status === 'complete') {
+          clearTimeout(timeout);
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve();
+        }
+      }
+      chrome.tabs.onUpdated.addListener(listener);
     });
 
-    if (!loginRes.ok) {
-      const errText = await loginRes.text();
-      throw new Error(`드림핵 로그인 API가 실패했습니다 (${loginRes.status}): ${errText}`);
+    // 3. Execute login fetch script inside the tab context
+    console.log('[INHACK Background] Executing login request within first-party tab context...');
+    const injectionResults = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: async (userEmail, userPassword) => {
+        // Read CSRF token from page cookie
+        const getCookie = (name) => {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop().split(';').shift();
+          return '';
+        };
+
+        const csrfToken = getCookie('csrftoken');
+        if (!csrfToken) {
+          throw new Error('CSRF cookie not found in page context.');
+        }
+
+        const loginRes = await fetch('/api/v1/auth/login/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRFToken': csrfToken
+          },
+          body: JSON.stringify({
+            email: userEmail,
+            password: userPassword,
+            loginSave: false
+          })
+        });
+
+        if (!loginRes.ok) {
+          const errText = await loginRes.text();
+          throw new Error(`Login API responded with status ${loginRes.status}: ${errText}`);
+        }
+
+        return true;
+      },
+      args: [email, password]
+    });
+
+    // Verify result
+    const success = injectionResults[0]?.result;
+    if (!success) {
+      throw new Error('First-party login execution failed.');
     }
 
-    // Set-Cookie is automatically processed by the browser context, but let's wait a bit for cookie store update
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // 4. Wait a moment for cookies to be committed by the browser
+    console.log('[INHACK Background] Login succeeded inside tab. Retrieving session cookies...');
+    await new Promise(resolve => setTimeout(resolve, 800));
 
     const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
     const sessionidCookie = cookies.find(c => c.name === 'sessionid');
-    const newCsrftokenCookie = cookies.find(c => c.name === 'csrftoken');
+    const csrftokenCookie = cookies.find(c => c.name === 'csrftoken');
 
     if (!sessionidCookie) {
       throw new Error("드림핵 로그인에는 성공했으나 sessionid 쿠키를 획득하지 못했습니다.");
     }
 
     const sessionid = sessionidCookie.value;
-    const csrftoken = newCsrftokenCookie ? newCsrftokenCookie.value : '';
+    const csrftoken = csrftokenCookie ? csrftokenCookie.value : '';
 
-    // Synchronize session back to portal
+    // 5. Synchronize session back to portal
     console.log('[INHACK Background] Synchronizing cookies back to portal...');
     const syncRes = await fetch(`${origin}/dreamhack/login`, {
       method: 'POST',
@@ -262,8 +253,14 @@ async function loginToDreamhackAndSync(email, password, origin) {
     }
 
     return { sessionid, csrftoken };
+
   } finally {
-    console.log('[INHACK Background] Cleaning up header modifications for Dreamhack login...');
-    await removeHeadersRule();
+    // 6. Always clean up the tab
+    console.log('[INHACK Background] Cleaning up background tab...');
+    try {
+      await chrome.tabs.remove(tab.id);
+    } catch (e) {
+      console.warn('[INHACK Background] Failed to remove background tab:', e);
+    }
   }
 }
