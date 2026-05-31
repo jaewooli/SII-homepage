@@ -187,13 +187,14 @@ async function loginToDreamhackAndSync(email, password, origin) {
   await setupHeadersRule();
 
   try {
-    // 1. Fetch home page to establish/renew the csrftoken cookie in the browser's cookie jar
-    console.log('[INHACK Background] Warming up CSRF session by fetching Dreamhack home...');
-    await fetch('https://dreamhack.io/', { credentials: 'include' });
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // 1. Fetch login page to establish/renew the csrftoken cookie in the browser's cookie jar
+    console.log('[INHACK Background] Warming up CSRF session by fetching Dreamhack login page...');
+    await fetch('https://dreamhack.io/login/', { credentials: 'include' });
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     console.log('[INHACK Background] Checking cookies for CSRF token...');
     const cookiesList = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
+    console.log('[INHACK Background] Retrieved cookies:', cookiesList.map(c => c.name));
     const csrftokenCookie = cookiesList.find(c => c.name === 'csrftoken');
     
     const headers = {
