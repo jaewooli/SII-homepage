@@ -386,3 +386,99 @@ async function logoutDreamhackSharedSession(sessionid, csrftoken) {
     }
   }
 }
+
+const LOGOUT_BLOCK_RULE_ID = 2002;
+
+// Function to enable or disable the logout block rule based on user role
+async function updateLogoutBlockRule() {
+  const isAdmin = await isCurrentUserAdmin();
+  
+  if (isAdmin) {
+    console.log('[INHACK Background] Current user is Admin. Disabling logout block rule.');
+    try {
+      await chrome.declarativeNetRequest.updateSessionRules({
+        removeRuleIds: [LOGOUT_BLOCK_RULE_ID]
+      });
+    } catch (e) {
+      console.warn('[INHACK Background] Failed to remove DNR session rules:', e);
+    }
+  } else {
+    console.log('[INHACK Background] Current user is Student. Enabling logout block rule.');
+    try {
+      await chrome.declarativeNetRequest.updateSessionRules({
+        removeRuleIds: [LOGOUT_BLOCK_RULE_ID],
+        addRules: [
+          {
+            id: LOGOUT_BLOCK_RULE_ID,
+            priority: 2,
+            action: {
+              type: 'redirect',
+              redirect: { url: 'https://dreamhack.io/' } // Redirect POST to home (fails POST, blocks actual logout on server)
+            },
+            condition: {
+              urlFilter: 'https://dreamhack.io/api/v1/auth/logout/',
+              resourceTypes: ['xmlhttprequest']
+            }
+          }
+        ]
+      });
+    } catch (e) {
+      console.warn('[INHACK Background] Failed to setup DNR session rules:', e);
+    }
+  }
+}
+
+// Helper to check if current user is admin
+async function isCurrentUserAdmin() {
+  try {
+    const data = await chrome.storage.local.get('INHACKuser');
+    return data && data.INHACKuser && data.INHACKuser.username === 'developer';
+  } catch (e) {
+    return false;
+  }
+}
+
+// Storage listener to update rules dynamically when user logs in/out of portal
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'local' && changes.INHACKuser) {
+    updateLogoutBlockRule();
+  }
+});
+
+// Run once on startup & install
+chrome.runtime.onInstalled.addListener(() => {
+  updateLogoutBlockRule();
+});
+chrome.runtime.onStartup.addListener(() => {
+  updateLogoutBlockRule();
+});
+// Execute now as well (in case service worker is already active)
+updateLogoutBlockRule();
+
+// Intercept student logout network request, discard cookies locally and reload tab
+chrome.webRequest.onBeforeRequest.addListener(
+  async (details) => {
+    const isAdmin = await isCurrentUserAdmin();
+    if (isAdmin) return; // Do nothing for admin (let them logout on the server)
+
+    console.log('[INHACK Background] Intercepted student logout request. Discarding cookies locally...');
+    
+    // Clear cookies locally
+    try {
+      await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'sessionid' });
+      await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrf_token' });
+    } catch (err) {
+      console.warn('[INHACK Background] Failed to remove local cookies during intercept:', err);
+    }
+
+    // Reload the tab to reflect logged-out state
+    if (details.tabId && details.tabId !== chrome.tabs.TAB_ID_NONE) {
+      try {
+        chrome.tabs.reload(details.tabId);
+      } catch (e) {
+        console.warn('[INHACK Background] Failed to reload tab:', e);
+      }
+    }
+  },
+  { urls: ["https://dreamhack.io/api/v1/auth/logout/"] }
+);
