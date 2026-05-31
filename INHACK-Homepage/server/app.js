@@ -33,12 +33,22 @@ async function loginDreamhackWithPuppeteer() {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
+      '--disable-blink-features=AutomationControlled',
       '--window-size=1920,1080'
     ]
   });
 
+  let page = null;
   try {
-    const page = await browser.newPage();
+    page = await browser.newPage();
+    
+    // Bypass webdriver detection
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => false,
+      });
+    });
+
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
     console.log('[Headless Chrome] Navigating to Dreamhack login page...');
@@ -72,6 +82,17 @@ async function loginDreamhackWithPuppeteer() {
     }
   } catch (err) {
     console.error('[Headless Chrome] Login routine error:', err.message);
+    if (page) {
+      try {
+        const html = await page.content();
+        console.log('[Headless Chrome] Error page HTML snippet:', html.substring(0, 1500));
+        const screenshotPath = path.join(__dirname, '../log/error_screenshot.png');
+        await page.screenshot({ path: screenshotPath });
+        console.log(`[Headless Chrome] Error screenshot saved to: ${screenshotPath}`);
+      } catch (e) {
+        console.error('[Headless Chrome] Failed to record error state:', e.message);
+      }
+    }
   } finally {
     await browser.close();
   }
