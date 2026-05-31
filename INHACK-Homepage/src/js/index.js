@@ -273,6 +273,53 @@ async function initializeAdminPanel() {
     });
   }
 
+  // Markdown File Upload and Parse
+  const fileInput = document.getElementById('admin-md-file');
+  const fileTrigger = document.getElementById('admin-upload-trigger-btn');
+  const filenameSpan = document.getElementById('admin-md-filename');
+
+  if (fileTrigger && fileInput && textareaContent) {
+    fileTrigger.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        filenameSpan.textContent = '선택된 파일 없음';
+        return;
+      }
+      filenameSpan.textContent = file.name;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const markdownText = e.target.result;
+        let htmlResult = '';
+        
+        if (window.marked && window.marked.parse) {
+          htmlResult = window.marked.parse(markdownText);
+        } else {
+          // Simple regex markdown-to-html fallback if marked CDN fails to load
+          htmlResult = markdownText
+            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+            .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+            .replace(/\*(.*)\*/gim, '<em>$1</em>')
+            .replace(/`(.*)`/gim, '<code>$1</code>')
+            .replace(/\[(.*?)\]\((.*?)\)/gim, "<a href='$2' target='_blank' rel='noopener noreferrer'>$1</a>")
+            .split('\n')
+            .map(line => line.trim() ? `<p>${line.trim()}</p>` : '')
+            .join('\n');
+        }
+        
+        textareaContent.value = htmlResult;
+        showToast('마크다운 파일이 HTML로 파싱되어 에디터에 로드되었습니다! 내용을 검토한 후 저장해 주세요.', 'success');
+      };
+      reader.readAsText(file);
+    });
+  }
+
   async function loadSectionContent(sectionId) {
     try {
       const response = await fetch(`/frags/${sectionId}.html?_t=${Date.now()}`);

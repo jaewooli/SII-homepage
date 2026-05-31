@@ -39,6 +39,15 @@
                 </select>
             </div>
 
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 1rem;">
+                <label style="font-size: 0.75rem; color: #64748b;">마크다운 (.md) 파일 업로드</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="file" id="admin-md-file" accept=".md" style="display: none;">
+                    <button type="button" id="admin-upload-trigger-btn" class="action-btn" style="margin: 0; padding: 10px 14px; font-size: 0.75rem; border-color: #10b981; color: #10b981;">MD 파일 선택</button>
+                    <span id="admin-md-filename" style="font-size: 0.75rem; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;">선택된 파일 없음</span>
+                </div>
+            </div>
+
             <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
                 <label for="admin-edit-content" style="font-size: 0.75rem; color: #64748b;">HTML 코드 편집</label>
                 <textarea id="admin-edit-content" style="width: 100%; height: 260px; min-height: 200px; padding: 12px; background: #080b12; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #00f0ff; font-family: 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.5; resize: vertical; outline: none;"></textarea>
