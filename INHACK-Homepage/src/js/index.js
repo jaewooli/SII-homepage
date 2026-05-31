@@ -49,31 +49,63 @@ window.addEventListener('hashchange', () => {
 });
 
 async function triggerAdminSessionRenewal() {
-  showToast('드림핵 공용 계정 세션 재발급 및 갱신 중... (약 10초 소요)', 'info', 0);
+  showToast('서버에서 E2E 암호화 자격 증명 가져오는 중...', 'info', 0);
 
   try {
-    const res = await fetch('/dreamhack/regenerate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
+    const credRes = await fetch('/dreamhack/encrypted-credentials');
+    if (!credRes.ok) {
+      if (credRes.status === 404) {
+        throw new Error('드림핵 E2E 계정 정보가 설정되지 않았습니다. 먼저 Dreamhack Integration 메뉴에서 E2E Credentials 설정을 완료해주세요.');
       }
-    });
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.message || '서버 재발급 요청에 실패했습니다.');
+      throw new Error('자격 증명 정보를 가져오지 못했습니다.');
     }
 
-    const resData = await res.json();
-    if (resData.ok) {
-      showToast('드림핵 공용 계정 세션 재발급 및 서버 갱신 완료!', 'success');
-      // If we are on the dreamhack page, reload to refresh logs and status
-      const dhStatusUpdate = document.getElementById('session-status');
-      if (dhStatusUpdate) {
-        window.location.reload();
+    const credData = await credRes.json();
+    if (!credData.ok || !credData.data) {
+      throw new Error(credData.message || '자격 증명 데이터 오류');
+    }
+
+    const { email, encryptedPassword, iv } = credData.data;
+
+    const isExtensionInstalled = document.documentElement.dataset.inhackExtensionInstalled === "true";
+    if (!isExtensionInstalled) {
+      throw new Error('Chrome Extension이 감지되지 않았습니다. 먼저 크롬 익스텐션을 설치 및 활성화해 주세요.');
+    }
+
+    showToast('드림핵 공용 계정 세션 재발급 및 갱신 중... (약 10초 소요)', 'info', 0);
+
+    // Promise wrapper to await extension response
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        window.removeEventListener('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', responseListener);
+        reject(new Error('익스텐션 응답 타임아웃 (15초 초과)'));
+      }, 15000);
+
+      function responseListener(event) {
+        clearTimeout(timeout);
+        window.removeEventListener('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', responseListener);
+        const { ok, message } = event.detail;
+        if (ok) {
+          resolve();
+        } else {
+          reject(new Error(message || '익스텐션 처리 중 오류가 발생했습니다.'));
+        }
       }
-    } else {
-      throw new Error(resData.message || '세션 재발급 도중 오류가 발생했습니다.');
+
+      window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', responseListener);
+
+      // Dispatch load trigger event to extension via window
+      window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', {
+        detail: { email, encryptedPassword, iv }
+      }));
+    });
+
+    showToast('드림핵 공용 계정 세션 재발급 및 서버 갱신 완료!', 'success');
+    
+    // If we are on the dreamhack page, reload to refresh logs and status
+    const dhStatusUpdate = document.getElementById('session-status');
+    if (dhStatusUpdate) {
+      window.location.reload();
     }
   } catch (err) {
     console.error('[Admin Session Renewal] Error:', err);

@@ -265,3 +265,45 @@ if (isDreamhackDomain) {
     }
   }, true);
 }
+
+// Listen for E2E master key save trigger from webpage
+window.addEventListener('INHACK_SAVE_MASTER_KEY', (event) => {
+  if (!isContextValid()) return;
+  const { jwk } = event.detail;
+  console.log('[INHACK Extension] Received E2E master key save request.');
+  chrome.runtime.sendMessage({
+    type: "SAVE_MASTER_KEY",
+    jwk
+  });
+});
+
+// Listen for admin E2E auto login and session regeneration trigger from webpage
+window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', (event) => {
+  if (!isContextValid()) {
+    console.warn('[INHACK Extension] Context invalidated. Reloading...');
+    window.location.reload();
+    return;
+  }
+  console.log('[INHACK Extension] Received admin E2E auto login trigger from webpage...');
+  const { email, encryptedPassword, iv } = event.detail;
+
+  chrome.runtime.sendMessage({
+    type: "ADMIN_AUTO_LOGIN_E2E",
+    email,
+    encryptedPassword,
+    iv
+  }, (response) => {
+    if (response && response.ok) {
+      console.log('[INHACK Extension] Admin E2E auto login completed successfully.');
+      window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', {
+        detail: { ok: true }
+      }));
+    } else {
+      const errMsg = response?.message || 'unknown error';
+      console.error('[INHACK Extension] Admin E2E auto login failed:', errMsg);
+      window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', {
+        detail: { ok: false, message: errMsg }
+      }));
+    }
+  });
+});

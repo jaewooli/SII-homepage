@@ -181,6 +181,91 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn("Cannot find the button with id 'dreamhack-confirm'.");
   }
 
+  // Render Admin E2E Credential Setup UI if user is admin
+  if (userdata && userdata.isAdmin) {
+    const container = document.querySelector('.option-container');
+    if (container) {
+      const adminCard = document.createElement('div');
+      adminCard.className = 'option-card admin-only-card';
+      adminCard.style.border = '1px solid rgba(255, 75, 75, 0.3)';
+      adminCard.innerHTML = `
+        <div class="option-title">
+            <span style="color: #ff4b4b;">E2E Credentials Setup</span>
+        </div>
+        <div class="option-desc" style="margin-bottom: 12px;">
+            Set up or update the administrator's Dreamhack credentials securely using End-to-End Encryption. Plain password is encrypted locally and never transmitted to the server.
+        </div>
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
+            <input type="email" id="dh-admin-email" placeholder="Dreamhack Email" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff;">
+            <input type="password" id="dh-admin-password" placeholder="Dreamhack Password" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff;">
+        </div>
+        <button id="dh-admin-save-btn" class="action-btn" style="background: #ff4b4b;" type="button">Save Credentials (E2E)</button>
+      `;
+      container.appendChild(adminCard);
+
+      const saveBtn = document.getElementById('dh-admin-save-btn');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+          const email = document.getElementById('dh-admin-email').value;
+          const password = document.getElementById('dh-admin-password').value;
+          if (!email || !password) {
+            showToast('이메일과 비밀번호를 모두 입력해 주세요.', 'error');
+            return;
+          }
+
+          showToast('보안 대칭키 생성 및 종단간 암호화 중...', 'info', 0);
+          try {
+            // 1. Generate AES-GCM Key (JWK)
+            const key = await window.crypto.subtle.generateKey(
+              { name: "AES-GCM", length: 256 },
+              true,
+              ["encrypt", "decrypt"]
+            );
+            const jwk = await window.crypto.subtle.exportKey("jwk", key);
+
+            // 2. Encrypt Password
+            const enc = new TextEncoder();
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            const encrypted = await window.crypto.subtle.encrypt(
+              { name: "AES-GCM", iv: iv },
+              key,
+              enc.encode(password)
+            );
+
+            const ciphertextBase64 = btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+            const ivBase64 = btoa(String.fromCharCode(...iv));
+
+            // 3. Dispatch master key save to chrome extension
+            window.dispatchEvent(new CustomEvent('INHACK_SAVE_MASTER_KEY', {
+              detail: { jwk }
+            }));
+
+            // Give a small delay to let extension save the key
+            await new Promise(resolve => setTimeout(resolve, 600));
+
+            // 4. Save encrypted credentials to server
+            const saveRes = await apiRequest('/dreamhack/encrypted-credentials', 'POST', {
+              email,
+              encryptedPassword: ciphertextBase64,
+              iv: ivBase64
+            });
+
+            if (saveRes.ok) {
+              showToast('E2E 암호화 설정이 안전하게 완료되었습니다!', 'success');
+              document.getElementById('dh-admin-email').value = '';
+              document.getElementById('dh-admin-password').value = '';
+            } else {
+              showToast(`자격 증명 서버 저장 실패: ${saveRes.message}`, 'error');
+            }
+          } catch (err) {
+            console.error(err);
+            showToast(`E2E 암호화 설정 실패: ${err.message}`, 'error');
+          }
+        });
+      }
+    }
+  }
+
   // Listen for load response event from extension content script
   window.addEventListener('INHACK_DREAMHACK_LOAD_RESPONSE', (event) => {
     const { ok, message } = event.detail;

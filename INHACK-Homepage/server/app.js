@@ -204,6 +204,15 @@ db.serialize(() => {
         timestamp TEXT
     )`);
 
+    // Create admin encrypted credentials table for E2E security
+    db.run(`CREATE TABLE IF NOT EXISTS admin_credentials (
+        id INTEGER PRIMARY KEY,
+        email TEXT,
+        encrypted_password TEXT,
+        iv TEXT,
+        updated_at TEXT
+    )`);
+
     // Seed default developer account dynamically from environment variables
     const adminUser = process.env.ADMIN_USERNAME || 'developer';
     const adminPass = process.env.ADMIN_PASSWORD;
@@ -425,6 +434,79 @@ app.get('/me', (req, res) => {
   return sendJson(res, {
     status: 401, ok: false, action: 'auth', resource: 'session',
     message: 'No active session', code: 'NO_SESSION'
+  });
+});
+
+// Get encrypted credentials for E2E decryption in chrome extension
+app.get('/dreamhack/encrypted-credentials', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, {
+      status: 403, ok: false, action: 'read', resource: 'dreamhack_credentials',
+      message: 'Forbidden', code: 'FORBIDDEN'
+    });
+  }
+
+  db.get(`SELECT email, encrypted_password, iv FROM admin_credentials WHERE id = 1`, [], (err, row) => {
+    if (err) {
+      console.error('[Database Read Error] Failed to read admin credentials:', err.message);
+      return sendJson(res, {
+        status: 500, ok: false, action: 'read', resource: 'dreamhack_credentials',
+        message: 'Database error', code: 'DATABASE_ERROR'
+      });
+    }
+    if (!row) {
+      return sendJson(res, {
+        status: 404, ok: false, action: 'read', resource: 'dreamhack_credentials',
+        message: 'No encrypted credentials found', code: 'NOT_FOUND'
+      });
+    }
+
+    sendJson(res, {
+      status: 200, ok: true, action: 'read', resource: 'dreamhack_credentials',
+      data: {
+        email: row.email,
+        encryptedPassword: row.encrypted_password,
+        iv: row.iv
+      },
+      code: 'SUCCESS'
+    });
+  });
+});
+
+// Update encrypted credentials from client side (E2E Encrypted)
+app.post('/dreamhack/encrypted-credentials', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, {
+      status: 403, ok: false, action: 'create', resource: 'dreamhack_credentials',
+      message: 'Forbidden', code: 'FORBIDDEN'
+    });
+  }
+
+  const { email, encryptedPassword, iv } = req.body;
+  if (!email || !encryptedPassword || !iv) {
+    return sendJson(res, {
+      status: 400, ok: false, action: 'create', resource: 'dreamhack_credentials',
+      message: 'email, encryptedPassword, and iv are required', code: 'BAD_REQUEST'
+    });
+  }
+
+  const timestamp = new Date().toISOString();
+
+  db.run(`INSERT OR REPLACE INTO admin_credentials (id, email, encrypted_password, iv, updated_at) 
+          VALUES (1, ?, ?, ?, ?)`, [email, encryptedPassword, iv, timestamp], (err) => {
+    if (err) {
+      console.error('[Database Error] Failed to save encrypted credentials:', err.message);
+      return sendJson(res, {
+        status: 500, ok: false, action: 'create', resource: 'dreamhack_credentials',
+        message: 'Database error', code: 'DATABASE_ERROR'
+      });
+    }
+
+    sendJson(res, {
+      status: 200, ok: true, action: 'create', resource: 'dreamhack_credentials',
+      message: '종단간(E2E) 암호화된 자격 증명이 성공적으로 저장되었습니다.',
+      code: 'SUCCESS'
+    });
   });
 });
 
