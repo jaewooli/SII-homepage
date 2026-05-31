@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     openHomepageTabBtn.addEventListener('click', () => {
       chrome.runtime.sendMessage({
         type: "URL_REDIRECT",
-        url: SERVER_BASE + '/homepage/main'
+        url: SERVER_BASE + '/'
       });
     });
   }

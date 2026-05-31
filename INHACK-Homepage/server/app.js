@@ -391,20 +391,19 @@ async function loginDreamhack(force = false){
 }
 
 app.get('/', (req, res) => {
-  res.redirect('/homepage');
-});
-
-// /homepage 경로로 접근 시 index.html 파일을 제공합니다.
-app.get('/homepage', (req, res) => {
-  res.redirect('/homepage/main');
-});
-
-app.get('/homepage/main', (req, res) => {
     res.sendFile(path.join(__dirname, '../src/html/index.html'), (err) => {
         if (err) {
             res.status(404).send('<h1>404 Not Found</h1>');
         }
     });
+});
+
+app.get('/homepage', (req, res) => {
+  res.redirect('/');
+});
+
+app.get('/homepage/main', (req, res) => {
+  res.redirect('/');
 });
 app.get('/homepage/:url', (req, res) => {
   let fileName = req.params.url || 'index';
