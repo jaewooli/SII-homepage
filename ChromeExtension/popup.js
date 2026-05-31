@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  const loginForm = document.getElementById('login-form');
+  const openHomepageBtn = document.getElementById('open-homepage-btn');
   const dreamhackBtn = document.getElementById('dreamhack-btn');
   const signoutBtn = document.getElementById('signout-btn');
   const supportLink = document.getElementById('support-link');
@@ -77,28 +77,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Login Submit
-  loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = document.getElementById('login-username').value.trim();
-    const password = document.getElementById('login-password').value;
-
-    showMsg('로그인 중...');
-
-    try {
-      const r = await postJson('/login', { username, password });
-      if (r.ok) {
-        showMsg(r.payload?.message ?? '로그인 성공');
-        await chrome.storage.local.set({ SIIuser: { username } });
-        setTimeout(() => location.reload(), 800);
-      } else {
-        showMsg(r.payload?.message ?? `로그인 실패 (${r.httpStatus})`, false);
-      }
-    } catch (err) {
-      console.error(err);
-      showMsg("네트워크 오류", false);
-    }
-  });
+  // Open Homepage Button redirect
+  if (openHomepageBtn) {
+    openHomepageBtn.addEventListener('click', () => {
+      chrome.runtime.sendMessage({
+        type: "URL_REDIRECT",
+        url: SERVER_BASE + '/homepage/login'
+      });
+    });
+  }
 
   // Dreamhack Button integration
   dreamhackBtn.addEventListener('click', async () => {
