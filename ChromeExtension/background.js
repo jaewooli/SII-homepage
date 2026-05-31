@@ -169,6 +169,47 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
+async function getCsrfToken() {
+  for (let attempt = 0; attempt < 25; attempt++) {
+    try {
+      const cookie = await chrome.cookies.get({ url: 'https://dreamhack.io', name: 'csrf_token' });
+      if (cookie && cookie.value) {
+        return cookie.value;
+      }
+    } catch (e) {
+      console.warn('[INHACK Background] Error getting cookie:', e);
+    }
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }
+  return null;
+}
+
+async function getCsrfTokenWithRetry(tabId) {
+  let token = await getCsrfToken();
+  if (token) return token;
+
+  // Fallback: nudge the server via a quick API call in the tab context
+  console.log('[INHACK Background] CSRF token not found in cookie store. Triggering fallback API request in tab context...');
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: async () => {
+        try {
+          await fetch('/api/v1/wargame/challenges/', { method: 'GET' });
+        } catch (e) {
+          console.warn('[INHACK Background] Fallback fetch failed:', e);
+        }
+      }
+    });
+  } catch (e) {
+    console.warn('[INHACK Background] Failed to execute fallback script:', e);
+  }
+
+  // Poll again
+  token = await getCsrfToken();
+  return token;
+}
+
 async function loginToDreamhackAndSync(email, password, origin) {
   const sessions = [];
 
@@ -180,6 +221,9 @@ async function loginToDreamhackAndSync(email, password, origin) {
       await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'sessionid' });
       await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrf_token' });
     } catch (e) {}
+
+    // Add a small delay to let Chrome process cookie deletions
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Create background tab
     const tab = await chrome.tabs.create({
@@ -205,36 +249,23 @@ async function loginToDreamhackAndSync(email, password, origin) {
         chrome.tabs.onUpdated.addListener(listener);
       });
 
+      // Retrieve CSRF token from Chrome cookie store directly in the service worker context
+      const csrfToken = await getCsrfTokenWithRetry(tab.id);
+      if (!csrfToken) {
+        throw new Error(`Session ${i + 1} login failed: CSRF cookie not found in Chrome cookie store.`);
+      }
+
       // Execute login request inside tab context
       const injectionResults = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        func: async (userEmail, userPassword) => {
+        func: async (userEmail, userPassword, token) => {
           try {
-            const getCookie = (name) => {
-              const value = `; ${document.cookie}`;
-              const parts = value.split(`; ${name}=`);
-              if (parts.length === 2) return parts.pop().split(';').shift();
-              return '';
-            };
-
-            // Poll for CSRF token for up to 5 seconds to handle async hydration
-            let csrfToken = '';
-            for (let attempt = 0; attempt < 25; attempt++) {
-              csrfToken = getCookie('csrf_token');
-              if (csrfToken) break;
-              await new Promise(resolve => setTimeout(resolve, 200));
-            }
-
-            if (!csrfToken) {
-              return { ok: false, error: 'CSRF cookie not found in page document.cookie: ' + document.cookie };
-            }
-
             const loginRes = await fetch('/api/v1/auth/login/', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'X-CSRFToken': csrfToken
+                'X-CSRFToken': token
               },
               body: JSON.stringify({
                 email: userEmail,
@@ -253,7 +284,7 @@ async function loginToDreamhackAndSync(email, password, origin) {
             return { ok: false, error: e.message };
           }
         },
-        args: [email, password]
+        args: [email, password, csrfToken]
       });
 
       const runResult = injectionResults[0]?.result;
@@ -281,6 +312,8 @@ async function loginToDreamhackAndSync(email, password, origin) {
       try {
         await chrome.tabs.remove(tab.id);
       } catch (e) {}
+      // Add a small delay after closing the tab before the next loop iteration
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
 
