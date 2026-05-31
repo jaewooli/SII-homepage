@@ -38,28 +38,6 @@ function verifyMessageSender(sender) {
   return false;
 }
 
-async function getHomepageTabOrigin() {
-  try {
-    const tabs = await chrome.tabs.query({
-      url: [
-        "http://localhost:8080/*",
-        "https://localhost:8080/*",
-        "http://127.0.0.1:8080/*",
-        "https://127.0.0.1:8080/*",
-        "http://ddyoru.duckdns.org/*",
-        "https://ddyoru.duckdns.org/*"
-      ]
-    });
-    if (tabs && tabs.length > 0) {
-      const url = new URL(tabs[0].url);
-      return url.origin;
-    }
-  } catch (err) {
-    console.error('[INHACK Background] Error getting homepage origin:', err);
-  }
-  return null;
-}
-
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!verifyMessageSender(sender)) {
     console.warn("[INHACK Security] Blocked message from untrusted sender:", sender.tab ? sender.tab.url : "unknown");
@@ -76,11 +54,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   } else if (msg.type === "GET_DREAMHACK_COOKIES") {
     (async () => {
       try {
-        const origin = await getHomepageTabOrigin();
-        if (!origin) {
-          sendResponse({ ok: false, message: "HOMEPAGE_TAB_CLOSED" });
-          return;
+        if (!sender.tab || !sender.tab.url) {
+          throw new Error('Message sender tab not resolved');
         }
+        const url = new URL(sender.tab.url);
+        const origin = url.origin;
 
         // 1. Fetch credentials from server
         console.log('[INHACK Background] Fetching credentials from server:', origin);

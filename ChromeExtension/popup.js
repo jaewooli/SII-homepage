@@ -2,23 +2,17 @@ let SERVER_BASE = 'http://localhost:8080';
 
 async function detectServerBase() {
   try {
-    const tabs = await chrome.tabs.query({
-      url: [
-        "http://localhost:8080/*",
-        "https://localhost:8080/*",
-        "http://127.0.0.1:8080/*",
-        "https://127.0.0.1:8080/*",
-        "http://ddyoru.duckdns.org/*",
-        "https://ddyoru.duckdns.org/*"
-      ]
-    });
-    if (tabs && tabs.length > 0) {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tabs && tabs.length > 0 && tabs[0].url) {
       const url = new URL(tabs[0].url);
-      SERVER_BASE = url.origin;
-      console.log('[INHACK Extension] Detected Server Base:', SERVER_BASE);
+      const allowedHosts = ['localhost', '127.0.0.1', 'ddyoru.duckdns.org'];
+      if (allowedHosts.includes(url.hostname)) {
+        SERVER_BASE = url.origin;
+        console.log('[INHACK Extension] Detected Server Base:', SERVER_BASE);
+      }
     }
   } catch (err) {
-    console.error('[INHACK Extension] Failed to query tabs for server base:', err);
+    console.error('[INHACK Extension] Failed to query active tab for server base:', err);
   }
 }
 
