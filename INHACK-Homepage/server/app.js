@@ -58,6 +58,11 @@ async function isSessionValid(sid, csrf) {
       }
     });
 
+    if (!response.ok) {
+      console.warn(`[Session Validation] Validation request returned status ${response.status}. Assuming session is valid to prevent false deletion.`);
+      return true;
+    }
+
     // 1. Check if server explicitly deletes the sessionid cookie (safe check for Node.js versions)
     let isCleared = false;
     if (typeof response.headers.getSetCookie === 'function') {
