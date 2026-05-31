@@ -214,7 +214,7 @@ async function loginToDreamhackAndSync(email, password, origin) {
           // 1. Invalidate old session on Dreamhack server by calling logout
           console.log('[INHACK Tab] Logging out old session to invalidate it...');
           try {
-            await fetch('/api/v1/auth/logout/', {
+            await fetch('/users/logout/', {
               method: 'POST',
               headers: {
                 'X-CSRFToken': csrfToken
@@ -346,7 +346,7 @@ async function logoutDreamhackSharedSession(sessionid, csrftoken) {
             document.cookie = `csrf_token=${csrfVal}; Path=/; Domain=.dreamhack.io; Secure; SameSite=Lax;`;
           }
 
-          const logoutRes = await fetch('/api/v1/auth/logout/', {
+          const logoutRes = await fetch('/users/logout/', {
             method: 'POST',
             headers: {
               'X-CSRFToken': csrfVal || ''
@@ -416,7 +416,7 @@ async function updateLogoutBlockRule() {
               redirect: { url: 'https://dreamhack.io/' } // Redirect POST to home (fails POST, blocks actual logout on server)
             },
             condition: {
-              urlFilter: 'https://dreamhack.io/api/v1/auth/logout/',
+              urlFilter: 'https://dreamhack.io/users/logout',
               resourceTypes: ['xmlhttprequest']
             }
           }
@@ -480,5 +480,5 @@ chrome.webRequest.onBeforeRequest.addListener(
       }
     }
   },
-  { urls: ["https://dreamhack.io/api/v1/auth/logout/"] }
+  { urls: ["https://dreamhack.io/users/logout", "https://dreamhack.io/users/logout/"] }
 );
