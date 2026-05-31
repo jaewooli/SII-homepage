@@ -436,3 +436,70 @@ p a:hover {
     color: #475569;
     padding: 2rem !important;
 }
+
+/* ==========================================================================
+   Horizontal Dreamhack Cards Layout & Warning Banner Styles
+   ========================================================================== */
+#dreamhack {
+    max-width: 900px;
+    padding: 2.5rem;
+}
+
+#dreamhack .option-container {
+    display: flex;
+    flex-direction: row;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    justify-content: center;
+    align-items: stretch;
+}
+
+#dreamhack .option-card {
+    flex: 1;
+    min-width: 260px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+#dreamhack .option-card .action-btn,
+#dreamhack .option-card .download-btn {
+    width: 100%;
+    margin-top: auto;
+}
+
+/* Warning Banner */
+.warning-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background-color: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin: 0.5rem 0 1.5rem 0;
+    text-align: left;
+}
+
+.warning-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.warning-text {
+    font-size: 0.85rem;
+    color: #f87171;
+    line-height: 1.5;
+}
+
+.warning-text strong {
+    color: #ffffff;
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+@media (max-width: 800px) {
+    #dreamhack .option-container {
+        flex-direction: column;
+    }
+}

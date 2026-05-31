@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="INHACK - Dreamhack Session Synchronization Link">
-    <title>INHACK - Dreamhack Access Portal</title>
+    <meta name="description" content="INHACK - 드림핵 세션 동기화 링크">
+    <title>INHACK - 드림핵 접속 포탈</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fira+Code:wght@400;500;700&family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -13,65 +13,70 @@
     <script type="module" src="/assets/js/dreamhack.js"></script>
 </head>
 <body>
-    <h1>Dreamhack Integration // <a href="/">INHACK Portal</a></h1>
+    <h1>드림핵 연동 // <a href="/">INHACK 포탈</a></h1>
 
     <section id="dreamhack">
-        <h2>Dreamhack Access</h2>
+        <h2>드림핵 접속 및 연동</h2>
         
         <div class="status-wrapper" style="gap: 12px; flex-wrap: wrap;">
             <span id="ext-status" class="status-badge status-disconnected">
                 <span class="status-dot"></span>
-                Extension: Not Detected
+                확장 프로그램: 감지되지 않음
             </span>
             <span id="session-status" class="status-badge status-disconnected">
                 <span class="status-dot"></span>
-                Shared Session: Checking...
+                공유 세션: 확인 중...
             </span>
+        </div>
+
+        <div class="warning-banner">
+            <span class="warning-icon">⚠️</span>
+            <span class="warning-text">공유 세션을 사용하는 동안에는 드림핵 사이트에서 <strong>로그아웃을 자제</strong>해 주세요. 로그아웃 시 다른 사용자의 세션 연동도 함께 해제됩니다.</span>
         </div>
 
         <div class="option-container">
             <!-- Option 1: Chrome Extension Sync -->
             <div class="option-card">
                 <div class="option-title">
-                    <span>Sync Session</span>
+                    <span>공유 세션 연동</span>
                 </div>
                 <div class="option-desc">
-                    Synchronize your local authorization token directly to the Dreamhack portal utilizing the installed INHACK Chrome Extension interface.
+                    설치된 INHACK 크롬 확장 프로그램을 사용하여 공용 드림핵 세션을 브라우저에 동기화하고 연동합니다.
                 </div>
-                <button id="dreamhack-confirm" class="action-btn" type="button">Initialize Sync</button>
+                <button id="dreamhack-confirm" class="action-btn" type="button">연동 시작</button>
             </div>
 
             <!-- Option 2: Download Extension -->
             <div class="option-card">
                 <div class="option-title">
-                    <span>Install Extension</span>
+                    <span>확장 프로그램 설치</span>
                 </div>
                 <div class="option-desc">
-                    If the secure INHACK Chrome Extension is missing or disabled, download the installation package to mount it on your browser.
+                    INHACK 크롬 확장 프로그램이 없거나 비활성화되어 있는 경우, 확장 프로그램을 다운로드하여 브라우저에 수동으로 설치해 주세요.
                 </div>
-                <a href="/assets/INHACK-Extension.zip" download id="dreamhack-download" class="download-btn">Download Extension (.ZIP)</a>
+                <a href="/assets/INHACK-Extension.zip" download id="dreamhack-download" class="download-btn">확장 프로그램 다운로드 (.ZIP)</a>
             </div>
         </div>
     </section>
 
     <!-- Activity Logs Panel -->
     <section id="logs-panel" class="logs-container">
-        <h2>Dreamhack Activity Logs</h2>
+        <h2>드림핵 활동 로그</h2>
         <div class="logs-grid">
             <div class="log-card">
-                <div class="log-card-title">Session Sync Attempts</div>
+                <div class="log-card-title">세션 동기화 시도 기록</div>
                 <div class="log-table-wrapper">
                     <table class="log-table" id="access-log-table">
                         <thead>
                             <tr>
-                                <th>USER</th>
-                                <th>IP ADDRESS</th>
-                                <th>TIMESTAMP</th>
+                                <th>사용자</th>
+                                <th>IP 주소</th>
+                                <th>일시</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="3" class="log-empty">Loading sync logs...</td>
+                                <td colspan="3" class="log-empty">동기화 로그를 불러오는 중...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -79,19 +84,19 @@
             </div>
             
             <div class="log-card">
-                <div class="log-card-title">Challenge Solve Logs</div>
+                <div class="log-card-title">문제 풀이 기록</div>
                 <div class="log-table-wrapper">
                     <table class="log-table" id="solve-log-table">
                         <thead>
                             <tr>
-                                <th>USER</th>
-                                <th>CHALLENGE</th>
-                                <th>SOLVED AT</th>
+                                <th>사용자</th>
+                                <th>문제 이름</th>
+                                <th>풀이 일시</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="3" class="log-empty">Loading solve logs...</td>
+                                <td colspan="3" class="log-empty">풀이 로그를 불러오는 중...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -99,19 +104,19 @@
             </div>
             
             <div class="log-card">
-                <div class="log-card-title">Logout Interceptions (Debug)</div>
+                <div class="log-card-title">로그아웃 차단 기록</div>
                 <div class="log-table-wrapper">
                     <table class="log-table" id="intercept-log-table">
                         <thead>
                             <tr>
-                                <th>USER</th>
-                                <th>IP ADDRESS</th>
-                                <th>TIMESTAMP</th>
+                                <th>사용자</th>
+                                <th>IP 주소</th>
+                                <th>일시</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="3" class="log-empty">Loading interception logs...</td>
+                                <td colspan="3" class="log-empty">차단 로그를 불러오는 중...</td>
                             </tr>
                         </tbody>
                     </table>

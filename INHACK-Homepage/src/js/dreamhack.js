@@ -67,7 +67,7 @@ async function autoSeedE2ECredentials(plainEmail, plainPassword) {
 }
 
 function showLoginRequiredToast() {
-  showToast('You need to Login first', 'error');
+  showToast('로그인이 필요합니다.', 'error');
 }
 
 function checkExtensionInstalled() {
@@ -80,10 +80,10 @@ function updateExtensionStatus() {
 
   if (checkExtensionInstalled()) {
     statusBadge.className = 'status-badge status-connected';
-    statusBadge.innerHTML = '<span class="status-dot"></span>Extension: Connected';
+    statusBadge.innerHTML = '<span class="status-dot"></span>확장 프로그램: 연결됨';
   } else {
     statusBadge.className = 'status-badge status-disconnected';
-    statusBadge.innerHTML = '<span class="status-dot"></span>Extension: Not Detected';
+    statusBadge.innerHTML = '<span class="status-dot"></span>확장 프로그램: 감지되지 않음';
   }
 }
 
@@ -98,22 +98,22 @@ async function updateSharedSessionStatus() {
       const valid = res.data.valid_sessions || 1;
       const total = res.data.total_sessions || 1;
       badge.className = 'status-badge status-connected';
-      badge.innerHTML = `<span class="status-dot"></span>Session: Active (Pool: ${valid}/${total}, Updated: ${timeStr})`;
+      badge.innerHTML = `<span class="status-dot"></span>세션: 활성화됨 (풀: ${valid}/${total}, 업데이트: ${timeStr})`;
     } else {
       badge.className = 'status-badge status-disconnected';
-      badge.innerHTML = '<span class="status-dot"></span>Session: Inactive (재발급 필요)';
+      badge.innerHTML = '<span class="status-dot"></span>세션: 비활성화됨 (재발급 필요)';
     }
   } catch (err) {
     console.error('Failed to fetch shared session status:', err);
     badge.className = 'status-badge status-disconnected';
-    badge.innerHTML = '<span class="status-dot"></span>Session: Error Checking';
+    badge.innerHTML = '<span class="status-dot"></span>세션: 상태 확인 오류';
   }
 }
 
 async function executeSpecificFeature(userdata) {
   const isExtensionInstalled = checkExtensionInstalled();
   if (!isExtensionInstalled) {
-    showToast('Chrome Extension not detected. Please install it first.', 'error');
+    showToast('크롬 확장 프로그램이 감지되지 않았습니다. 먼저 설치해 주세요.', 'error');
     return;
   }
 
@@ -144,7 +144,7 @@ async function loadActivityLogs() {
             `;
           }).join('');
         } else {
-          accessBody.innerHTML = `<tr><td colspan="3" class="log-empty">No sync attempts logged yet.</td></tr>`;
+          accessBody.innerHTML = `<tr><td colspan="3" class="log-empty">아직 동기화 시도 기록이 없습니다.</td></tr>`;
         }
       }
 
@@ -163,7 +163,7 @@ async function loadActivityLogs() {
             `;
           }).join('');
         } else {
-          solveBody.innerHTML = `<tr><td colspan="3" class="log-empty">No solved challenges logged yet.</td></tr>`;
+          solveBody.innerHTML = `<tr><td colspan="3" class="log-empty">아직 풀이한 문제가 없습니다.</td></tr>`;
         }
       }
 
@@ -182,7 +182,7 @@ async function loadActivityLogs() {
             `;
           }).join('');
         } else {
-          interceptBody.innerHTML = `<tr><td colspan="3" class="log-empty">No logout attempts intercepted yet.</td></tr>`;
+          interceptBody.innerHTML = `<tr><td colspan="3" class="log-empty">아직 로그아웃 차단 기록이 없습니다.</td></tr>`;
         }
       }
     }
@@ -203,7 +203,7 @@ function escapeHtml(str) {
 async function executeLoadSharedSession(userdata) {
   const isExtensionInstalled = checkExtensionInstalled();
   if (!isExtensionInstalled) {
-    showToast('Chrome Extension not detected. Please install it first.', 'error');
+    showToast('크롬 확장 프로그램이 감지되지 않았습니다. 먼저 설치해 주세요.', 'error');
     return;
   }
 
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (confirmbtn) {
     if (userdata) {
-      confirmbtn.textContent = 'Load Shared Session';
+      confirmbtn.textContent = '공유 세션 불러오기';
       confirmbtn.addEventListener('click', () => {
         executeLoadSharedSession(userdata);
       });
@@ -258,15 +258,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       adminCard.style.border = '1px solid rgba(255, 75, 75, 0.3)';
       adminCard.innerHTML = `
         <div class="option-title">
-            <span style="color: #ff4b4b;">E2E Password Setup</span>
+            <span style="color: #ff4b4b;">E2E 비밀번호 설정 (관리자 전용)</span>
         </div>
         <div class="option-desc" style="margin-bottom: 12px;">
-            Set up or update the administrator's Dreamhack password securely using End-to-End Encryption. Plain password is encrypted locally and never transmitted to the server.
+            종단간 암호화(E2E)를 사용하여 관리자용 드림핵 비밀번호를 안전하게 설정/업데이트합니다. 비밀번호 평문은 브라우저에서 직접 암호화되며 서버로는 절대 전송되지 않습니다.
         </div>
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
-            <input type="password" id="dh-admin-password" placeholder="Dreamhack Password" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff;">
+            <input type="password" id="dh-admin-password" placeholder="드림핵 비밀번호" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff;">
         </div>
-        <button id="dh-admin-save-btn" class="action-btn" style="background: #ff4b4b;" type="button">Save Password (E2E)</button>
+        <button id="dh-admin-save-btn" class="action-btn" style="background: #ff4b4b;" type="button">비밀번호 저장 (E2E)</button>
       `;
       container.appendChild(adminCard);
 

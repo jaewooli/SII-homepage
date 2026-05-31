@@ -160,7 +160,7 @@ if (isDreamhackDomain) {
       
       // Delay to let browser render the page completely first
       setTimeout(() => {
-        alert('[INHACK 디버그] 드림핵 로그아웃 시도가 감지되어 차단되었습니다. 다른 사용자의 공용 세션을 보호하기 위해 서버 로그아웃을 방지하고 로컬 브라우저 쿠키만 삭제합니다.');
+        alert('[INHACK] 드림핵 로그아웃 시도가 감지되어 차단되었습니다. 다른 사용자의 공용 세션을 보호하기 위해 서버 로그아웃을 방지하고 로컬 브라우저 쿠키만 삭제합니다.');
         
         if (forceRedirect) {
           // If we had to catch the flag late (e.g. from listener), force reload & redraw the main page layout
@@ -217,7 +217,7 @@ if (isDreamhackDomain) {
     console.log('[INHACK Extension] Performing client-side logout interception...');
     
     // 1. Immediately alert the user on the current page before navigation starts
-    alert('[INHACK 디버그] 드림핵 로그아웃 시도가 감지되어 차단되었습니다. 다른 사용자의 공용 세션을 보호하기 위해 서버 로그아웃을 방지하고 로컬 브라우저 쿠키만 삭제합니다.');
+    alert('[INHACK] 드림핵 로그아웃 시도가 감지되어 차단되었습니다. 다른 사용자의 공용 세션을 보호하기 위해 서버 로그아웃을 방지하고 로컬 브라우저 쿠키만 삭제합니다.');
 
     // 2. Tell background worker to discard cookies and log to portal
     chrome.runtime.sendMessage({ type: "STUDENT_LOGOUT_INTERCEPT" }, () => {
