@@ -112,27 +112,30 @@ async function registerDreamhackLoginRules(csrfToken) {
 async function performDreamhackLogin(email, password) {
   console.log('[SII Background] Performing direct browser-context Dreamhack login...');
   
-  // Get all cookies for dreamhack.io to cover subdomains and wildcards
+  // Get all cookies available to the extension and filter for dreamhack.io (handling all wildcards/subdomains)
   let cookies = [];
   try {
-    cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
+    cookies = await chrome.cookies.getAll({});
   } catch (err) {
     console.warn('[SII Background] Failed to query cookies:', err);
   }
-  let csrfCookie = cookies.find(c => c.name === 'csrftoken');
+  let dreamhackCookies = cookies.filter(c => c.domain && c.domain.includes('dreamhack.io'));
+  let csrfCookie = dreamhackCookies.find(c => c.name === 'csrftoken');
   
-  // If the cookie does not exist, fetch the login page to initialize cookies
+  // If the cookie does not exist, fetch the main page to initialize cookies
   if (!csrfCookie) {
-    console.log('[SII Background] No csrftoken cookie found. Initializing session via GET request...');
+    console.log('[SII Background] No csrftoken cookie found. Initializing session via GET request to main page...');
     try {
-      await fetch('https://dreamhack.io/login', {
+      await fetch('https://dreamhack.io/', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        cache: 'no-store'
       });
-      cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
-      csrfCookie = cookies.find(c => c.name === 'csrftoken');
+      cookies = await chrome.cookies.getAll({});
+      dreamhackCookies = cookies.filter(c => c.domain && c.domain.includes('dreamhack.io'));
+      csrfCookie = dreamhackCookies.find(c => c.name === 'csrftoken');
     } catch (err) {
-      console.warn('[SII Background] Failed to fetch login page to init CSRF token:', err);
+      console.warn('[SII Background] Failed to fetch main page to init CSRF token:', err);
     }
   }
 
