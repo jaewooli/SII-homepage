@@ -193,6 +193,11 @@ document.addEventListener('DOMContentLoaded', async() => {
   const me = await fetchMe();
   renderUserUI(me);
 
+  // Force first-time users to change their password immediately
+  if (me && !me.isAdmin && me.passwordChanged === 0) {
+    showForcePasswordChangeModal();
+  }
+
   const message = sessionStorage.getItem('toastMessage');
   const type = sessionStorage.getItem('toastType');
 
@@ -202,6 +207,110 @@ document.addEventListener('DOMContentLoaded', async() => {
     showToast(message, type || 'info');
   }
 });
+
+// Fullscreen overlay modal enforcing E2E mixed password rules
+function showForcePasswordChangeModal() {
+  const overlay = document.createElement('div');
+  overlay.id = 'force-password-change-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(8, 11, 18, 0.95);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+  `;
+
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    width: 100%;
+    max-width: 420px;
+    padding: 2.5rem;
+    background: #0d131f;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    color: #fff;
+    font-family: sans-serif;
+  `;
+
+  modal.innerHTML = `
+    <h2 style="color: #ef4444; font-size: 1.25rem; margin-top: 0; margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">최초 비밀번호 변경 필수</h2>
+    <p style="font-size: 0.8rem; color: #94a3b8; line-height: 1.5; margin-bottom: 1.5rem;">보안 강화를 위해 첫 로그인 시 비밀번호 변경이 강제됩니다. 변경 완료 전까지 포털 사용이 불가능합니다.</p>
+    
+    <form id="force-password-form" style="display: flex; flex-direction: column; gap: 1rem;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label style="font-size: 0.75rem; color: #64748b; font-weight: 600;">현재 비밀번호</label>
+        <input type="password" id="force-curr-pw" placeholder="현재 임시 비밀번호" required style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #fff; outline: none; border-color: rgba(255,255,255,0.1);">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label style="font-size: 0.75rem; color: #64748b; font-weight: 600;">새 비밀번호</label>
+        <input type="password" id="force-new-pw" placeholder="영어 대/소문자, 숫자, 특수문자 포함 (8자 이상)" required style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #fff; outline: none; border-color: rgba(255,255,255,0.1);">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label style="font-size: 0.75rem; color: #64748b; font-weight: 600;">새 비밀번호 확인</label>
+        <input type="password" id="force-confirm-pw" placeholder="새 비밀번호 다시 입력" required style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #fff; outline: none; border-color: rgba(255,255,255,0.1);">
+      </div>
+      
+      <button type="submit" class="action-btn" style="border-color: #ef4444; color: #ef4444; margin-top: 1rem; width: 100%; font-weight: 600; padding: 12px; cursor: pointer; background: transparent;">비밀번호 변경 완료</button>
+    </form>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const form = modal.querySelector('#force-password-form');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPassword = modal.querySelector('#force-curr-pw').value;
+    const newPassword = modal.querySelector('#force-new-pw').value;
+    const confirmPassword = modal.querySelector('#force-confirm-pw').value;
+
+    if (newPassword === currentPassword) {
+      showToast('새 비밀번호는 현재 비밀번호와 다르게 설정해야 합니다.', 'error');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      showToast('새 비밀번호와 비밀번호 확인이 일치하지 않습니다.', 'error');
+      return;
+    }
+
+    // Complexity check: Uppercase, Lowercase, Number, keyboard special character, >= 8 chars
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      showToast('새 비밀번호는 최소 8자 이상이어야 하며 숫자, 영문 대문자, 영문 소문자, 특수문자를 각각 최소 1개 이상 포함해야 합니다.', 'error');
+      return;
+    }
+
+    showToast('비밀번호 변경 처리 중...', 'info', 0);
+    try {
+      const res = await fetch('/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        showToast('비밀번호가 성공적으로 변경되었습니다! 포털 페이지로 진입합니다.', 'success');
+        overlay.remove();
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        showToast(data.message || '비밀번호 변경 실패', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('서버 통신 오류', 'error');
+    }
+  });
+}
 
 async function initializeAdminPanel() {
   const selectSection = document.getElementById('admin-edit-section');

@@ -146,6 +146,33 @@ app.use(session({
     rolling:true,
 }));
 
+// Global Password Change Enforcer Middleware for initial users
+app.use((req, res, next) => {
+  const isAuthOrStatic = req.path.startsWith('/login') || 
+                         req.path.startsWith('/logout') || 
+                         req.path.startsWith('/me') || 
+                         req.path.startsWith('/change-password') || 
+                         req.path.startsWith('/assets') || 
+                         req.path.startsWith('/images');
+
+  if (req.session && req.session.user && !req.session.user.isAdmin) {
+    if (req.session.user.passwordChanged === 0 && !isAuthOrStatic) {
+      if (req.headers.accept && req.headers.accept.includes('text/html')) {
+        if (req.path.startsWith('/frags/') && req.path !== '/frags/home.html') {
+          return res.status(403).send('<div style="color:#ff4b4b;text-align:center;padding:20px;font-family:sans-serif;font-weight:bold;">비밀번호 변경이 필요합니다.</div>');
+        }
+      }
+      return sendJson(res, {
+        status: 403,
+        ok: false,
+        message: '최초 로그인 후 비밀번호 변경이 필요합니다.',
+        code: 'PASSWORD_CHANGE_REQUIRED'
+      });
+    }
+  }
+  next();
+});
+
 app.use(rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 500,
@@ -196,6 +223,13 @@ db.serialize(() => {
         password TEXT,
         name TEXT
     )`);
+    
+    // Add password_changed column for tracking initial login states (E2E Migration)
+    db.run(`ALTER TABLE users ADD COLUMN password_changed INTEGER DEFAULT 0`, [], (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+            console.error('[Database Migration] Failed to add password_changed column:', err.message);
+        }
+    });
     
     // Create dreamhack access tracking log table
     db.run(`CREATE TABLE IF NOT EXISTS dreamhack_access_logs (
@@ -461,7 +495,13 @@ app.post('/login', validateLogin, (req, res) => {
 
             const adminUser = process.env.ADMIN_USERNAME || 'developer';
             const isAdmin = (row.username === adminUser);
-            req.session.user = { id: row.id, username: row.username, name: row.name, isAdmin };
+            req.session.user = { 
+                id: row.id, 
+                username: row.username, 
+                name: row.name, 
+                isAdmin, 
+                passwordChanged: row.password_changed || 0 
+            };
             sendJson(res, {
                 status: 200, ok: true, action: 'auth', resource: 'users',
                 message: 'Login Success!.',
@@ -487,6 +527,56 @@ app.get('/me', (req, res) => {
   return sendJson(res, {
     status: 401, ok: false, action: 'auth', resource: 'session',
     message: 'No active session', code: 'NO_SESSION'
+  });
+});
+
+// User Route: Change password (enforcing security rules)
+app.post('/change-password', (req, res) => {
+  if (!req.session.user) {
+    return sendJson(res, { status: 401, ok: false, message: '로그인이 필요합니다.', code: 'UNAUTHORIZED' });
+  }
+
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return sendJson(res, { status: 400, ok: false, message: '현재 비밀번호와 새 비밀번호를 모두 입력해 주세요.', code: 'BAD_REQUEST' });
+  }
+
+  // Enforce password requirements: Number, Upper/Lower English letter, general special character, at least 8 chars
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]).{8,}$/;
+  if (!passwordRegex.test(newPassword)) {
+    return sendJson(res, {
+      status: 400,
+      ok: false,
+      message: '새 비밀번호는 최소 8자 이상이어야 하며 숫자, 영문 대문자, 영문 소문자, 특수문자를 각각 최소 1개 이상 포함해야 합니다.',
+      code: 'PASSWORD_TOO_WEAK'
+    });
+  }
+
+  db.get(`SELECT password FROM users WHERE id = ?`, [req.session.user.id], (err, row) => {
+    if (err || !row) {
+      console.error('[Database Error] Failed to fetch user password:', err ? err.message : 'User not found');
+      return sendJson(res, { status: 500, ok: false, message: '데이터베이스 조회 실패', code: 'DB_ERROR' });
+    }
+
+    try {
+      const match = bcrypt.compareSync(currentPassword, row.password);
+      if (!match) {
+        return sendJson(res, { status: 400, ok: false, message: '현재 비밀번호가 일치하지 않습니다.', code: 'INVALID_CURRENT_PASSWORD' });
+      }
+
+      const hashedNewPassword = bcrypt.hashSync(newPassword, 10);
+      db.run(`UPDATE users SET password = ?, password_changed = 1 WHERE id = ?`, [hashedNewPassword, req.session.user.id], (updateErr) => {
+        if (updateErr) {
+          console.error('[Database Error] Failed to update password:', updateErr.message);
+          return sendJson(res, { status: 500, ok: false, message: '비밀번호 변경 실패', code: 'DB_ERROR' });
+        }
+
+        req.session.user.passwordChanged = 1;
+        sendJson(res, { status: 200, ok: true, message: '비밀번호가 성공적으로 변경되었습니다. 이제 포털 서비스를 이용하실 수 있습니다.', code: 'SUCCESS' });
+      });
+    } catch (e) {
+      sendJson(res, { status: 500, ok: false, message: '비밀번호 검증 오류', code: 'HASH_ERROR' });
+    }
   });
 });
 
