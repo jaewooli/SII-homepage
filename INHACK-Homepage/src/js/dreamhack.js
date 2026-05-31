@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span style="color: #ff4b4b;">E2E 비밀번호 설정 (관리자 전용)</span>
         </div>
         <div class="option-desc" style="margin-bottom: 12px;">
-            드림핵 공용 계정의 <strong>실제 로그인 비밀번호</strong>를 입력해야 합니다. 비밀번호 평문은 브라우저에서 직접 암호화되며 서버로는 절대 전송되지 않습니다.
+            드림핵 공용 계정의 <strong>실제 로그인 비밀번호</strong>를 입력해야 합니다. 입력한 비밀번호는 브라우저에서 종단간(E2E) 암호화되어 서버에 저장됩니다.
         </div>
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
             <input type="password" id="dh-admin-password" placeholder="드림핵 포탈 실제 비밀번호" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff;">
