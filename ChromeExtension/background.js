@@ -235,8 +235,8 @@ async function getCsrfTokenWithRetry(tabId) {
 async function loginToDreamhackAndSync(email, password, origin) {
   const sessions = [];
 
-  for (let i = 0; i < 5; i++) {
-    console.log(`[INHACK Background] Generating session ${i + 1}/5...`);
+  for (let i = 0; i < 3; i++) {
+    console.log(`[INHACK Background] Generating session ${i + 1}/3...`);
 
     // Clear existing cookies locally to force Django to generate a fresh session ID
     try {
@@ -340,7 +340,7 @@ async function loginToDreamhackAndSync(email, password, origin) {
     }
   }
 
-  console.log('[INHACK Background] Generated 5 sessions. Synchronizing sessions back to portal...');
+  console.log('[INHACK Background] Generated 3 sessions. Synchronizing sessions back to portal...');
   const syncRes = await fetch(`${origin}/dreamhack/login`, {
     method: 'POST',
     headers: {
