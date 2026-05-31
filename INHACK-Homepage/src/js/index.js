@@ -267,29 +267,29 @@ function showForcePasswordChangeModal() {
   const form = modal.querySelector('#force-password-form');
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const currentPassword = modal.querySelector('#force-curr-pw').value;
-    const newPassword = modal.querySelector('#force-new-pw').value;
-    const confirmPassword = modal.querySelector('#force-confirm-pw').value;
-
-    if (newPassword === currentPassword) {
-      showToast('새 비밀번호는 현재 비밀번호와 다르게 설정해야 합니다.', 'error');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      showToast('새 비밀번호와 비밀번호 확인이 일치하지 않습니다.', 'error');
-      return;
-    }
-
-    // Complexity check: Uppercase, Lowercase, Number, keyboard special character, >= 8 chars
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]).{8,}$/;
-    if (!passwordRegex.test(newPassword)) {
-      showToast('새 비밀번호는 최소 8자 이상이어야 하며 숫자, 영문 대문자, 영문 소문자, 특수문자를 각각 최소 1개 이상 포함해야 합니다.', 'error');
-      return;
-    }
-
-    showToast('비밀번호 변경 처리 중...', 'info', 0);
     try {
+      const currentPassword = document.getElementById('force-curr-pw').value;
+      const newPassword = document.getElementById('force-new-pw').value;
+      const confirmPassword = document.getElementById('force-confirm-pw').value;
+
+      if (newPassword === currentPassword) {
+        showToast('새 비밀번호는 현재 비밀번호와 다르게 설정해야 합니다.', 'error');
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        showToast('새 비밀번호와 비밀번호 확인이 일치하지 않습니다.', 'error');
+        return;
+      }
+
+      // Complexity check: Uppercase, Lowercase, Number, keyboard special character, >= 8 chars
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]).{8,}$/;
+      if (!passwordRegex.test(newPassword)) {
+        showToast('새 비밀번호는 최소 8자 이상이어야 하며 숫자, 영문 대문자, 영문 소문자, 특수문자를 각각 최소 1개 이상 포함해야 합니다.', 'error');
+        return;
+      }
+
+      showToast('비밀번호 변경 처리 중...', 'info', 0);
       const res = await fetch('/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -306,8 +306,8 @@ function showForcePasswordChangeModal() {
         showToast(data.message || '비밀번호 변경 실패', 'error');
       }
     } catch (err) {
-      console.error(err);
-      showToast('서버 통신 오류', 'error');
+      console.error('[Force Password Change Error]:', err);
+      showToast(`비밀번호 변경 처리 중 오류가 발생했습니다: ${err.message}`, 'error');
     }
   });
 }
