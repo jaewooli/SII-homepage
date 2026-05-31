@@ -48,7 +48,10 @@ let sessionid = "";
 let sessionCache = {};
 
 async function isSessionValid(sid, csrf) {
-  if (!sid) return false;
+  if (!sid) {
+    console.log('[Session Validation] Invalid check: Session ID is missing.');
+    return false;
+  }
   try {
     const response = await fetch('https://dreamhack.io/', {
       method: 'GET',
@@ -65,28 +68,39 @@ async function isSessionValid(sid, csrf) {
 
     // 1. Check if server explicitly deletes the sessionid cookie (safe check for Node.js versions)
     let isCleared = false;
+    let cookieHeaders = [];
     if (typeof response.headers.getSetCookie === 'function') {
-      const cookies = response.headers.getSetCookie();
-      cookies.forEach(cookie => {
-        if (cookie.includes('sessionid=""') || cookie.includes('sessionid=;') || (cookie.includes('sessionid=') && cookie.includes('1970'))) {
-          isCleared = true;
-        }
-      });
+      cookieHeaders = response.headers.getSetCookie();
     } else {
       const rawCookie = response.headers.get('set-cookie');
-      if (rawCookie) {
-        if (rawCookie.includes('sessionid=""') || rawCookie.includes('sessionid=;') || (rawCookie.includes('sessionid=') && rawCookie.includes('1970'))) {
-          isCleared = true;
-        }
-      }
+      if (rawCookie) cookieHeaders = [rawCookie];
     }
-    if (isCleared) return false;
+
+    cookieHeaders.forEach(cookie => {
+      if (cookie.includes('sessionid=""') || cookie.includes('sessionid=;') || (cookie.includes('sessionid=') && cookie.includes('1970'))) {
+        isCleared = true;
+      }
+    });
+
+    if (isCleared) {
+      console.log(`[Session Validation] Session ${sid.substring(0, 8)}... is INVALID: Server sent Set-Cookie to clear sessionid. Headers:`, cookieHeaders);
+      return false;
+    }
 
     // 2. Check if the returned server-rendered HTML contains the logout link (which indicates active session)
     const html = await response.text();
-    return html.includes('/users/logout');
+    const hasLogout = html.includes('/users/logout');
+    
+    if (!hasLogout) {
+      const length = html.length;
+      const isNuxt = html.includes('__nuxt') || html.includes('id="__layout"');
+      const hasLoginLink = html.includes('/login');
+      console.log(`[Session Validation] Session ${sid.substring(0, 8)}... is INVALID: HTML does not contain logout link. HTML length: ${length}, IsNuxt: ${isNuxt}, HasLoginLink: ${hasLoginLink}`);
+    }
+
+    return hasLogout;
   } catch (err) {
-    console.error('[Session Validation] Error checking session validity:', err.message);
+    console.error('[Session Validation] Error checking session validity:', err.message, err.stack);
     // Fallback: If verification request fails due to network/server issue, assume it is valid to avoid false deletion.
     return true;
   }
