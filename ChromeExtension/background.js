@@ -175,47 +175,51 @@ async function loginToDreamhackAndSync(email, password, origin) {
     const injectionResults = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: async (userEmail, userPassword) => {
-        // Read CSRF token from page cookie
-        const getCookie = (name) => {
-          const value = `; ${document.cookie}`;
-          const parts = value.split(`; ${name}=`);
-          if (parts.length === 2) return parts.pop().split(';').shift();
-          return '';
-        };
+        try {
+          // Read CSRF token from page cookie
+          const getCookie = (name) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return '';
+          };
 
-        const csrfToken = getCookie('csrftoken');
-        if (!csrfToken) {
-          throw new Error('CSRF cookie not found in page context.');
+          const csrfToken = getCookie('csrftoken');
+          if (!csrfToken) {
+            return { ok: false, error: 'CSRF cookie not found in page document.cookie: ' + document.cookie };
+          }
+
+          const loginRes = await fetch('/api/v1/auth/login/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+              email: userEmail,
+              password: userPassword,
+              loginSave: false
+            })
+          });
+
+          if (!loginRes.ok) {
+            const errText = await loginRes.text();
+            return { ok: false, error: `Login API responded with status ${loginRes.status}: ${errText}` };
+          }
+
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: e.message };
         }
-
-        const loginRes = await fetch('/api/v1/auth/login/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRFToken': csrfToken
-          },
-          body: JSON.stringify({
-            email: userEmail,
-            password: userPassword,
-            loginSave: false
-          })
-        });
-
-        if (!loginRes.ok) {
-          const errText = await loginRes.text();
-          throw new Error(`Login API responded with status ${loginRes.status}: ${errText}`);
-        }
-
-        return true;
       },
       args: [email, password]
     });
 
     // Verify result
-    const success = injectionResults[0]?.result;
-    if (!success) {
-      throw new Error('First-party login execution failed.');
+    const runResult = injectionResults[0]?.result;
+    if (!runResult || !runResult.ok) {
+      throw new Error(runResult?.error || 'First-party login execution failed with empty result.');
     }
 
     // 4. Wait a moment for cookies to be committed by the browser
