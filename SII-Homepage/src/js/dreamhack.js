@@ -77,4 +77,20 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     console.warn("Cannot find the button with id 'dreamhack-confirm'.");
   }
+
+  // Listen for login response event from extension content script
+  window.addEventListener('SII_DREAMHACK_LOGIN_RESPONSE', (event) => {
+    const { ok, message } = event.detail;
+    if (ok) {
+      showToast('Dreamhack session sync successful! Redirecting...', 'success');
+    } else {
+      if (message.includes('RECAPTCHA_REQUIRED')) {
+        showToast('Login failed: ReCAPTCHA requested by Dreamhack. Please log in manually on dreamhack.io first to solve it.', 'error');
+      } else if (message.includes('401')) {
+        showToast('Login failed: Incorrect credentials or captcha required.', 'error');
+      } else {
+        showToast(`Login failed: ${message}`, 'error');
+      }
+    }
+  });
 });

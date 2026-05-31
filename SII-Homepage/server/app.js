@@ -317,13 +317,20 @@ app.post('/dreamhack/login', async (req, res) => {
       
     } catch (error) {
         console.error('Dreamhack login API error:', error.response ? error.response.data : error.message);
-        const detailMsg = error.response && error.response.data
+        let detailMsg = error.response && error.response.data
           ? (typeof error.response.data === 'object' ? JSON.stringify(error.response.data) : error.response.data)
           : error.message;
+        
+        let code = 'SERVER_ERROR';
+        if (detailMsg.toLowerCase().includes('recaptcha')) {
+          detailMsg = 'ReCAPTCHA required by Dreamhack. Please log in manually on dreamhack.io first.';
+          code = 'RECAPTCHA_REQUIRED';
+        }
+        
         sendJson(res, {
             status: 500, ok: false, action: 'auth', resource: 'dreamhack',
             message: `Dreamhack API Error: ${detailMsg}`,
-            code: 'SERVER_ERROR'
+            code: code
         });
     }
 });

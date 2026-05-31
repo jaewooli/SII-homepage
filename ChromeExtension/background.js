@@ -34,6 +34,12 @@ async function performDreamhackLogin(email, password) {
   if (!response.ok) {
     let errData = '';
     try { errData = await response.text(); } catch(_) {}
+    
+    // Check if body content mentions recaptcha or if status is 403 / 429
+    if (errData.toLowerCase().includes('recaptcha') || response.status === 403 || response.status === 429) {
+      throw new Error("RECAPTCHA_REQUIRED");
+    }
+    
     throw new Error(`Dreamhack status ${response.status}: ${errData}`);
   }
   

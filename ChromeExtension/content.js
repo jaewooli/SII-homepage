@@ -28,7 +28,6 @@ window.addEventListener('SII_DREAMHACK_LOGIN_TRIGGER', (event) => {
 
   console.log('[SII Extension] Received login credentials from page. Requesting background worker to log in...');
   
-  // Perform login directly via background script in browser context
   chrome.runtime.sendMessage({ 
     type: "PERFORM_DREAMHACK_LOGIN", 
     email, 
@@ -36,8 +35,15 @@ window.addEventListener('SII_DREAMHACK_LOGIN_TRIGGER', (event) => {
   }, (response) => {
     if (response && response.ok) {
       console.log('[SII Extension] Login sync completed successfully.');
+      window.dispatchEvent(new CustomEvent('SII_DREAMHACK_LOGIN_RESPONSE', {
+        detail: { ok: true }
+      }));
     } else {
-      console.error('[SII Extension] Login sync failed:', response?.message || 'unknown error');
+      const errMsg = response?.message || 'unknown error';
+      console.error('[SII Extension] Login sync failed:', errMsg);
+      window.dispatchEvent(new CustomEvent('SII_DREAMHACK_LOGIN_RESPONSE', {
+        detail: { ok: false, message: errMsg }
+      }));
     }
   });
 });

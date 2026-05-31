@@ -127,7 +127,16 @@ document.addEventListener('DOMContentLoaded', () => {
           if (response && response.ok) {
             showMsg('Dreamhack 연동 완료! 리다이렉트 중...');
           } else {
-            const cleanErr = response?.message ? (response.message.includes('401') ? '아이디/비밀번호 오류 또는 캡차 필요' : response.message) : '오류 발생';
+            let cleanErr = '오류 발생';
+            if (response?.message) {
+              if (response.message.includes('RECAPTCHA_REQUIRED')) {
+                cleanErr = '캡차(ReCAPTCHA) 인증이 필요합니다. 드림핵(dreamhack.io)에 직접 접속하여 로그인 후 다시 시도해 주세요.';
+              } else if (response.message.includes('401')) {
+                cleanErr = '아이디/비밀번호가 일치하지 않거나 캡차가 필요합니다.';
+              } else {
+                cleanErr = response.message;
+              }
+            }
             showMsg('연동 실패: ' + cleanErr, false);
           }
         });
