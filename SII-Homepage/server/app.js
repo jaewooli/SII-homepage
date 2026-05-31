@@ -92,6 +92,15 @@ db.serialize(() => {
         ip_address TEXT,
         timestamp TEXT
     )`);
+
+    // Create dreamhack challenge solve logs table
+    db.run(`CREATE TABLE IF NOT EXISTS dreamhack_solves (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        challenge_id TEXT,
+        challenge_name TEXT,
+        timestamp TEXT
+    )`);
     
     // Seed default developer account (password: 'developer_password')
     db.run(`INSERT OR IGNORE INTO users (username, password, name) 
@@ -373,6 +382,41 @@ app.post('/dreamhack/login', async (req, res) => {
             code: code
         });
     }
+});
+
+app.post('/dreamhack/solve-log', (req, res) => {
+  const { username, challengeId, challengeName, timestamp } = req.body;
+  if (!username || !challengeId || !challengeName) {
+    return sendJson(res, {
+      status: 400, ok: false, action: 'create', resource: 'dreamhack_solves',
+      message: 'Invalid payload details', code: 'BAD_REQUEST'
+    });
+  }
+  
+  // 1. Log to SQLite database
+  db.run(`INSERT INTO dreamhack_solves (username, challenge_id, challenge_name, timestamp) VALUES (?, ?, ?, ?)`,
+    [username, challengeId, challengeName, timestamp], (err) => {
+      if (err) {
+        console.error('[Database Log Error] Failed to log dreamhack solve:', err.message);
+        return sendJson(res, {
+          status: 500, ok: false, action: 'create', resource: 'dreamhack_solves',
+          message: 'Database insertion failed', code: 'DATABASE_ERROR'
+        });
+      }
+      
+      // 2. Log to log file
+      const logMessage = `[${timestamp}] Operator '${username}' solved challenge '${challengeName}' (ID: ${challengeId})\n`;
+      const logFilePath = path.join(__dirname, '../log/dreamhack_solves.log');
+      fs.appendFileSync(logFilePath, logMessage);
+      
+      console.log(`[SII Tracker] Solve recorded: User '${username}' solved '${challengeName}' (${challengeId})`);
+
+      sendJson(res, {
+        status: 200, ok: true, action: 'create', resource: 'dreamhack_solves',
+        message: 'Solve successfully logged', code: 'SUCCESS'
+      });
+    }
+  );
 });
 
 app.get('/:url', (req, res) => {

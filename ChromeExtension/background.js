@@ -76,6 +76,38 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse(cookies);
     });
     return true; // Keep the message channel open for async response
+  } else if (msg.type === "DREAMHACK_SOLVE_DETECTED") {
+    // 1. Fetch current SII Homepage session context
+    fetch('http://localhost:8080/me')
+      .then(res => res.json())
+      .then(userData => {
+        if (userData && userData.ok && userData.data) {
+          const username = userData.data.username;
+          // 2. Submit wargame solve log to server database
+          fetch('http://localhost:8080/dreamhack/solve-log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: username,
+              challengeId: msg.challengeId,
+              challengeName: msg.challengeName,
+              timestamp: new Date().toISOString()
+            })
+          })
+          .then(res => res.json())
+          .then(logData => {
+            console.log('[SII Background] Solve logged on server:', logData);
+          })
+          .catch(err => {
+            console.error('[SII Background] Failed to submit solve log:', err);
+          });
+        } else {
+          console.warn('[SII Background] Solve detected but user is not logged in to SII Homepage');
+        }
+      })
+      .catch(err => {
+        console.error('[SII Background] Failed to query current SII session:', err);
+      });
   }
 });
 
