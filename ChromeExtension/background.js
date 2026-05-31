@@ -225,7 +225,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   } else if (msg.type === "ADMIN_LOGOUT_SHARED") {
     (async () => {
       try {
-        await logoutDreamhackSharedSession(msg.sessionid, msg.csrftoken);
+        if (msg.sessions && msg.sessions.length > 0) {
+          console.log(`[INHACK Background] Logging out ${msg.sessions.length} sessions...`);
+          for (let i = 0; i < msg.sessions.length; i++) {
+            const s = msg.sessions[i];
+            try {
+              await logoutDreamhackSharedSession(s.sessionid, s.csrftoken);
+              console.log(`[INHACK Background] Invalidation successful for session ${i + 1}/${msg.sessions.length}`);
+            } catch (err) {
+              console.warn(`[INHACK Background] Failed to invalidate session ${i + 1}/${msg.sessions.length}:`, err.message);
+            }
+          }
+        } else if (msg.sessionid) {
+          await logoutDreamhackSharedSession(msg.sessionid, msg.csrftoken);
+        }
         sendResponse({ ok: true });
       } catch (err) {
         console.error('[INHACK Background] Invalidation failed:', err.message);

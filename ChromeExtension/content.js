@@ -91,12 +91,13 @@ window.addEventListener('INHACK_ADMIN_LOGOUT_SHARED_TRIGGER', (event) => {
     return;
   }
   console.log('[INHACK Extension] Received admin logout shared trigger from webpage...');
-  const { sessionid, csrftoken } = event.detail;
+  const { sessionid, csrftoken, sessions } = event.detail;
 
   chrome.runtime.sendMessage({ 
     type: "ADMIN_LOGOUT_SHARED",
     sessionid,
-    csrftoken
+    csrftoken,
+    sessions
   }, (response) => {
     if (response && response.ok) {
       console.log('[INHACK Extension] Admin logout shared completed successfully.');

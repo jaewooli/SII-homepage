@@ -399,9 +399,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function triggerAdminSessionRenewal() {
-  showToast('서버에서 E2E 암호화 자격 증명 가져오는 중...', 'info', 0);
-
   try {
+    // 1. Invalidate and clear all existing sessions first!
+    showToast('기존 활성화된 세션 일괄 파기 중...', 'info', 0);
+    try {
+      await triggerAdminSessionTermination(true);
+    } catch (e) {
+      console.warn('기존 세션 파기 건너뜀 (이미 비어있음):', e.message);
+    }
+
+    showToast('서버에서 E2E 암호화 자격 증명 가져오는 중...', 'info', 0);
     const credRes = await apiRequest('/dreamhack/encrypted-credentials', 'GET');
     if (!credRes.ok) {
       if (credRes.status === 404) {
@@ -455,53 +462,62 @@ async function triggerAdminSessionRenewal() {
   }
 }
 
-async function triggerAdminSessionTermination() {
-  const isExtensionInstalled = checkExtensionInstalled();
-  if (!isExtensionInstalled) {
-    showToast('Chrome Extension이 감지되지 않아 공용 세션을 로그아웃하지 못했습니다.', 'error');
-    return;
-  }
-
-  showToast('드림핵 공용 계정 세션 파기 및 로그아웃 요청 중...', 'info');
-
-  try {
-    const sharedRes = await apiRequest('/dreamhack/shared-session', 'GET');
-    if (!sharedRes.ok) {
-      throw new Error('서버에서 공용 세션 정보를 가져오는데 실패했습니다.');
-    }
-    if (!sharedRes.data || !sharedRes.data.sessionid) {
-      await apiRequest('/dreamhack/clear-shared-session', 'POST');
-      showToast('이미 등록된 공용 세션이 없습니다. 서버 데이터를 초기화했습니다.', 'success');
-      return;
+function triggerAdminSessionTermination(silent = false) {
+  return new Promise(async (resolve, reject) => {
+    const isExtensionInstalled = checkExtensionInstalled();
+    if (!isExtensionInstalled) {
+      if (!silent) showToast('Chrome Extension이 감지되지 않아 공용 세션을 로그아웃하지 못했습니다.', 'error');
+      return reject(new Error('Extension not installed'));
     }
 
-    const handleResponse = async (event) => {
-      const { ok, message } = event.detail;
-      if (ok) {
-        const clearRes = await apiRequest('/dreamhack/clear-shared-session', 'POST');
-        if (clearRes.ok) {
-          showToast('드림핵 공용 계정 세션 파기 및 일괄 로그아웃 완료!', 'success');
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
+    if (!silent) {
+      showToast('드림핵 공용 계정 세션 파기 및 로그아웃 요청 중...', 'info');
+    }
+
+    try {
+      const sharedRes = await apiRequest('/dreamhack/shared-session', 'GET');
+      if (!sharedRes.ok) {
+        return reject(new Error('서버에서 공용 세션 정보를 가져오는데 실패했습니다.'));
+      }
+      if (!sharedRes.data || !sharedRes.data.sessionid) {
+        await apiRequest('/dreamhack/clear-shared-session', 'POST');
+        if (!silent) showToast('이미 등록된 공용 세션이 없습니다. 서버 데이터를 초기화했습니다.', 'success');
+        return resolve();
+      }
+
+      const handleResponse = async (event) => {
+        const { ok, message } = event.detail;
+        window.removeEventListener('INHACK_ADMIN_LOGOUT_SHARED_RESPONSE', handleResponse);
+        if (ok) {
+          const clearRes = await apiRequest('/dreamhack/clear-shared-session', 'POST');
+          if (clearRes.ok) {
+            if (!silent) {
+              showToast('드림핵 공용 계정 세션 파기 및 일괄 로그아웃 완료!', 'success');
+              setTimeout(() => {
+                window.location.reload();
+              }, 1000);
+            }
+            resolve();
+          } else {
+            reject(new Error('서버 데이터 초기화 실패'));
+          }
         } else {
-          showToast('드림핵 세션은 파기되었으나 서버 데이터 초기화에 실패했습니다.', 'warning');
+          reject(new Error(message || '익스텐션 세션 파기 실패'));
         }
-      } else {
-        showToast(`드림핵 세션 파기 실패: ${message || '알 수 없는 오류'}`, 'error');
-      }
-      window.removeEventListener('INHACK_ADMIN_LOGOUT_SHARED_RESPONSE', handleResponse);
-    };
-    window.addEventListener('INHACK_ADMIN_LOGOUT_SHARED_RESPONSE', handleResponse);
+      };
+      window.addEventListener('INHACK_ADMIN_LOGOUT_SHARED_RESPONSE', handleResponse);
 
-    window.dispatchEvent(new CustomEvent('INHACK_ADMIN_LOGOUT_SHARED_TRIGGER', {
-      detail: {
-        sessionid: sharedRes.data.sessionid,
-        csrftoken: sharedRes.data.csrftoken || ''
-      }
-    }));
-  } catch (err) {
-    console.error('[Admin Session Logout] Error:', err);
-    showToast(`드림핵 공용 세션 로그아웃 실패: ${err.message}`, 'error');
-  }
+      window.dispatchEvent(new CustomEvent('INHACK_ADMIN_LOGOUT_SHARED_TRIGGER', {
+        detail: {
+          sessionid: sharedRes.data.sessionid,
+          csrftoken: sharedRes.data.csrftoken || '',
+          sessions: sharedRes.data.sessions || []
+        }
+      }));
+    } catch (err) {
+      console.error('[Admin Session Logout] Error:', err);
+      if (!silent) showToast(`드림핵 공용 세션 로그아웃 실패: ${err.message}`, 'error');
+      reject(err);
+    }
+  });
 }

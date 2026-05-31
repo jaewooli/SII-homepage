@@ -887,7 +887,8 @@ app.get('/dreamhack/shared-session', (req, res) => {
         csrftoken: chosenSession.csrftoken,
         updated_at: chosenSession.updated_at,
         total_sessions: rows.length,
-        valid_sessions: rows.length
+        valid_sessions: rows.length,
+        sessions: rows.map(r => ({ sessionid: r.sessionid, csrftoken: r.csrftoken }))
       },
       code: 'SUCCESS'
     });
