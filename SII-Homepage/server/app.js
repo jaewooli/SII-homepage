@@ -317,7 +317,7 @@ app.get('/dreamhack/credentials', (req, res) => {
   });
 });
 
-app.get('/dreamhack/logs', (req, res) => {
+app.get('/dreamhack/logs', async (req, res) => {
   if (!req.session.user) {
     return sendJson(res, {
       status: 401, ok: false, action: 'read', resource: 'dreamhack_logs',
@@ -338,34 +338,34 @@ app.get('/dreamhack/logs', (req, res) => {
     queryParams = [username];
   }
 
-  db.all(queryAccess, queryParams, (err, accessLogs) => {
-    if (err) {
-      console.error('[Database Read Error] Failed to read dreamhack access logs:', err.message);
-      return sendJson(res, {
-        status: 500, ok: false, action: 'read', resource: 'dreamhack_logs',
-        message: 'Failed to retrieve access logs', code: 'DATABASE_ERROR'
-      });
-    }
-
-    db.all(querySolves, queryParams, (err, solveLogs) => {
-      if (err) {
-        console.error('[Database Read Error] Failed to read dreamhack solve logs:', err.message);
-        return sendJson(res, {
-          status: 500, ok: false, action: 'read', resource: 'dreamhack_logs',
-          message: 'Failed to retrieve solve logs', code: 'DATABASE_ERROR'
-        });
-      }
-
-      sendJson(res, {
-        status: 200, ok: true, action: 'read', resource: 'dreamhack_logs',
-        data: {
-          accessLogs,
-          solveLogs
-        },
-        code: 'SUCCESS'
-      });
+  const queryPromise = (sql, params) => new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
     });
   });
+
+  try {
+    const [accessLogs, solveLogs] = await Promise.all([
+      queryPromise(queryAccess, queryParams),
+      queryPromise(querySolves, queryParams)
+    ]);
+
+    sendJson(res, {
+      status: 200, ok: true, action: 'read', resource: 'dreamhack_logs',
+      data: {
+        accessLogs,
+        solveLogs
+      },
+      code: 'SUCCESS'
+    });
+  } catch (err) {
+    console.error('[Database Read Error] Parallel read failed:', err.message);
+    sendJson(res, {
+      status: 500, ok: false, action: 'read', resource: 'dreamhack_logs',
+      message: 'Failed to retrieve logs', code: 'DATABASE_ERROR'
+    });
+  }
 });
 
 app.post('/logout', (req, res) => {
