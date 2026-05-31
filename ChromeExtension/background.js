@@ -60,9 +60,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const url = new URL(sender.tab.url);
         const origin = url.origin;
 
-        // 1. Fetch credentials from server
+        // 1. Fetch credentials from server with credentials included (session cookies)
         console.log('[INHACK Background] Fetching credentials from server:', origin);
-        const credsRes = await fetch(`${origin}/dreamhack/credentials`);
+        const credsRes = await fetch(`${origin}/dreamhack/credentials`, {
+          credentials: 'include'
+        });
         if (!credsRes.ok) {
           throw new Error('Failed to fetch credentials from portal (ensure you are logged in)');
         }
