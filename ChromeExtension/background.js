@@ -38,6 +38,28 @@ function verifyMessageSender(sender) {
   return false;
 }
 
+async function getHomepageTabOrigin() {
+  try {
+    const tabs = await chrome.tabs.query({
+      url: [
+        "http://localhost:8080/*",
+        "https://localhost:8080/*",
+        "http://127.0.0.1:8080/*",
+        "https://127.0.0.1:8080/*",
+        "http://ddyoru.duckdns.org/*",
+        "https://ddyoru.duckdns.org/*"
+      ]
+    });
+    if (tabs && tabs.length > 0) {
+      const url = new URL(tabs[0].url);
+      return url.origin;
+    }
+  } catch (err) {
+    console.error('[INHACK Background] Error getting homepage origin:', err);
+  }
+  return null;
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!verifyMessageSender(sender)) {
     console.warn("[INHACK Security] Blocked message from untrusted sender:", sender.tab ? sender.tab.url : "unknown");
@@ -52,27 +74,63 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
     return true; // Keep message channel open for async response
   } else if (msg.type === "GET_DREAMHACK_COOKIES") {
-    isHomepageTabOpen().then(isOpen => {
-      if (!isOpen) {
-        sendResponse({ ok: false, message: "HOMEPAGE_TAB_CLOSED" });
-        return;
-      }
+    (async () => {
+      try {
+        const origin = await getHomepageTabOrigin();
+        if (!origin) {
+          sendResponse({ ok: false, message: "HOMEPAGE_TAB_CLOSED" });
+          return;
+        }
 
-      chrome.cookies.getAll({}).then(cookies => {
-        const dreamhackCookies = cookies.filter(c => c.domain && c.domain.includes('dreamhack.io'));
-        const sessionidCookie = dreamhackCookies.find(c => c.name === 'sessionid');
-        const csrftokenCookie = dreamhackCookies.find(c => c.name === 'csrftoken');
+        // 1. Fetch credentials from server
+        console.log('[INHACK Background] Fetching credentials from server:', origin);
+        const credsRes = await fetch(`${origin}/dreamhack/credentials`);
+        if (!credsRes.ok) {
+          throw new Error('Failed to fetch credentials from portal (ensure you are logged in)');
+        }
+        const credsData = await credsRes.json();
+        if (!credsData.ok || !credsData.data || !credsData.data.email || !credsData.data.password) {
+          throw new Error('Invalid credentials returned by server');
+        }
+
+        const { email, password } = credsData.data;
+
+        // 2. Perform login request to dreamhack.io from browser
+        console.log('[INHACK Background] Logging in to Dreamhack on behalf of user...');
+        const loginRes = await fetch('https://dreamhack.io/api/v1/auth/login/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ email, password, loginSave: false })
+        });
+
+        if (!loginRes.ok) {
+          const errText = await loginRes.text();
+          console.error('[INHACK Background] Dreamhack login failed response:', errText);
+          throw new Error('Dreamhack authentication failed');
+        }
+
+        // 3. Extract cookies (the browser automatically stores cookies from the fetch response)
+        const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
+        const sessionidCookie = cookies.find(c => c.name === 'sessionid');
+        const csrftokenCookie = cookies.find(c => c.name === 'csrftoken');
 
         const sessionid = sessionidCookie ? sessionidCookie.value : '';
         const csrftoken = csrftokenCookie ? csrftokenCookie.value : '';
 
-        console.log('[INHACK Background] Retracted Dreamhack sessionid:', sessionid ? 'FOUND' : 'MISSING');
+        if (!sessionid) {
+          throw new Error('Dreamhack session cookie was not set after login');
+        }
+
+        console.log('[INHACK Background] Cookie sync successful.');
         sendResponse({ ok: true, sessionid, csrftoken });
-      }).catch(err => {
-        console.error('[INHACK Background] Failed to query cookies:', err);
+      } catch (err) {
+        console.error('[INHACK Background] Sync failed:', err.message);
         sendResponse({ ok: false, message: err.message });
-      });
-    });
+      }
+    })();
     return true; // Keep message channel open for async response
   }
 });
