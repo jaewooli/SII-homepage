@@ -532,10 +532,7 @@ async function logoutDreamhackSharedSession(sessionid, csrftoken) {
           }
 
           const logoutRes = await fetch('/users/logout/', {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': csrfVal || ''
-            }
+            method: 'GET'
           });
 
           if (!logoutRes.ok) {
