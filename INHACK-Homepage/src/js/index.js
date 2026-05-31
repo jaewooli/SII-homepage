@@ -49,7 +49,7 @@ window.addEventListener('hashchange', () => {
 });
 
 async function triggerAdminSessionRenewal() {
-  showToast('드림핵 공용 계정 세션 재발급 및 갱신 중... (약 10초 소요)', 'info');
+  showToast('드림핵 공용 계정 세션 재발급 및 갱신 중... (약 10초 소요)', 'info', 0);
 
   try {
     const res = await fetch('/dreamhack/regenerate', {

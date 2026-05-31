@@ -1,4 +1,4 @@
-export function showToast(text, type = 'info') {
+export function showToast(text, type = 'info', duration = 3000) {
   // type: 'success' | 'error' | 'info'
   let el = document.getElementById('toast');
   if (el) {
@@ -16,11 +16,13 @@ export function showToast(text, type = 'info') {
   el.style.opacity = '1';
   el.style.transform = 'translateY(0)';
   
-  setTimeout(() => { 
-    el.style.opacity = '0'; 
-    el.style.transform = 'translateY(-8px)';
+  if (duration && duration > 0) {
     setTimeout(() => { 
-      if (el.parentNode) el.remove(); 
-    }, 300); 
-  }, 3000);
+      el.style.opacity = '0'; 
+      el.style.transform = 'translateY(-8px)';
+      setTimeout(() => { 
+        if (el.parentNode) el.remove(); 
+      }, 300); 
+    }, duration);
+  }
 }

@@ -59,7 +59,7 @@ async function executeSpecificFeature(userdata) {
     return;
   }
 
-  showToast('드림핵 세션 동기화 요청 중...', 'info');
+  showToast('드림핵 세션 동기화 요청 중...', 'info', 0);
 
   // Trigger cookie sync from Chrome Extension
   window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_SYNC_TRIGGER'));
@@ -149,7 +149,7 @@ async function executeLoadSharedSession(userdata) {
     return;
   }
 
-  showToast('서버에서 공용 세션 정보 가져오는 중...', 'info');
+  showToast('서버에서 공용 세션 정보 가져오는 중...', 'info', 0);
   // Dispatch load trigger event to extension
   window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_TRIGGER'));
 }
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         showToast('드림핵 로그인 세션이 발견되지 않았습니다. 드림핵(dreamhack.io)에 먼저 로그인해주세요.', 'error');
         return;
       }
-      showToast('드림핵 세션 정보 획득 완료. 서버 연동 중...', 'info');
+      showToast('드림핵 세션 정보 획득 완료. 서버 연동 중...', 'info', 0);
 
       try {
         const syncRes = await apiRequest('/dreamhack/login', 'POST', { sessionid, csrftoken });
