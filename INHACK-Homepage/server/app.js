@@ -58,14 +58,23 @@ async function isSessionValid(sid, csrf) {
       }
     });
 
-    // 1. Check if server explicitly deletes the sessionid cookie
-    const cookies = response.headers.getSetCookie();
+    // 1. Check if server explicitly deletes the sessionid cookie (safe check for Node.js versions)
     let isCleared = false;
-    cookies.forEach(cookie => {
-      if (cookie.includes('sessionid=""') || cookie.includes('sessionid=;') || (cookie.includes('sessionid=') && cookie.includes('1970'))) {
-        isCleared = true;
+    if (typeof response.headers.getSetCookie === 'function') {
+      const cookies = response.headers.getSetCookie();
+      cookies.forEach(cookie => {
+        if (cookie.includes('sessionid=""') || cookie.includes('sessionid=;') || (cookie.includes('sessionid=') && cookie.includes('1970'))) {
+          isCleared = true;
+        }
+      });
+    } else {
+      const rawCookie = response.headers.get('set-cookie');
+      if (rawCookie) {
+        if (rawCookie.includes('sessionid=""') || rawCookie.includes('sessionid=;') || (rawCookie.includes('sessionid=') && rawCookie.includes('1970'))) {
+          isCleared = true;
+        }
       }
-    });
+    }
     if (isCleared) return false;
 
     // 2. Check if the returned server-rendered HTML contains the logout link (which indicates active session)
@@ -257,7 +266,15 @@ async function loginDreamhack(force = false){
     });
 
     if (loginRes.ok) {
-      const cookies = loginRes.headers.getSetCookie();
+      let cookies = [];
+      if (typeof loginRes.headers.getSetCookie === 'function') {
+        cookies = loginRes.headers.getSetCookie();
+      } else {
+        const rawCookie = loginRes.headers.get('set-cookie');
+        if (rawCookie) {
+          cookies = [rawCookie];
+        }
+      }
       let csrfToken = '';
       let sessId = '';
       
