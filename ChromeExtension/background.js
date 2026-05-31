@@ -54,26 +54,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   } else if (msg.type === "GET_DREAMHACK_COOKIES") {
     (async () => {
       try {
-        if (!sender.tab || !sender.tab.url) {
-          throw new Error('Message sender tab not resolved');
+        const { email, password } = msg;
+        if (!email || !password) {
+          throw new Error('Dreamhack credentials not provided by webpage');
         }
-        const url = new URL(sender.tab.url);
-        const origin = url.origin;
-
-        // 1. Fetch credentials from server with credentials included (session cookies)
-        console.log('[INHACK Background] Fetching credentials from server:', origin);
-        const credsRes = await fetch(`${origin}/dreamhack/credentials`, {
-          credentials: 'include'
-        });
-        if (!credsRes.ok) {
-          throw new Error('Failed to fetch credentials from portal (ensure you are logged in)');
-        }
-        const credsData = await credsRes.json();
-        if (!credsData.ok || !credsData.data || !credsData.data.email || !credsData.data.password) {
-          throw new Error('Invalid credentials returned by server');
-        }
-
-        const { email, password } = credsData.data;
 
         // 2. Perform login request to dreamhack.io from browser
         console.log('[INHACK Background] Logging in to Dreamhack on behalf of user...');

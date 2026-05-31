@@ -36,10 +36,26 @@ async function executeSpecificFeature(userdata) {
     return;
   }
 
-  showToast('드림핵 세션 동기화 요청 중...', 'info');
-
-  // Trigger cookie sync from Chrome Extension
-  window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_SYNC_TRIGGER'));
+  showToast('드림핵 계정 정보 가져오는 중...', 'info');
+  try {
+    const credsRes = await apiRequest('/dreamhack/credentials', 'GET');
+    if (!credsRes.ok || !credsRes.data) {
+      showToast('포탈로부터 드림핵 계정 정보를 가져오는데 실패했습니다.', 'error');
+      return;
+    }
+    
+    showToast('드림핵 세션 동기화 요청 중...', 'info');
+    // Pass credentials to the extension via custom event
+    window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_SYNC_TRIGGER', {
+      detail: {
+        email: credsRes.data.email,
+        password: credsRes.data.password
+      }
+    }));
+  } catch (err) {
+    console.error(err);
+    showToast('계정 정보 조회 중 오류가 발생했습니다.', 'error');
+  }
 }
 
 async function loadActivityLogs() {
