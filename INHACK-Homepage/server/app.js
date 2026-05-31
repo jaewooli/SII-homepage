@@ -86,9 +86,9 @@ async function loginDreamhackWithPuppeteer() {
       try {
         const html = await page.content();
         console.log('[Headless Chrome] Error page HTML snippet:', html.substring(0, 1500));
-        const screenshotPath = path.join(__dirname, '../log/error_screenshot.png');
+        const screenshotPath = path.join(__dirname, '../src/error_screenshot.png');
         await page.screenshot({ path: screenshotPath });
-        console.log(`[Headless Chrome] Error screenshot saved to: ${screenshotPath}`);
+        console.log(`[Headless Chrome] Error screenshot saved to src for web download: ${screenshotPath}`);
       } catch (e) {
         console.error('[Headless Chrome] Failed to record error state:', e.message);
       }
