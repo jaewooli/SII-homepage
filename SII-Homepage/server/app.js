@@ -337,6 +337,14 @@ app.post('/dreamhack/login', async (req, res) => {
     });
     }
 
+    const { sessionid: clientSessionid, csrftoken: clientCsrftoken } = req.body;
+    if (!clientSessionid) {
+      return sendJson(res, {
+        status: 400, ok: false, action: 'auth', resource: 'dreamhack',
+        message: 'Dreamhack sessionid is required', code: 'LOGIN_FAILED'
+      });
+    }
+
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
     const timestamp = new Date().toISOString();
     
@@ -349,37 +357,35 @@ app.post('/dreamhack/login', async (req, res) => {
       }
     );
 
-    const logMessage = `[${timestamp}] Login attempt for user: ${username} from IP: ${ip}\n`;
+    const logMessage = `[${timestamp}] Cookie sync for user: ${username} from IP: ${ip}\n`;
     const logFilePath = path.join(__dirname, '../log/login_attempts.log');
 
     fs.appendFileSync(logFilePath, logMessage);
 
     try {
-      const response = await loginDreamhack();
+      // Synchronize client session tokens to server global variables
+      sessionid = clientSessionid;
+      
+      process.env.DREAMHACK_SESSIONID = clientSessionid;
+      if (clientCsrftoken) {
+        process.env.DREAMHACK_CSRF = clientCsrftoken;
+      }
+
+      console.log(`[Dreamhack Sync] Successfully synchronized session cookies for user: ${username}`);
 
       sendJson(res, {
           status: 200, ok: true, action: 'auth', resource: 'dreamhack',
           message: 'Dreamhack login successful',
-          data: response,
+          data: { sessionid, csrf_token: clientCsrftoken },
           code: 'LOGIN_SUCCESS'
         });
       
     } catch (error) {
-        console.error('Dreamhack login API error:', error.response ? error.response.data : error.message);
-        let detailMsg = error.response && error.response.data
-          ? (typeof error.response.data === 'object' ? JSON.stringify(error.response.data) : error.response.data)
-          : error.message;
-        
-        let code = 'SERVER_ERROR';
-        if (detailMsg.toLowerCase().includes('recaptcha')) {
-          detailMsg = 'ReCAPTCHA required by Dreamhack. Please log in manually on dreamhack.io first.';
-          code = 'RECAPTCHA_REQUIRED';
-        }
-        
+        console.error('Dreamhack login sync error:', error.message);
         sendJson(res, {
             status: 500, ok: false, action: 'auth', resource: 'dreamhack',
-            message: `Dreamhack API Error: ${detailMsg}`,
-            code: code
+            message: `Dreamhack API Error: ${error.message}`,
+            code: 'SERVER_ERROR'
         });
     }
 });

@@ -19,29 +19,25 @@ function setInstalledFlag() {
 setInstalledFlag();
 
 // Listen for custom trigger events from the webpage
-window.addEventListener('SII_DREAMHACK_LOGIN_TRIGGER', (event) => {
-  const { email, password } = event.detail;
-  if (!email || !password) {
-    console.error('[SII Extension] Missing email or password details in event');
-    return;
-  }
-
-  console.log('[SII Extension] Received login credentials from page. Requesting background worker to log in...');
+window.addEventListener('SII_DREAMHACK_SYNC_TRIGGER', () => {
+  console.log('[SII Extension] Received cookie sync trigger from webpage. Querying background worker...');
   
   chrome.runtime.sendMessage({ 
-    type: "PERFORM_DREAMHACK_LOGIN", 
-    email, 
-    password 
+    type: "GET_DREAMHACK_COOKIES"
   }, (response) => {
     if (response && response.ok) {
-      console.log('[SII Extension] Login sync completed successfully.');
-      window.dispatchEvent(new CustomEvent('SII_DREAMHACK_LOGIN_RESPONSE', {
-        detail: { ok: true }
+      console.log('[SII Extension] Cookie retraction completed successfully.');
+      window.dispatchEvent(new CustomEvent('SII_DREAMHACK_SYNC_RESPONSE', {
+        detail: { 
+          ok: true, 
+          sessionid: response.sessionid, 
+          csrftoken: response.csrftoken 
+        }
       }));
     } else {
       const errMsg = response?.message || 'unknown error';
-      console.error('[SII Extension] Login sync failed:', errMsg);
-      window.dispatchEvent(new CustomEvent('SII_DREAMHACK_LOGIN_RESPONSE', {
+      console.error('[SII Extension] Cookie sync failed:', errMsg);
+      window.dispatchEvent(new CustomEvent('SII_DREAMHACK_SYNC_RESPONSE', {
         detail: { ok: false, message: errMsg }
       }));
     }

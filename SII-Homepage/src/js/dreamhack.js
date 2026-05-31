@@ -36,26 +36,10 @@ async function executeSpecificFeature(userdata) {
     return;
   }
 
-  showToast('Fetching Dreamhack credentials...', 'info');
+  showToast('드림핵 세션 동기화 요청 중...', 'info');
 
-  const credentialsRes = await apiRequest('/dreamhack/credentials', 'GET');
-
-  try {
-    if (credentialsRes.ok && credentialsRes.data) {
-      const { email, password } = credentialsRes.data;
-      showToast('Logging in to Dreamhack via Extension...', 'success');
-
-      // Dispatch event to the Chrome Extension content script to trigger browser-side login
-      window.dispatchEvent(new CustomEvent('SII_DREAMHACK_LOGIN_TRIGGER', {
-        detail: { email, password }
-      }));
-    } else {
-      showToast(`Failed to retrieve credentials: ${credentialsRes.message || 'Server error'}`, 'error');
-    }
-  } catch (error) {
-    console.error('Error fetching Dreamhack credentials:', error);
-    showToast('An error occurred while fetching credentials.', 'error');
-  }
+  // Trigger cookie sync from Chrome Extension
+  window.dispatchEvent(new CustomEvent('SII_DREAMHACK_SYNC_TRIGGER'));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -78,18 +62,35 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn("Cannot find the button with id 'dreamhack-confirm'.");
   }
 
-  // Listen for login response event from extension content script
-  window.addEventListener('SII_DREAMHACK_LOGIN_RESPONSE', (event) => {
-    const { ok, message } = event.detail;
+  // Listen for sync response event from extension content script
+  window.addEventListener('SII_DREAMHACK_SYNC_RESPONSE', async (event) => {
+    const { ok, sessionid, csrftoken, message } = event.detail;
     if (ok) {
-      showToast('Dreamhack session sync successful! Redirecting...', 'success');
+      if (!sessionid) {
+        showToast('드림핵 로그인 세션이 발견되지 않았습니다. 드림핵(dreamhack.io)에 먼저 로그인해주세요.', 'error');
+        return;
+      }
+      showToast('드림핵 세션 정보 획득 완료. 서버 연동 중...', 'info');
+
+      try {
+        const syncRes = await apiRequest('/dreamhack/login', 'POST', { sessionid, csrftoken });
+        if (syncRes.ok) {
+          showToast('드림핵 세션 동기화 성공!', 'success');
+          setTimeout(() => {
+            window.location.href = 'https://dreamhack.io';
+          }, 1200);
+        } else {
+          showToast(`서버 연동 실패: ${syncRes.message || '서버 오류'}`, 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('서버 통신 오류', 'error');
+      }
     } else {
-      if (message.includes('RECAPTCHA_REQUIRED')) {
-        showToast('Login failed: ReCAPTCHA requested by Dreamhack. Please log in manually on dreamhack.io first to solve it.', 'error');
-      } else if (message.includes('401')) {
-        showToast('Login failed: Incorrect credentials or captcha required.', 'error');
+      if (message === 'HOMEPAGE_TAB_CLOSED') {
+        showToast('연동 기능을 사용하려면 SII 홈페이지에서 DREAMHACK 기능을 이용해주세요.', 'error');
       } else {
-        showToast(`Login failed: ${message}`, 'error');
+        showToast(`쿠키 동기화 실패: ${message}`, 'error');
       }
     }
   });
