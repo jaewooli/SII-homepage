@@ -187,7 +187,12 @@ async function loginToDreamhackAndSync(email, password, origin) {
   await setupHeadersRule();
 
   try {
-    console.log('[INHACK Background] Checking existing cookies for CSRF token...');
+    // 1. Fetch home page to establish/renew the csrftoken cookie in the browser's cookie jar
+    console.log('[INHACK Background] Warming up CSRF session by fetching Dreamhack home...');
+    await fetch('https://dreamhack.io/', { credentials: 'include' });
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    console.log('[INHACK Background] Checking cookies for CSRF token...');
     const cookiesList = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
     const csrftokenCookie = cookiesList.find(c => c.name === 'csrftoken');
     
@@ -198,14 +203,17 @@ async function loginToDreamhackAndSync(email, password, origin) {
     };
 
     if (csrftokenCookie && csrftokenCookie.value) {
-      console.log('[INHACK Background] Attaching existing CSRF token to request headers:', csrftokenCookie.value);
+      console.log('[INHACK Background] Attaching CSRF token to request headers:', csrftokenCookie.value);
       headers['X-CSRFToken'] = csrftokenCookie.value;
+    } else {
+      console.warn('[INHACK Background] No csrftoken cookie found even after warmup!');
     }
 
     console.log('[INHACK Background] Performing background login to Dreamhack...');
     const loginRes = await fetch('https://dreamhack.io/api/v1/auth/login/', {
       method: 'POST',
       headers: headers,
+      credentials: 'include', // Crucial to send and receive cookies
       body: JSON.stringify({
         email: email,
         password: password,
