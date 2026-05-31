@@ -119,6 +119,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
     })();
     return true; // Keep message channel open for async response
+  } else if (msg.type === "ADMIN_LOGOUT_SHARED") {
+    (async () => {
+      try {
+        await logoutDreamhackSharedSession(msg.sessionid, msg.csrftoken);
+        sendResponse({ ok: true });
+      } catch (err) {
+        console.error('[INHACK Background] Invalidation failed:', err.message);
+        sendResponse({ ok: false, message: err.message });
+      }
+    })();
+    return true; // Keep message channel open for async response
   } else if (msg.type === "GET_DREAMHACK_COOKIES") {
     chrome.cookies.getAll({ domain: 'dreamhack.io' }).then(cookies => {
       const sessionidCookie = cookies.find(c => c.name === 'sessionid');
@@ -286,6 +297,87 @@ async function loginToDreamhackAndSync(email, password, origin) {
 
   } finally {
     // 6. Always clean up the tab
+    console.log('[INHACK Background] Cleaning up background tab...');
+    try {
+      await chrome.tabs.remove(tab.id);
+    } catch (e) {
+      console.warn('[INHACK Background] Failed to remove background tab:', e);
+    }
+  }
+}
+
+async function logoutDreamhackSharedSession(sessionid, csrftoken) {
+  console.log('[INHACK Background] Invalidate session: Creating background tab for Dreamhack first-party logout...');
+  const tab = await chrome.tabs.create({
+    url: 'https://dreamhack.io/login/',
+    active: false
+  });
+
+  try {
+    console.log('[INHACK Background] Waiting for tab to load:', tab.id);
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        chrome.tabs.onUpdated.removeListener(listener);
+        reject(new Error('Dreamhack logout page load timeout'));
+      }, 10000);
+
+      function listener(tabId, changeInfo) {
+        if (tabId === tab.id && changeInfo.status === 'complete') {
+          clearTimeout(timeout);
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve();
+        }
+      }
+      chrome.tabs.onUpdated.addListener(listener);
+    });
+
+    console.log('[INHACK Background] Injecting logout execution script inside tab...');
+    const injectionResults = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: async (sessVal, csrfVal) => {
+        try {
+          // Clear current page cookies first
+          document.cookie = 'sessionid=; Path=/; Domain=.dreamhack.io; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+          document.cookie = 'csrf_token=; Path=/; Domain=.dreamhack.io; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+
+          // Set the cookies we want to invalidate
+          document.cookie = `sessionid=${sessVal}; Path=/; Domain=.dreamhack.io; Secure; SameSite=Lax;`;
+          if (csrfVal) {
+            document.cookie = `csrf_token=${csrfVal}; Path=/; Domain=.dreamhack.io; Secure; SameSite=Lax;`;
+          }
+
+          const logoutRes = await fetch('/api/v1/auth/logout/', {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': csrfVal || ''
+            }
+          });
+
+          if (!logoutRes.ok) {
+            const errText = await logoutRes.text();
+            throw new Error(`Logout API failed with status ${logoutRes.status}: ${errText}`);
+          }
+
+          // Clean up cookies again
+          document.cookie = 'sessionid=; Path=/; Domain=.dreamhack.io; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+          document.cookie = 'csrf_token=; Path=/; Domain=.dreamhack.io; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: e.message };
+        }
+      },
+      args: [sessionid, csrftoken]
+    });
+
+    const runResult = injectionResults[0]?.result;
+    if (!runResult || !runResult.ok) {
+      throw new Error(runResult?.error || 'First-party logout script execution failed.');
+    }
+
+    console.log('[INHACK Background] Invalidation completed successfully.');
+
+  } finally {
     console.log('[INHACK Background] Cleaning up background tab...');
     try {
       await chrome.tabs.remove(tab.id);

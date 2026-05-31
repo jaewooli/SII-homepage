@@ -225,6 +225,15 @@ nav button#renew-btn:hover {
     background-color: rgba(16, 185, 129, 0.08);
 }
 
+nav button#logout-shared-btn {
+    border-color: var(--color-red);
+    color: var(--color-red);
+}
+
+nav button#logout-shared-btn:hover {
+    background-color: rgba(239, 68, 68, 0.08);
+}
+
 /* ==========================================================================
    Main Grid Layout
    ========================================================================== */

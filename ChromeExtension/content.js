@@ -90,3 +90,28 @@ window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', (event) => {
     }
   });
 });
+
+// Listen for admin logout shared trigger from the webpage
+window.addEventListener('INHACK_ADMIN_LOGOUT_SHARED_TRIGGER', (event) => {
+  console.log('[INHACK Extension] Received admin logout shared trigger from webpage...');
+  const { sessionid, csrftoken } = event.detail;
+
+  chrome.runtime.sendMessage({ 
+    type: "ADMIN_LOGOUT_SHARED",
+    sessionid,
+    csrftoken
+  }, (response) => {
+    if (response && response.ok) {
+      console.log('[INHACK Extension] Admin logout shared completed successfully.');
+      window.dispatchEvent(new CustomEvent('INHACK_ADMIN_LOGOUT_SHARED_RESPONSE', {
+        detail: { ok: true }
+      }));
+    } else {
+      const errMsg = response?.message || 'unknown error';
+      console.error('[INHACK Extension] Admin logout shared failed:', errMsg);
+      window.dispatchEvent(new CustomEvent('INHACK_ADMIN_LOGOUT_SHARED_RESPONSE', {
+        detail: { ok: false, message: errMsg }
+      }));
+    }
+  });
+});

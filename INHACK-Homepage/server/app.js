@@ -537,6 +537,36 @@ app.get('/dreamhack/shared-session', (req, res) => {
   });
 });
 
+app.post('/dreamhack/clear-shared-session', (req, res) => {
+  if (!req.session.user || req.session.user.username !== 'developer') {
+    return sendJson(res, {
+      status: 403, ok: false, action: 'delete', resource: 'dreamhack',
+      message: 'Only the administrator can clear the shared session', code: 'FORBIDDEN'
+    });
+  }
+
+  db.run(`DELETE FROM shared_session`, [], (err) => {
+    if (err) {
+      console.error('[Database Error] Failed to delete shared session:', err.message);
+      return sendJson(res, {
+        status: 500, ok: false, action: 'delete', resource: 'dreamhack',
+        message: 'Database error', code: 'DATABASE_ERROR'
+      });
+    }
+
+    // Also clear global variables
+    sessionid = "";
+    process.env.DREAMHACK_SESSIONID = "";
+    process.env.DREAMHACK_CSRF = "";
+
+    console.log('[Dreamhack Sync] Shared session cleared by admin.');
+    sendJson(res, {
+      status: 200, ok: true, action: 'delete', resource: 'dreamhack',
+      message: 'Shared session cleared successfully', code: 'SUCCESS'
+    });
+  });
+});
+
 app.post('/dreamhack/solve-log', (req, res) => {
   const { username, challengeId, challengeName, timestamp } = req.body;
   if (!username || !challengeId || !challengeName) {
