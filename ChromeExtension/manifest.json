@@ -47,7 +47,9 @@
         "http://127.0.0.1:8080/*",
         "https://127.0.0.1:8080/*",
         "http://ddyoru.duckdns.org/*",
-        "https://ddyoru.duckdns.org/*"
+        "https://ddyoru.duckdns.org/*",
+        "https://dreamhack.io/*",
+        "https://*.dreamhack.io/*"
       ],
       "js": ["content.js"],
       "run_at": "document_start"

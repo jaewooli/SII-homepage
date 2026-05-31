@@ -445,13 +445,21 @@ async function updateLogoutBlockRule() {
       await chrome.declarativeNetRequest.updateSessionRules({
         removeRuleIds: [LOGOUT_BLOCK_RULE_ID]
       });
+      await chrome.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: [LOGOUT_BLOCK_RULE_ID]
+      });
     } catch (e) {
       console.warn('[INHACK Background] Failed to remove DNR session rules:', e);
     }
   } else {
     console.log('[INHACK Background] Current user is Student. Enabling logout block rule.');
     try {
+      // Ensure we clean up session rules first to avoid conflicts
       await chrome.declarativeNetRequest.updateSessionRules({
+        removeRuleIds: [LOGOUT_BLOCK_RULE_ID]
+      });
+      // Add as dynamic rule so it persists across restarts
+      await chrome.declarativeNetRequest.updateDynamicRules({
         removeRuleIds: [LOGOUT_BLOCK_RULE_ID],
         addRules: [
           {
@@ -469,7 +477,7 @@ async function updateLogoutBlockRule() {
         ]
       });
     } catch (e) {
-      console.warn('[INHACK Background] Failed to setup DNR session rules:', e);
+      console.warn('[INHACK Background] Failed to setup DNR dynamic rules:', e);
     }
   }
 }
@@ -501,7 +509,7 @@ chrome.runtime.onStartup.addListener(() => {
 // Execute now as well (in case service worker is already active)
 updateLogoutBlockRule();
 
-// Intercept student logout network request, discard cookies locally and reload tab
+// Intercept student logout network request, discard cookies locally and set alert flag
 chrome.webRequest.onBeforeRequest.addListener(
   async (details) => {
     const isAdmin = await isCurrentUserAdmin();
@@ -527,6 +535,14 @@ chrome.webRequest.onBeforeRequest.addListener(
       console.warn('[INHACK Background] Failed to remove local cookies during intercept:', err);
     }
 
+    // Set storage flag so that content.js on dreamhack.io can display the alert
+    try {
+      await chrome.storage.local.set({ 'showLogoutBlockedAlert': true });
+      console.log('[INHACK Background] showLogoutBlockedAlert flag set successfully.');
+    } catch (err) {
+      console.warn('[INHACK Background] Failed to set showLogoutBlockedAlert flag:', err);
+    }
+
     // Notify portal about interception for debugging logs
     chrome.storage.local.get('portalOrigin').then(res => {
       const portalOrigin = res.portalOrigin || 'http://localhost:8080';
@@ -535,20 +551,6 @@ chrome.webRequest.onBeforeRequest.addListener(
         method: 'POST'
       }).catch(e => console.warn('[INHACK Background] Failed to log intercept:', e));
     });
-
-    // Alert the student that the logout was intercepted and reload tab
-    if (details.tabId && details.tabId !== chrome.tabs.TAB_ID_NONE) {
-      chrome.scripting.executeScript({
-        target: { tabId: details.tabId },
-        func: () => {
-          alert('[INHACK 디버그] 드림핵 로그아웃 시도가 감지되어 차단되었습니다. 다른 사용자의 공용 세션을 보호하기 위해 서버 로그아웃을 방지하고 로컬 브라우저 쿠키만 삭제합니다.');
-        }
-      }).catch(e => console.warn('[INHACK Background] Alert injection failed:', e)).finally(() => {
-        try {
-          chrome.tabs.reload(details.tabId);
-        } catch (e) {}
-      });
-    }
   },
   { urls: ["https://dreamhack.io/users/logout", "https://dreamhack.io/users/logout/"] }
 );
