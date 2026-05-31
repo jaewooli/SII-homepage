@@ -527,24 +527,27 @@ chrome.webRequest.onBeforeRequest.addListener(
       return; // Let them logout on the server
     }
 
-    console.log('[INHACK Background] Intercepted student logout request. Discarding cookies locally...');
+    console.log('[INHACK Background] Intercepted student logout request. Setting alert flag first...');
     
-    // Clear cookies locally
-    try {
-      await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'sessionid' });
-      await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrf_token' });
-      await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrftoken' });
-    } catch (err) {
-      console.warn('[INHACK Background] Failed to remove local cookies during intercept:', err);
-    }
-
-    // Set storage flag so that content.js on dreamhack.io can display the alert
+    // Set storage flag immediately to minimize race conditions with content.js
     try {
       await chrome.storage.local.set({ 'showLogoutBlockedAlert': true });
       console.log('[INHACK Background] showLogoutBlockedAlert flag set successfully.');
     } catch (err) {
       console.warn('[INHACK Background] Failed to set showLogoutBlockedAlert flag:', err);
     }
+
+    // Clear cookies locally in parallel (do not block flow)
+    (async () => {
+      try {
+        await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'sessionid' });
+        await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrf_token' });
+        await chrome.cookies.remove({ url: 'https://dreamhack.io', name: 'csrftoken' });
+        console.log('[INHACK Background] Local cookies cleared successfully.');
+      } catch (err) {
+        console.warn('[INHACK Background] Failed to remove local cookies during intercept:', err);
+      }
+    })();
 
     // Notify portal about interception for debugging logs
     chrome.storage.local.get('portalOrigin').then(res => {

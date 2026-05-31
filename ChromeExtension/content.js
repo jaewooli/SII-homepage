@@ -149,18 +149,48 @@ if (isPortalOrigin) {
 // Check if we need to show the logout blocked alert on dreamhack.io
 const isDreamhackDomain = window.location.hostname.endsWith('dreamhack.io');
 if (isDreamhackDomain) {
+  let alertTriggered = false;
+
+  const triggerAlertAndReload = (forceRedirect = false) => {
+    if (alertTriggered) return;
+    alertTriggered = true;
+
+    chrome.storage.local.remove('showLogoutBlockedAlert', () => {
+      console.log('[INHACK Extension] Dispensing showLogoutBlockedAlert. Displaying notice...');
+      
+      // Delay to let browser render the page completely first
+      setTimeout(() => {
+        alert('[INHACK 디버그] 드림핵 로그아웃 시도가 감지되어 차단되었습니다. 다른 사용자의 공용 세션을 보호하기 위해 서버 로그아웃을 방지하고 로컬 브라우저 쿠키만 삭제합니다.');
+        
+        if (forceRedirect) {
+          // If we had to catch the flag late (e.g. from listener), force reload & redraw the main page layout
+          window.location.href = 'https://dreamhack.io/';
+        } else {
+          // Normal flow: just reload current page
+          window.location.reload();
+        }
+      }, 600);
+    });
+  };
+
   const checkAlertFlag = () => {
     chrome.storage.local.get('showLogoutBlockedAlert', (data) => {
       if (data && data.showLogoutBlockedAlert) {
-        chrome.storage.local.remove('showLogoutBlockedAlert', () => {
-          console.log('[INHACK Extension] Detected showLogoutBlockedAlert flag. Delaying alert to avoid blank screen...');
-          // Delay the alert with setTimeout so the browser has time to fully render the page first
-          setTimeout(() => {
-            alert('[INHACK 디버그] 드림핵 로그아웃 시도가 감지되어 차단되었습니다. 다른 사용자의 공용 세션을 보호하기 위해 서버 로그아웃을 방지하고 로컬 브라우저 쿠키만 삭제합니다.');
-            // Reload the page to reflect the logged-out UI state (since we cleared cookies locally)
-            window.location.reload();
-          }, 600);
-        });
+        triggerAlertAndReload(false);
+      } else {
+        // Fallback: if not set yet, listen for the changes dynamically for 2 seconds (in case background script was slow)
+        const storageListener = (changes, namespace) => {
+          if (namespace === 'local' && changes.showLogoutBlockedAlert && changes.showLogoutBlockedAlert.newValue === true) {
+            console.log('[INHACK Extension] Detected showLogoutBlockedAlert flag from dynamic listener.');
+            chrome.storage.onChanged.removeListener(storageListener);
+            triggerAlertAndReload(true); // Force redirect to avoid blank page
+          }
+        };
+        chrome.storage.onChanged.addListener(storageListener);
+        // Timeout after 2초 to avoid memory leaks
+        setTimeout(() => {
+          chrome.storage.onChanged.removeListener(storageListener);
+        }, 2000);
       }
     });
   };
@@ -169,6 +199,6 @@ if (isDreamhackDomain) {
     document.addEventListener('DOMContentLoaded', checkAlertFlag);
   } else {
     // If DOM is already loaded, check with a slight delay
-    setTimeout(checkAlertFlag, 500);
+    setTimeout(checkAlertFlag, 400);
   }
 }
