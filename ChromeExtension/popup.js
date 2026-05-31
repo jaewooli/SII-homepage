@@ -106,11 +106,54 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Dreamhack Button integration
-  dreamhackBtn.addEventListener('click', () => {
-    chrome.runtime.sendMessage({
-      type: "URL_REDIRECT",
-      url: SERVER_BASE + '/homepage/dreamhack'
-    });
+  dreamhackBtn.addEventListener('click', async () => {
+    showMsg('인증 정보 조회 중...');
+    try {
+      const credRes = await fetch(SERVER_BASE + '/dreamhack/credentials', {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (!credRes.ok) {
+        showMsg('홈페이지 세션이 만료되었습니다. 다시 로그인해주세요.', false);
+        return;
+      }
+
+      const payload = await credRes.json();
+      if (payload && payload.ok && payload.data) {
+        const { email, password } = payload.data;
+        showMsg('Dreamhack 로그인 시도 중 (브라우저)...');
+
+        chrome.runtime.sendMessage({
+          type: "PERFORM_DREAMHACK_LOGIN",
+          email,
+          password
+        }, (response) => {
+          if (response && response.ok) {
+            showMsg('Dreamhack 연동 완료! 리다이렉트 중...');
+          } else {
+            let cleanErr = '오류 발생';
+            if (response?.message) {
+              if (response.message.includes('RECAPTCHA_REQUIRED')) {
+                cleanErr = '캡차(ReCAPTCHA) 인증이 필요합니다. 드림핵(dreamhack.io)에 직접 접속하여 로그인 후 다시 시도해 주세요.';
+              } else if (response.message.includes('INVALID_CREDENTIALS') || response.message.includes('401')) {
+                cleanErr = '아이디 또는 비밀번호가 일치하지 않습니다.';
+              } else if (response.message === 'HOMEPAGE_TAB_CLOSED') {
+                cleanErr = '연동 기능을 사용하려면 SII 홈페이지에서 DREAMHACK 기능을 이용해주세요.';
+              } else {
+                cleanErr = response.message;
+              }
+            }
+            showMsg('연동 실패: ' + cleanErr, false);
+          }
+        });
+      } else {
+        showMsg('인증 정보가 비어있습니다.', false);
+      }
+    } catch (err) {
+      console.error(err);
+      showMsg('네트워크 오류', false);
+    }
   });
 
   // Sign out Submit
