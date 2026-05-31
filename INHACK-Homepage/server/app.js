@@ -153,13 +153,40 @@ app.use(rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 }));
+// Database connection
+const db = new sqlite3.Database(path.join(__dirname, '../users.db'));
+
+// Block unauthorized access to admin fragment
+app.get('/frags/admin.html', (req, res, next) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return res.status(403).send('Forbidden');
+  }
+  next();
+});
+
+// Serve fragments dynamically from database
+app.get('/frags/:id.html', (req, res, next) => {
+  const fragmentID = req.params.id;
+  const validSections = ['home', 'curriculum', 'seminar', 'ctf'];
+  
+  if (validSections.includes(fragmentID)) {
+    db.get(`SELECT content_html FROM site_contents WHERE section_id = ?`, [fragmentID], (err, row) => {
+      if (err || !row) {
+        // Fallback to static file if DB has error or is missing
+        return next();
+      }
+      res.set('Content-Type', 'text/html');
+      return res.send(row.content_html);
+    });
+  } else {
+    next();
+  }
+});
+
 // Serve static files
 app.use('/frags', express.static(path.join(__dirname, '../src/html/fragments')));
 app.use('/assets', express.static(path.join(__dirname, '../src')));
 app.use('/images', express.static(path.join(__dirname, '../images')));
-
-// Database connection
-const db = new sqlite3.Database(path.join(__dirname, '../users.db'));
 
 // Create users table if it doesn't exist
 db.serialize(() => {
@@ -213,6 +240,13 @@ db.serialize(() => {
         updated_at TEXT
     )`);
 
+    // Create site contents table for dynamic content editing
+    db.run(`CREATE TABLE IF NOT EXISTS site_contents (
+        section_id TEXT PRIMARY KEY,
+        content_html TEXT,
+        updated_at TEXT
+    )`);
+
     // Seed default developer account dynamically from environment variables
     const adminUser = process.env.ADMIN_USERNAME || 'developer';
     const adminPass = process.env.ADMIN_PASSWORD;
@@ -234,6 +268,26 @@ db.serialize(() => {
         db.run(`INSERT OR IGNORE INTO users (username, password, name) 
                 VALUES ('123', '$2a$10$eTZ.B/MOrL.i7qceTaDnM.fLD627Xp/yFhTqQZaeFbgNGPBhWyXay', 'TestUser123')`);
     }
+
+    // Seed default site contents from static files
+    const sections = ['home', 'curriculum', 'seminar', 'ctf'];
+    sections.forEach(sec => {
+        db.get(`SELECT 1 FROM site_contents WHERE section_id = ?`, [sec], (err, row) => {
+            if (!row) {
+                try {
+                    const filePath = path.join(__dirname, `../src/html/fragments/${sec}.html`);
+                    if (fs.existsSync(filePath)) {
+                        const content = fs.readFileSync(filePath, 'utf8');
+                        const timestamp = new Date().toISOString();
+                        db.run(`INSERT INTO site_contents (section_id, content_html, updated_at) VALUES (?, ?, ?)`,
+                            [sec, content, timestamp]);
+                    }
+                } catch (e) {
+                    console.error(`[Seed Error] Failed to seed site content for ${sec}:`, e.message);
+                }
+            }
+        });
+    });
 });
 
 function sendJson(res, {
@@ -599,6 +653,53 @@ app.post('/dreamhack/regenerate', async (req, res) => {
     data: { valid_count: sessions.length },
     code: 'SUCCESS'
   });
+});
+
+// Admin Route: Register a new user
+app.post('/admin/register-user', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+  const { username, password, name } = req.body;
+  if (!username || !password || !name) {
+    return sendJson(res, { status: 400, ok: false, message: '모든 필드(아이디, 비밀번호, 이름)를 입력해주세요.', code: 'BAD_REQUEST' });
+  }
+
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  db.run(`INSERT INTO users (username, password, name) VALUES (?, ?, ?)`, [username, hashedPassword, name], (err) => {
+    if (err) {
+      if (err.message.includes('UNIQUE constraint failed')) {
+        return sendJson(res, { status: 409, ok: false, message: '이미 존재하는 사용자 아이디입니다.', code: 'ALREADY_EXISTS' });
+      }
+      return sendJson(res, { status: 500, ok: false, message: '사용자 등록 실패', code: 'DB_ERROR' });
+    }
+    return sendJson(res, { status: 200, ok: true, message: `사용자 '${name}'(이)가 성공적으로 등록되었습니다.`, code: 'SUCCESS' });
+  });
+});
+
+// Admin Route: Update site section content HTML
+app.post('/admin/update-content', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+  const { sectionId, contentHtml } = req.body;
+  const validSections = ['home', 'curriculum', 'seminar', 'ctf'];
+  if (!sectionId || contentHtml === undefined) {
+    return sendJson(res, { status: 400, ok: false, message: '필수 필드가 누락되었습니다.', code: 'BAD_REQUEST' });
+  }
+  if (!validSections.includes(sectionId)) {
+    return sendJson(res, { status: 400, ok: false, message: '유효하지 않은 섹션 ID입니다.', code: 'BAD_REQUEST' });
+  }
+
+  const timestamp = new Date().toISOString();
+  db.run(`INSERT OR REPLACE INTO site_contents (section_id, content_html, updated_at) VALUES (?, ?, ?)`,
+    [sectionId, contentHtml, timestamp], (err) => {
+      if (err) {
+        console.error('[Database Error] Content update failed:', err.message);
+        return sendJson(res, { status: 500, ok: false, message: '컨텐츠 업데이트 실패', code: 'DB_ERROR' });
+      }
+      return sendJson(res, { status: 200, ok: true, message: '컨텐츠가 성공적으로 업데이트되었습니다.', code: 'SUCCESS' });
+    });
 });
 
 app.get('/dreamhack/logs', async (req, res) => {

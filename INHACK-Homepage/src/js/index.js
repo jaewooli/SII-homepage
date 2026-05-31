@@ -17,6 +17,9 @@ async function loadContent(fragmentID){
   }
   const htmlContent = await response.text();
   contentArea.innerHTML = htmlContent;
+  if (fragmentID === 'admin') {
+    initializeAdminPanel();
+  }
   }catch(err){
     console.error('Failed to load content:', err);
     contentArea.innerHTML = '<p>Failed to load content. Please try again later.</p>';
@@ -174,6 +177,14 @@ function renderUserUI(user){
     }
 
     if (user.isAdmin) {
+      // Append Admin Panel to sidebar
+      const sidebarList = document.querySelector('aside ul');
+      if (sidebarList && !document.getElementById('nav-admin-link')) {
+        const adminLi = document.createElement('li');
+        adminLi.innerHTML = `<a href="#admin" id="nav-admin-link" class="nav-item-link" style="color: #ff4b4b; border-left: 2px solid #ff4b4b; font-weight: 700;">Admin Panel</a>`;
+        sidebarList.appendChild(adminLi);
+      }
+
       const renewbtn = document.createElement('button');
       renewbtn.id = 'renew-btn';
       renewbtn.textContent = 'Renew Session';
@@ -246,3 +257,85 @@ document.addEventListener('DOMContentLoaded', async() => {
     showToast(message, type || 'info');
   }
 });
+
+async function initializeAdminPanel() {
+  const selectSection = document.getElementById('admin-edit-section');
+  const textareaContent = document.getElementById('admin-edit-content');
+  const saveBtn = document.getElementById('admin-save-content-btn');
+  const registerForm = document.getElementById('admin-register-form');
+
+  if (selectSection && textareaContent) {
+    // Load default section on load
+    await loadSectionContent(selectSection.value);
+
+    selectSection.addEventListener('change', async () => {
+      await loadSectionContent(selectSection.value);
+    });
+  }
+
+  async function loadSectionContent(sectionId) {
+    try {
+      const response = await fetch(`/frags/${sectionId}.html?_t=${Date.now()}`);
+      if (response.ok) {
+        const text = await response.text();
+        textareaContent.value = text;
+      }
+    } catch (e) {
+      console.error('Failed to load section content:', e);
+      showToast('섹션 데이터를 가져오는데 실패했습니다.', 'error');
+    }
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const sectionId = selectSection.value;
+      const contentHtml = textareaContent.value;
+      
+      showToast('저장 중...', 'info', 0);
+      try {
+        const res = await fetch('/admin/update-content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sectionId, contentHtml })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          showToast('컨텐츠가 안전하게 업데이트되었습니다!', 'success');
+        } else {
+          showToast(data.message || '저장 실패', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('서버 통신 오류', 'error');
+      }
+    });
+  }
+
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('admin-reg-username').value;
+      const name = document.getElementById('admin-reg-name').value;
+      const password = document.getElementById('admin-reg-password').value;
+
+      showToast('사용자 등록 중...', 'info', 0);
+      try {
+        const res = await fetch('/admin/register-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, name })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          showToast(data.message, 'success');
+          registerForm.reset();
+        } else {
+          showToast(data.message || '등록 실패', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('서버 통신 오류', 'error');
+      }
+    });
+  }
+}
