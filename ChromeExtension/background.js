@@ -1,16 +1,26 @@
 // Helper to thoroughly clear all dreamhack-related local authorization cookies
 async function clearDreamhackCookiesLocally() {
-  const names = ['sessionid', 'csrf_token'];
-  for (const name of names) {
-    try {
-      await chrome.cookies.remove({
-        url: 'https://dreamhack.io',
-        name: name
-      });
-      console.log(`[INHACK Background] Cleared local cookie: ${name} from https://dreamhack.io`);
-    } catch (err) {
-      console.warn(`[INHACK Background] Failed to clear cookie ${name}:`, err.message);
+  try {
+    const cookies = await chrome.cookies.getAll({ domain: 'dreamhack.io' });
+    const targetNames = ['sessionid', 'csrf_token'];
+    
+    for (const cookie of cookies) {
+      if (targetNames.includes(cookie.name)) {
+        const prefix = cookie.secure ? 'https://' : 'http://';
+        // strip leading dot from domain for URL formation
+        const domainStr = cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain;
+        const cookieUrl = prefix + domainStr + cookie.path;
+        
+        await chrome.cookies.remove({
+          url: cookieUrl,
+          name: cookie.name,
+          storeId: cookie.storeId
+        });
+        console.log(`[INHACK Background] Cleared local cookie: ${cookie.name} from url: ${cookieUrl}`);
+      }
     }
+  } catch (err) {
+    console.warn('[INHACK Background] Failed to clear local cookies:', err.message);
   }
 }
 
