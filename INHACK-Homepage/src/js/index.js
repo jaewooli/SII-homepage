@@ -48,6 +48,50 @@ window.addEventListener('hashchange', () => {
   updateActiveNavLink(fragmentID);
 });
 
+async function triggerAdminSessionRenewal() {
+  const isExtensionInstalled = document.documentElement.dataset.inhackExtensionInstalled === "true";
+  if (!isExtensionInstalled) {
+    showToast('Chrome Extension이 감지되지 않아 세션을 재발급하지 못했습니다.', 'error');
+    return;
+  }
+
+  showToast('드림핵 공용 계정 세션 재발급 요청 중...', 'info');
+
+  try {
+    const credRes = await fetch('/dreamhack/credentials');
+    if (!credRes.ok) {
+      throw new Error('드림핵 계정 정보를 가져오는데 실패했습니다.');
+    }
+    const credData = await credRes.json();
+    if (!credData.ok || !credData.data || !credData.data.email || !credData.data.password) {
+      throw new Error(credData.message || '올바르지 않은 계정 데이터 형식입니다.');
+    }
+
+    // Register a one-time response listener
+    const handleResponse = (event) => {
+      const { ok, message } = event.detail;
+      if (ok) {
+        showToast('드림핵 공용 계정 세션 재발급 및 동기화 완료!', 'success');
+      } else {
+        showToast(`드림핵 세션 재발급 실패: ${message || '알 수 없는 오류'}`, 'error');
+      }
+      window.removeEventListener('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', handleResponse);
+    };
+    window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', handleResponse);
+
+    // Dispatch the auto login trigger to extension
+    window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', {
+      detail: {
+        email: credData.data.email,
+        password: credData.data.password
+      }
+    }));
+  } catch (err) {
+    console.error('[Admin Session Renewal] Error:', err);
+    showToast(`드림핵 세션 재발급 실패: ${err.message}`, 'error');
+  }
+}
+
 function renderUserUI(user){
   let loginbtn = document.getElementById('login-btn');
   let supportbtn = document.getElementById('support-btn');
@@ -57,6 +101,16 @@ function renderUserUI(user){
     if (loginbtn && supportbtn){
     loginbtn.hidden = true;
     supportbtn.hidden = true;
+    }
+
+    if (user.username === 'developer') {
+      const renewbtn = document.createElement('button');
+      renewbtn.id = 'renew-btn';
+      renewbtn.textContent = 'Renew Session';
+      renewbtn.addEventListener('click', async () => {
+        await triggerAdminSessionRenewal();
+      });
+      document.querySelector('nav').appendChild(renewbtn);
     }
 
     logoutbtn = document.createElement('button');

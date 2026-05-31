@@ -100,38 +100,6 @@ function escapeHtml(str) {
             .replace(/'/g, "&#039;");
 }
 
-async function executeRenewSharedSession(userdata) {
-  const isExtensionInstalled = checkExtensionInstalled();
-  if (!isExtensionInstalled) {
-    showToast('Chrome Extension not detected. Please install it first.', 'error');
-    return;
-  }
-
-  showToast('드림핵 공용 계정 세션 재발급 요청 중...', 'info');
-
-  try {
-    const credRes = await apiRequest('/dreamhack/credentials', 'GET');
-    if (!credRes.ok) {
-      throw new Error('드림핵 계정 정보를 가져오는데 실패했습니다.');
-    }
-    const credData = credRes.data;
-    if (!credData || !credData.email || !credData.password) {
-      throw new Error('올바르지 않은 계정 데이터 형식입니다.');
-    }
-
-    // Dispatch the auto login trigger to extension
-    window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', {
-      detail: {
-        email: credData.email,
-        password: credData.password
-      }
-    }));
-  } catch (err) {
-    console.error('[Admin Session Renewal] Error:', err);
-    showToast(`드림핵 세션 재발급 실패: ${err.message}`, 'error');
-  }
-}
-
 async function executeLoadSharedSession(userdata) {
   const isExtensionInstalled = checkExtensionInstalled();
   if (!isExtensionInstalled) {
@@ -157,17 +125,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (confirmbtn) {
     if (userdata) {
-      if (userdata.username === 'developer') {
-        confirmbtn.textContent = 'Renew Shared Session (Admin)';
-        confirmbtn.addEventListener('click', () => {
-          executeRenewSharedSession(userdata);
-        });
-      } else {
-        confirmbtn.textContent = 'Load Shared Session (User)';
-        confirmbtn.addEventListener('click', () => {
-          executeLoadSharedSession(userdata);
-        });
-      }
+      confirmbtn.textContent = 'Load Shared Session';
+      confirmbtn.addEventListener('click', () => {
+        executeLoadSharedSession(userdata);
+      });
     } else {
       confirmbtn.addEventListener('click', showLoginRequiredToast);
     }

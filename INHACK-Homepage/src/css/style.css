@@ -216,6 +216,15 @@ nav button#logout-btn:hover {
     background-color: rgba(239, 68, 68, 0.08);
 }
 
+nav button#renew-btn {
+    border-color: var(--color-green);
+    color: var(--color-green);
+}
+
+nav button#renew-btn:hover {
+    background-color: rgba(16, 185, 129, 0.08);
+}
+
 /* ==========================================================================
    Main Grid Layout
    ========================================================================== */
