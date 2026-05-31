@@ -1,6 +1,6 @@
 // Helper to thoroughly clear all dreamhack-related local authorization cookies
 async function clearDreamhackCookiesLocally() {
-  const names = ['sessionid', 'csrf_token', 'csrftoken'];
+  const names = ['sessionid', 'csrf_token'];
   for (const name of names) {
     try {
       await chrome.cookies.remove({
