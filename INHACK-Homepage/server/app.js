@@ -107,7 +107,7 @@ app.use(session({
       secure: false,
       httpOnly: true
     },
-    rolling:false,
+    rolling:true,
 }));
 
 app.use(rateLimit({
