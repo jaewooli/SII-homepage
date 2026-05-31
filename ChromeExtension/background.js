@@ -78,6 +78,7 @@ async function performDreamhackLogin(email, password) {
   console.log('[SII Background] Performing direct browser-context Dreamhack login...');
   const response = await fetch('https://dreamhack.io/api/v1/auth/login/', {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -93,8 +94,13 @@ async function performDreamhackLogin(email, password) {
     let errData = '';
     try { errData = await response.text(); } catch(_) {}
     
-    // Check if body content mentions recaptcha or if status is 403 / 429
-    if (errData.toLowerCase().includes('recaptcha') || response.status === 403 || response.status === 429) {
+    // Identify invalid credentials first (status 401 is always invalid credentials)
+    if (response.status === 401 || (response.status === 400 && (errData.includes('이메일') || errData.includes('비밀번호') || errData.includes('password') || errData.includes('email') || errData.includes('login_failed') || errData.includes('credentials')))) {
+      throw new Error("INVALID_CREDENTIALS");
+    }
+    
+    // Strictly isolate real ReCAPTCHA requirements
+    if (errData.toLowerCase().includes('recaptcha')) {
       throw new Error("RECAPTCHA_REQUIRED");
     }
     

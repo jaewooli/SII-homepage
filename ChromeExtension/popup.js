@@ -136,8 +136,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response?.message) {
               if (response.message.includes('RECAPTCHA_REQUIRED')) {
                 cleanErr = '캡차(ReCAPTCHA) 인증이 필요합니다. 드림핵(dreamhack.io)에 직접 접속하여 로그인 후 다시 시도해 주세요.';
-              } else if (response.message.includes('401')) {
-                cleanErr = '아이디/비밀번호가 일치하지 않거나 캡차가 필요합니다.';
+              } else if (response.message.includes('INVALID_CREDENTIALS') || response.message.includes('401')) {
+                cleanErr = '아이디 또는 비밀번호가 일치하지 않습니다.';
+              } else if (response.message === 'HOMEPAGE_TAB_CLOSED') {
+                cleanErr = '연동 기능을 사용하려면 SII 홈페이지에서 DREAMHACK 기능을 이용해주세요.';
               } else {
                 cleanErr = response.message;
               }
