@@ -324,7 +324,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-// E2E Web Crypto Decrypt Helper
+// E2E Web Crypto Decrypt Helper with safe base64 decoding
+function safeAtob(base64) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
 async function decryptPasswordE2E(encryptedBase64, ivBase64, jwk) {
   const key = await self.crypto.subtle.importKey(
     "jwk",
@@ -335,15 +345,17 @@ async function decryptPasswordE2E(encryptedBase64, ivBase64, jwk) {
   );
 
   const enc = new TextDecoder();
-  const encrypted = new Uint8Array(atob(encryptedBase64).split("").map(c => c.charCodeAt(0)));
-  const iv = new Uint8Array(atob(ivBase64).split("").map(c => c.charCodeAt(0)));
+  const encrypted = safeAtob(encryptedBase64);
+  const iv = safeAtob(ivBase64);
 
   const decrypted = await self.crypto.subtle.decrypt(
     { name: "AES-GCM", iv: iv },
     key,
     encrypted
   );
-  return enc.decode(decrypted);
+  const decryptedText = enc.decode(decrypted);
+  console.log(`[INHACK Background] E2E Decrypted password length: ${decryptedText.length}`);
+  return decryptedText;
 }
 
 async function pollForLoggedInCookies(sessionNum) {

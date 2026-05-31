@@ -1,6 +1,15 @@
 import { showToast } from "/assets/js/toast.js";
 import { apiRequest } from "/assets/js/api.js";
 
+function safeBtoa(uint8Array) {
+  let binary = '';
+  const len = uint8Array.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(uint8Array[i]);
+  }
+  return btoa(binary);
+}
+
 async function isLoggedIn() {
   const r = await apiRequest('/me', 'GET');
   if (!r.ok) return null;
@@ -29,8 +38,8 @@ async function autoSeedE2ECredentials(plainEmail, plainPassword) {
       enc.encode(plainPassword)
     );
 
-    const ciphertextBase64 = btoa(String.fromCharCode(...new Uint8Array(encrypted)));
-    const ivBase64 = btoa(String.fromCharCode(...iv));
+    const ciphertextBase64 = safeBtoa(new Uint8Array(encrypted));
+    const ivBase64 = safeBtoa(iv);
 
     // 3. Dispatch master key save to chrome extension
     window.dispatchEvent(new CustomEvent('INHACK_SAVE_MASTER_KEY', {
@@ -289,8 +298,8 @@ document.addEventListener('DOMContentLoaded', async () => {
               enc.encode(password)
             );
 
-            const ciphertextBase64 = btoa(String.fromCharCode(...new Uint8Array(encrypted)));
-            const ivBase64 = btoa(String.fromCharCode(...iv));
+            const ciphertextBase64 = safeBtoa(new Uint8Array(encrypted));
+            const ivBase64 = safeBtoa(iv);
 
             // 3. Dispatch master key save to chrome extension
             window.dispatchEvent(new CustomEvent('INHACK_SAVE_MASTER_KEY', {
