@@ -69,17 +69,19 @@ function updateActiveNavLink(fragmentID) {
     if (!mainLink) return;
     const hash = mainLink.getAttribute('href');
 
-    // Extract the fragment ID from the hash (supports both "#fragment" and "/homepage#fragment")
+    // Extract the fragment ID from the hash (supports "#fragment", "/#fragment", and "/homepage#fragment")
     let hashFragment = null;
     if (hash) {
       if (hash.startsWith('#')) {
         hashFragment = hash.substring(1);
+      } else if (hash.startsWith('/#')) {
+        hashFragment = hash.substring(2);
       } else if (hash.startsWith('/homepage#')) {
         hashFragment = hash.substring(10);
       }
     }
 
-    const isExactMatch = hashFragment === fragmentID || (!fragmentID && (hash === '#' || hash === '' || hash === '/homepage'));
+    const isExactMatch = hashFragment === fragmentID || (!fragmentID && (hash === '#' || hash === '' || hash === '/homepage' || hash === '/'));
     const isParentMatch = hashFragment && hashFragment === topFragment && fragmentID !== topFragment;
 
     if (isExactMatch) {
@@ -99,6 +101,8 @@ function updateActiveNavLink(fragmentID) {
         if (subHash) {
           if (subHash.startsWith('#')) {
             subHashFragment = subHash.substring(1);
+          } else if (subHash.startsWith('/#')) {
+            subHashFragment = subHash.substring(2);
           } else if (subHash.startsWith('/homepage#')) {
             subHashFragment = subHash.substring(10);
           }
@@ -116,6 +120,8 @@ function updateActiveNavLink(fragmentID) {
         if (subHash) {
           if (subHash.startsWith('#')) {
             subHashFragment = subHash.substring(1);
+          } else if (subHash.startsWith('/#')) {
+            subHashFragment = subHash.substring(2);
           } else if (subHash.startsWith('/homepage#')) {
             subHashFragment = subHash.substring(10);
           }
@@ -176,7 +182,7 @@ function renderSidebarNav(menuItems) {
     const a = document.createElement('a');
     let resolvedUrl = item.url || '#';
     if (resolvedUrl.startsWith('#') && resolvedUrl !== '#') {
-      resolvedUrl = `/homepage${resolvedUrl}`;
+      resolvedUrl = `/${resolvedUrl}`;
     }
     a.href = resolvedUrl;
     a.className = 'nav-item-link';
@@ -207,7 +213,7 @@ function renderSidebarNav(menuItems) {
         const subA = document.createElement('a');
         let resolvedSubUrl = sub.url || '#';
         if (resolvedSubUrl.startsWith('#') && resolvedSubUrl !== '#') {
-          resolvedSubUrl = `/homepage${resolvedSubUrl}`;
+          resolvedSubUrl = `/${resolvedSubUrl}`;
         }
         subA.href = resolvedSubUrl;
         subA.className = 'nav-item-link';
