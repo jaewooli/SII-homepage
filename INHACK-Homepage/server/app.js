@@ -83,6 +83,11 @@ const adminRouter = require('./routes/admin');
 const dreamhackRouter = require('./routes/dreamhack');
 const pagesRouter = require('./routes/pages');
 
+// API Routers
+app.use('/', authRouter);
+app.use('/admin', adminRouter);
+app.use('/dreamhack', dreamhackRouter);
+
 // Pages & Fragment Router (Requires higher priority than static /frags)
 app.use('/', pagesRouter);
 
@@ -90,11 +95,6 @@ app.use('/', pagesRouter);
 app.use('/frags', express.static(path.join(__dirname, '../src/html/fragments')));
 app.use('/assets', express.static(path.join(__dirname, '../src')));
 app.use('/images', express.static(path.join(__dirname, '../images')));
-
-// API Routers
-app.use('/', authRouter);
-app.use('/admin', adminRouter);
-app.use('/dreamhack', dreamhackRouter);
 
 // Server Listen
 const PORT = env.PORT;
