@@ -1985,6 +1985,40 @@ async function initializeAdminPanel() {
                 showToast(`메뉴 #${i + 1}의 URL을 입력해 주세요. (페이지가 없으면 # 입력)`, 'error');
                 return;
               }
+
+              const isExternal = block.external || /^https?:\/\//i.test(url);
+              const isLocked = block.deleteLocked === true;
+              if (!isExternal && !isLocked) {
+                if (!url.startsWith('#')) {
+                  showToast(`메뉴 #${i + 1}의 URL은 반드시 '#'으로 시작해야 합니다. (예: #page)`, 'error');
+                  return;
+                }
+              }
+              
+              // Validation: Submenu (fragment) items must have a customized title and URL
+              if (block.submenus && Array.isArray(block.submenus)) {
+                for (let j = 0; j < block.submenus.length; j++) {
+                  const sub = block.submenus[j];
+                  const subTitle = (sub.title || '').trim();
+                  const subUrl = (sub.url || '').trim();
+                  if (!subTitle || subTitle === '새 서브메뉴') {
+                    showToast(`메뉴 #${i + 1}의 서브메뉴 #${j + 1} 제목을 입력해 주세요. ('새 서브메뉴' 제외)`, 'error');
+                    return;
+                  }
+                  if (!subUrl || subUrl === '#' || subUrl.endsWith('/')) {
+                    showToast(`메뉴 #${i + 1}의 서브메뉴 #${j + 1} URL을 올바르게 입력해 주세요. (예: #parent/sub-page)`, 'error');
+                    return;
+                  }
+
+                  const subIsExternal = sub.external || /^https?:\/\//i.test(subUrl);
+                  if (!subIsExternal) {
+                    if (!subUrl.startsWith('#')) {
+                      showToast(`메뉴 #${i + 1}의 서브메뉴 #${j + 1} URL은 반드시 '#'으로 시작해야 합니다. (예: #parent/sub)`, 'error');
+                      return;
+                    }
+                  }
+                }
+              }
             }
           }
         }

@@ -350,6 +350,36 @@ router.post('/update-content', (req, res) => {
           if (!url) {
             return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 URL이 누락되었습니다.`, code: 'VALIDATION_ERROR' });
           }
+
+          const isExternal = item.external || /^https?:\/\//i.test(url);
+          const isLocked = item.deleteLocked === true;
+          if (!isExternal && !isLocked) {
+            if (!url.startsWith('#')) {
+              return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 URL은 '#'으로 시작해야 합니다.`, code: 'VALIDATION_ERROR' });
+            }
+          }
+
+          // Server-side validation: Submenu items (fragments) must have customized title and URL
+          if (item.submenus && Array.isArray(item.submenus)) {
+            for (let j = 0; j < item.submenus.length; j++) {
+              const sub = item.submenus[j];
+              const subTitle = (sub.title || '').trim();
+              const subUrl = (sub.url || '').trim();
+              if (!subTitle || subTitle === '새 서브메뉴') {
+                return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 서브메뉴 #${j + 1} 제목이 누락되었거나 기본값('새 서브메뉴')입니다.`, code: 'VALIDATION_ERROR' });
+              }
+              if (!subUrl || subUrl === '#' || subUrl.endsWith('/')) {
+                return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 서브메뉴 #${j + 1} URL이 올바르지 않습니다.`, code: 'VALIDATION_ERROR' });
+              }
+
+              const subIsExternal = sub.external || /^https?:\/\//i.test(subUrl);
+              if (!subIsExternal) {
+                if (!subUrl.startsWith('#')) {
+                  return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 서브메뉴 #${j + 1} URL은 '#'으로 시작해야 합니다.`, code: 'VALIDATION_ERROR' });
+                }
+              }
+            }
+          }
         }
       }
     }
