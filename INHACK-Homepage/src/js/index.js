@@ -1977,8 +1977,8 @@ async function initializeAdminPanel() {
             if (block.type === 'menu_item') {
               const title = (block.title || '').trim();
               const url = (block.url || '').trim();
-              if (!title) {
-                showToast(`메뉴 #${i + 1}의 제목(이름)을 입력해 주세요.`, 'error');
+              if (!title || title === '새 메뉴') {
+                showToast(`메뉴 #${i + 1}의 제목(이름)을 입력해 주세요. ('새 메뉴' 제외)`, 'error');
                 return;
               }
               if (!url) {

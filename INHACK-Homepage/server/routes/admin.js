@@ -344,8 +344,8 @@ router.post('/update-content', (req, res) => {
         if (item.type === 'menu_item') {
           const title = (item.title || '').trim();
           const url = (item.url || '').trim();
-          if (!title) {
-            return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 제목(이름)이 누락되었습니다.`, code: 'VALIDATION_ERROR' });
+          if (!title || title === '새 메뉴') {
+            return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 제목(이름)이 누락되었거나 기본값('새 메뉴')입니다.`, code: 'VALIDATION_ERROR' });
           }
           if (!url) {
             return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 URL이 누락되었습니다.`, code: 'VALIDATION_ERROR' });
