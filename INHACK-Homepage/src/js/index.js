@@ -182,7 +182,7 @@ function renderSidebarNav(menuItems) {
     const isHomepage = window.location.pathname === '/' || window.location.pathname === '/homepage' || window.location.pathname === '/homepage/main';
     let resolvedUrl = item.url || '#';
     if (resolvedUrl.startsWith('#') && resolvedUrl !== '#') {
-      resolvedUrl = isHomepage ? resolvedUrl : `/homepage${resolvedUrl}`;
+      resolvedUrl = isHomepage ? resolvedUrl : `/${resolvedUrl}`;
     }
     a.href = resolvedUrl;
     a.className = 'nav-item-link';
@@ -214,7 +214,7 @@ function renderSidebarNav(menuItems) {
         const isHomepage = window.location.pathname === '/' || window.location.pathname === '/homepage' || window.location.pathname === '/homepage/main';
         let resolvedSubUrl = sub.url || '#';
         if (resolvedSubUrl.startsWith('#') && resolvedSubUrl !== '#') {
-          resolvedSubUrl = isHomepage ? resolvedSubUrl : `/homepage${resolvedSubUrl}`;
+          resolvedSubUrl = isHomepage ? resolvedSubUrl : `/${resolvedSubUrl}`;
         }
         subA.href = resolvedSubUrl;
         subA.className = 'nav-item-link';
