@@ -572,3 +572,21 @@ p a:hover {
         min-height: 350px !important;
     }
 }
+
+.tool-btn {
+    padding: 6px 10px;
+    font-size: 0.7rem;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 3px;
+    color: var(--color-cyan);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: var(--font-mono);
+}
+
+.tool-btn:hover {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: var(--color-cyan);
+    box-shadow: 0 0 6px rgba(0, 240, 255, 0.2);
+}

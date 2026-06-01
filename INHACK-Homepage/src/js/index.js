@@ -599,6 +599,122 @@ async function initializeAdminPanel() {
     // Load default section on load
     await loadSectionMarkdown(selectSection.value);
 
+    // Toolbar Block Injector Logic
+    const toolbar = document.querySelector('.block-toolbar');
+    if (toolbar) {
+      toolbar.querySelectorAll('.tool-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const blockType = btn.getAttribute('data-block-type');
+          injectBlockTemplate(blockType);
+        });
+      });
+    }
+
+    function injectBlockTemplate(type) {
+      let currentVal = textareaMarkdown.value.trim();
+      let arr = [];
+      try {
+        if (currentVal) {
+          arr = JSON.parse(currentVal);
+          if (!Array.isArray(arr)) {
+            arr = [];
+          }
+        }
+      } catch (e) {
+        if (!confirm('현재 에디터에 올바르지 않은 JSON 데이터가 있어 초기화 후 블록이 추가됩니다. 진행할까요?')) {
+          return;
+        }
+        arr = [];
+      }
+
+      const templates = {
+        banner: {
+          type: "banner",
+          title: "New Banner Title",
+          lead: "This is a **lead text** that supports inline markdown.",
+          desc: "Description text goes here."
+        },
+        header: {
+          type: "header",
+          title: "New Section Header",
+          desc: "Section description goes here."
+        },
+        features: {
+          type: "features",
+          items: [
+            {
+              tag: "TAG 01 //",
+              title: "Feature Title",
+              desc: "Feature description detail."
+            }
+          ]
+        },
+        links: {
+          type: "links",
+          items: [
+            {
+              tag: "LINK //",
+              title: "Link Description ↗",
+              url: "https://example.com",
+              desc: "Details about where this external link points."
+            }
+          ]
+        },
+        phases: {
+          type: "phases",
+          items: [
+            {
+              phase: "Phase 01",
+              title: "Phase Title",
+              desc: "What this phase covers.",
+              topics: [
+                "Detailed Topic 1",
+                "Detailed Topic 2"
+              ]
+            }
+          ]
+        },
+        timeline: {
+          type: "timeline",
+          items: [
+            {
+              week: "Week 01",
+              title: "Topic/Title",
+              desc: "Summary of activities.",
+              presenter: "Presenter: Name"
+            }
+          ]
+        },
+        ctf_dashboard: {
+          type: "ctf_dashboard",
+          leaderboard: [
+            {
+              rank: "1st 🥇",
+              user: "alice",
+              score: "1000 PTS",
+              status: "5 / 5 SOLVED"
+            }
+          ],
+          challenges: [
+            {
+              category: "WEB",
+              title: "Super Simple SQL",
+              score: "100 PTS",
+              status: "solved"
+            }
+          ]
+        }
+      };
+
+      const blockObj = templates[type];
+      if (blockObj) {
+        arr.push(blockObj);
+        textareaMarkdown.value = JSON.stringify(arr, null, 2);
+        renderPreview(textareaMarkdown.value);
+        showToast(`새로운 ${type} 블록이 추가되었습니다!`, 'success');
+      }
+    }
+
     selectSection.addEventListener('change', async () => {
       await loadSectionMarkdown(selectSection.value);
     });
