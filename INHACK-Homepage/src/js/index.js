@@ -1549,7 +1549,7 @@ async function initializeAdminPanel() {
             <input type="text" class="block-form-input block-field" data-field="title" value="${block.title || ''}">
           </div>
           <div class="block-form-group">
-            <label>메뉴 URL (없으면 # 또는 비워두기)</label>
+            <label>메뉴 URL</label>
             <input type="text" class="block-form-input block-field" data-field="url" value="${block.url || ''}">
           </div>
           <div class="block-form-group">
@@ -1561,7 +1561,7 @@ async function initializeAdminPanel() {
           <div class="block-form-group" style="margin-top: 10px; padding: 10px; background: rgba(244, 63, 94, 0.05); border: 1px solid rgba(244, 63, 94, 0.15); border-radius: 4px;">
             <label style="display:flex; align-items:center; gap: 8px; cursor:pointer; color: #f43f5e; font-weight: 600; font-size: 0.8rem;">
               <input type="checkbox" class="block-delete-lock-check" ${block.deleteLocked ? 'checked' : ''}>
-              <span>⚠️ 메뉴 삭제 방지 보호 (활성화 시 삭제 불가)</span>
+              <span>⚠️ 메뉴 삭제 방지 보호 </span>
             </label>
           </div>
           <h4 style="color: var(--color-cyan); margin: 16px 0 8px 0; font-size: 0.82rem; border-bottom: 1px solid rgba(59,130,246,0.2); padding-bottom: 6px;">📂 세부 메뉴 (Submenus)</h4>
