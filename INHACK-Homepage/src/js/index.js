@@ -593,12 +593,15 @@ ${chalsHtml}</div>
 
 async function initializeAdminPanel() {
   const selectSection = document.getElementById('admin-edit-section');
-  const textareaMarkdown = document.getElementById('admin-edit-content') || document.getElementById('admin-edit-markdown');
+  const formContainer = document.getElementById('admin-block-form-container');
   const previewArea = document.getElementById('admin-html-preview');
   const saveBtn = document.getElementById('admin-save-content-btn');
   const registerForm = document.getElementById('admin-register-form');
 
-  if (selectSection && textareaMarkdown && previewArea) {
+  if (selectSection && formContainer && previewArea) {
+    let currentBlocks = [];
+    let activeBlockIndex = null;
+
     // Load default section on load
     await loadSectionMarkdown(selectSection.value);
 
@@ -613,368 +616,775 @@ async function initializeAdminPanel() {
       });
     }
 
-    function injectBlockTemplate(type) {
-      const currentVal = textareaMarkdown.value;
-
-      const templates = {
-        banner: {
-          type: "banner",
-          title: "New Banner Title",
-          lead: "This is a **lead text** that supports inline markdown.",
-          desc: "Description text goes here."
-        },
-        header: {
-          type: "header",
-          title: "New Section Header",
-          desc: "Section description goes here."
-        },
-        features: {
-          type: "features",
-          items: [
-            {
-              tag: "TAG 01 //",
-              title: "Feature Title",
-              desc: "Feature description detail."
-            }
-          ]
-        },
-        spacer: {
-          type: "spacer",
-          height: "1.75rem"
-        },
-        phases: {
-          type: "phases",
-          items: [
-            {
-              phase: "Phase 01",
-              title: "Phase Title",
-              desc: "What this phase covers.",
-              topics: [
-                "Detailed Topic 1",
-                "Detailed Topic 2"
-              ]
-            }
-          ]
-        },
-        timeline: {
-          type: "timeline",
-          items: [
-            {
-              week: "Week 01",
-              title: "Topic/Title",
-              desc: "Summary of activities.",
-              presenter: "Presenter: Name"
-            }
-          ]
-        },
-        ctf_dashboard: {
-          type: "ctf_dashboard",
-          leaderboard: [
-            {
-              rank: "1st 🥇",
-              user: "alice",
-              score: "1000 PTS",
-              status: "5 / 5 SOLVED"
-            }
-          ],
-          challenges: [
-            {
-              category: "WEB",
-              title: "Super Simple SQL",
-              score: "100 PTS",
-              status: "solved"
-            }
-          ]
+    function legacyFallback(data, sectionId) {
+      const legacyBlocks = [];
+      if (sectionId === 'home') {
+        if (data.banner) legacyBlocks.push({ type: 'banner', ...data.banner });
+        if (data.features) legacyBlocks.push({ type: 'features', items: data.features });
+        if (data.links) {
+          legacyBlocks.push({ type: 'spacer', height: '1.75rem' });
+          legacyBlocks.push({ type: 'features', items: data.links });
         }
-      };
+      } else if (sectionId === 'curriculum') {
+        if (data.header) legacyBlocks.push({ type: 'header', ...data.header });
+        if (data.phases) legacyBlocks.push({ type: 'phases', items: data.phases });
+      } else if (sectionId === 'seminar') {
+        if (data.header) legacyBlocks.push({ type: 'header', ...data.header });
+        if (data.items) legacyBlocks.push({ type: 'timeline', items: data.items });
+      } else if (sectionId === 'ctf') {
+        if (data.header) legacyBlocks.push({ type: 'header', ...data.header });
+        if (data.leaderboard || data.challenges) {
+          legacyBlocks.push({
+            type: 'ctf_dashboard',
+            leaderboard: data.leaderboard || [],
+            challenges: data.challenges || []
+          });
+        }
+      }
+      return legacyBlocks;
+    }
 
-      const blockObj = templates[type];
+    const templates = {
+      banner: {
+        type: "banner",
+        title: "새로운 배너 제목",
+        lead: "여기에 **강조 텍스트**나 리드 문구를 입력하세요.",
+        desc: "상세 설명 텍스트를 입력할 수 있습니다."
+      },
+      header: {
+        type: "header",
+        title: "새로운 섹션 헤더 제목",
+        desc: "이 섹션에 대한 간단한 설명입니다."
+      },
+      features: {
+        type: "features",
+        items: [
+          {
+            tag: "TAG 01 //",
+            title: "카드 제목",
+            desc: "카드 설명글 상세 정보",
+            url: ""
+          }
+        ]
+      },
+      spacer: {
+        type: "spacer",
+        height: "1.75rem"
+      },
+      phases: {
+        type: "phases",
+        items: [
+          {
+            phase: "Phase 01",
+            title: "단계 제목",
+            desc: "해당 단계에서 공부하는 주요 개념",
+            topics: [
+              "상세 주제 1",
+              "상세 주제 2"
+            ]
+          }
+        ]
+      },
+      timeline: {
+        type: "timeline",
+        items: [
+          {
+            week: "Week 01",
+            title: "세미나 주제",
+            desc: "세미나 및 활동 내용 설명",
+            presenter: "Presenter: 발표자 이름"
+          }
+        ]
+      },
+      ctf_dashboard: {
+        type: "ctf_dashboard",
+        leaderboard: [
+          {
+            rank: "1st 🥇",
+            user: "닉네임",
+            score: "1000 PTS",
+            status: "5 / 5 SOLVED"
+          }
+        ],
+        challenges: [
+          {
+            category: "WEB",
+            title: "Web Challenge 1",
+            score: "100 PTS",
+            status: "open"
+          }
+        ]
+      }
+    };
+
+    function injectBlockTemplate(type) {
+      const blockObj = JSON.parse(JSON.stringify(templates[type]));
       if (!blockObj) return;
 
-      // If the editor is empty or just whitespace or empty array/object
-      if (!currentVal.trim() || currentVal.trim() === '[]' || currentVal.trim() === '{}') {
-        textareaMarkdown.value = JSON.stringify([blockObj], null, 2);
-        renderPreview(textareaMarkdown.value);
-        showToast(`새로운 ${type} 블록이 추가되었습니다!`, 'success');
-        return;
-      }
+      currentBlocks.push(blockObj);
+      activeBlockIndex = currentBlocks.length - 1;
 
-      // Check if overall JSON is valid to give confidence
-      try {
-        JSON.parse(currentVal);
-      } catch (e) {
-        if (!confirm('현재 에디터에 올바르지 않은 JSON 데이터가 있습니다. 커서 위치에 강제로 텍스트를 삽입할까요? (그렇지 않으면 삽입이 취소됩니다)')) {
-          return;
-        }
-      }
-
-      const startPos = textareaMarkdown.selectionStart;
-      const endPos = textareaMarkdown.selectionEnd;
-      const beforeText = currentVal.substring(0, startPos);
-      const afterText = currentVal.substring(endPos);
-
-      // Stringify block
-      let insertStr = JSON.stringify(blockObj, null, 2);
+      renderBlockList();
+      renderActiveBlockForm();
+      renderPreview();
+      showToast(`새로운 ${type} 블록이 추가되었습니다!`, 'success');
       
-      // Indent block body
-      insertStr = insertStr.split('\n').map((line, idx) => idx === 0 ? line : '  ' + line).join('\n');
-
-      let prefix = '';
-      let suffix = '';
-
-      const trimmedBefore = beforeText.trim();
-      const trimmedAfter = afterText.trim();
-
-      if (trimmedBefore.endsWith('}')) {
-        prefix = ',\n  ';
-      } else if (trimmedBefore.endsWith('[')) {
-        prefix = '\n  ';
-      } else if (trimmedBefore && !trimmedBefore.endsWith(',') && !trimmedBefore.endsWith('[')) {
-        prefix = ',\n  ';
+      const blockListContainer = document.getElementById('admin-block-list');
+      if (blockListContainer) {
+        blockListContainer.scrollTop = blockListContainer.scrollHeight;
       }
-
-      if (trimmedAfter.startsWith('{')) {
-        suffix = ',\n';
-      } else if (trimmedAfter.startsWith(']')) {
-        suffix = '\n';
-      }
-
-      const finalInsert = prefix + insertStr + suffix;
-
-      textareaMarkdown.value = beforeText + finalInsert + afterText;
-      
-      // Focus and set selection range right after insertion
-      const newCursorPos = startPos + finalInsert.length;
-      textareaMarkdown.selectionStart = newCursorPos;
-      textareaMarkdown.selectionEnd = newCursorPos;
-      textareaMarkdown.focus();
-
-      renderPreview(textareaMarkdown.value);
-      showToast(`커서 위치에 ${type} 블록이 주입되었습니다!`, 'success');
     }
 
     selectSection.addEventListener('change', async () => {
       await loadSectionMarkdown(selectSection.value);
     });
 
-    // Real-time Preview Logic (Validates JSON and draws preview)
-    textareaMarkdown.addEventListener('input', () => {
-      renderPreview(textareaMarkdown.value);
-    });
-  }
-
-  function renderPreview(jsonText) {
-    if (!previewArea) return;
-    const sectionId = selectSection.value;
-    
-    try {
-      const data = JSON.parse(jsonText);
-      const htmlResult = clientCompileJsonToHtml(sectionId, data);
-      previewArea.innerHTML = htmlResult;
+    function renderPreview() {
+      if (!previewArea) return;
+      const sectionId = selectSection.value;
       
-      // Clear error highlights
-      textareaMarkdown.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-      if (saveBtn) saveBtn.disabled = false;
-
-      updateBlockListUI(data);
-    } catch (err) {
-      // Draw error message in the preview panel
-      previewArea.innerHTML = `<div style="color: #ef4444; padding: 1.5rem; border: 1px dashed rgba(239, 68, 68, 0.3); border-radius: 6px; background: rgba(239, 68, 68, 0.05); font-family: monospace; font-size: 0.85rem;">
-        <h4 style="margin-top: 0; margin-bottom: 0.5rem; text-transform: uppercase;">⚠️ JSON 문법 에러</h4>
-        <p style="margin: 0; line-height: 1.5;">${err.message}</p>
-        <p style="margin-top: 10px; margin-bottom: 0; font-size: 0.75rem; color: #94a3b8;">중괄호, 쉼표, 큰따옴표의 정렬이 올바른지 확인해 주세요.</p>
-      </div>`;
-      
-      // Highlight editor border as error and block save
-      textareaMarkdown.style.borderColor = '#ef4444';
-      if (saveBtn) saveBtn.disabled = true;
-
-      updateBlockListUI(null, err.message);
-    }
-  }
-
-  function updateBlockListUI(blocks, errMsg) {
-    const blockListContainer = document.getElementById('admin-block-list');
-    if (!blockListContainer) return;
-    
-    if (errMsg) {
-      blockListContainer.innerHTML = `<div style="color: #ef4444; font-size: 0.75rem; padding: 10px; text-align: center; border: 1px dashed rgba(239,68,68,0.2); border-radius: 4px;">
-        ⚠️ JSON 에러 발생<br><span style="font-size: 0.65rem; color: #94a3b8; word-break: break-all;">${errMsg}</span>
-      </div>`;
-      return;
-    }
-    
-    if (!blocks || !Array.isArray(blocks) || blocks.length === 0) {
-      blockListContainer.innerHTML = '<div style="color: #64748b; font-size: 0.75rem; text-align: center; padding: 20px;">등록된 블록이 없습니다.</div>';
-      return;
-    }
-
-    blockListContainer.innerHTML = '';
-    blocks.forEach((block, index) => {
-      const blockCard = document.createElement('div');
-      blockCard.className = 'block-hierarchy-card';
-      
-      let titlePreview = '';
-      let icon = '📦';
-      if (block.type === 'banner') { icon = '📢'; titlePreview = block.title || ''; }
-      else if (block.type === 'header') { icon = '🏷️'; titlePreview = block.title || ''; }
-      else if (block.type === 'features') { icon = '🎴'; titlePreview = `카드 ${block.items?.length || 0}개`; }
-      else if (block.type === 'spacer') { icon = '↕️'; titlePreview = block.height || '1.5rem'; }
-      else if (block.type === 'phases') { icon = '🗺️'; titlePreview = `단계 ${block.items?.length || 0}개`; }
-      else if (block.type === 'timeline') { icon = '📅'; titlePreview = `아이템 ${block.items?.length || 0}개`; }
-      else if (block.type === 'ctf_dashboard') { icon = '🏆'; titlePreview = '대시보드'; }
-
-      if (titlePreview && titlePreview.length > 15) {
-        titlePreview = titlePreview.substring(0, 15) + '...';
+      try {
+        const htmlResult = clientCompileJsonToHtml(sectionId, currentBlocks);
+        previewArea.innerHTML = htmlResult;
+        if (saveBtn) saveBtn.disabled = false;
+      } catch (err) {
+        previewArea.innerHTML = `<div style="color: #ef4444; padding: 1.5rem; border: 1px dashed rgba(239, 68, 68, 0.3); border-radius: 6px; background: rgba(239, 68, 68, 0.05); font-family: monospace; font-size: 0.85rem;">
+          <h4 style="margin-top: 0; margin-bottom: 0.5rem; text-transform: uppercase;">⚠️ 렌더링 오류</h4>
+          <p style="margin: 0; line-height: 1.5;">${err.message}</p>
+        </div>`;
+        if (saveBtn) saveBtn.disabled = true;
       }
-
-      blockCard.innerHTML = `
-        <div style="display: flex; flex-direction: column; flex: 1; min-width: 0; text-align: left;">
-          <span style="font-size: 0.65rem; color: #64748b; font-family: monospace;">#${index + 1} ${block.type.toUpperCase()}</span>
-          <span style="font-size: 0.75rem; color: #e2e8f0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${icon} ${titlePreview || block.type}</span>
-        </div>
-        <div style="display: flex; gap: 4px; flex-shrink: 0; align-items: center;">
-          <button type="button" class="hierarchy-btn move-up" data-index="${index}" title="위로 이동" style="padding: 4px 6px; font-size: 0.65rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: #fff; cursor: pointer;">↑</button>
-          <button type="button" class="hierarchy-btn move-down" data-index="${index}" title="아래로 이동" style="padding: 4px 6px; font-size: 0.65rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: #fff; cursor: pointer;">↓</button>
-          <button type="button" class="hierarchy-btn delete-block" data-index="${index}" title="삭제" style="padding: 4px 6px; font-size: 0.65rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 3px; color: #ef4444; cursor: pointer;">🗑️</button>
-        </div>
-      `;
-      blockListContainer.appendChild(blockCard);
-    });
-
-    blockListContainer.querySelectorAll('.move-up').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.getAttribute('data-index'));
-        moveBlock(idx, -1);
-      });
-    });
-    blockListContainer.querySelectorAll('.move-down').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.getAttribute('data-index'));
-        moveBlock(idx, 1);
-      });
-    });
-    blockListContainer.querySelectorAll('.delete-block').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.getAttribute('data-index'));
-        deleteBlock(idx);
-      });
-    });
-  }
-
-  function moveBlock(idx, direction) {
-    try {
-      const data = JSON.parse(textareaMarkdown.value);
-      if (!Array.isArray(data)) return;
-      const targetIdx = idx + direction;
-      if (targetIdx < 0 || targetIdx >= data.length) return;
-
-      const temp = data[idx];
-      data[idx] = data[targetIdx];
-      data[targetIdx] = temp;
-
-      textareaMarkdown.value = JSON.stringify(data, null, 2);
-      renderPreview(textareaMarkdown.value);
-      showToast('블록 순서가 변경되었습니다.', 'success');
-    } catch (e) {
-      showToast('순서 변경 실패: JSON이 올바르지 않습니다.', 'error');
     }
-  }
 
-  function deleteBlock(idx) {
-    try {
-      const data = JSON.parse(textareaMarkdown.value);
-      if (!Array.isArray(data)) return;
-      if (!confirm('정말로 이 블록을 삭제하시겠습니까?')) return;
-
-      data.splice(idx, 1);
-
-      textareaMarkdown.value = JSON.stringify(data, null, 2);
-      renderPreview(textareaMarkdown.value);
-      showToast('블록이 삭제되었습니다.', 'success');
-    } catch (e) {
-      showToast('삭제 실패: JSON이 올바르지 않습니다.', 'error');
-    }
-  }
-
-  // JSON File Upload and Parse
-  const fileInput = document.getElementById('admin-md-file');
-  const fileTrigger = document.getElementById('admin-upload-trigger-btn');
-  const filenameSpan = document.getElementById('admin-md-filename');
-
-  if (fileTrigger && fileInput && textareaMarkdown) {
-    fileTrigger.addEventListener('click', () => {
-      fileInput.click();
-    });
-
-    fileInput.addEventListener('change', () => {
-      const file = fileInput.files[0];
-      if (!file) {
-        filenameSpan.textContent = '선택된 파일 없음';
+    function renderBlockList() {
+      const blockListContainer = document.getElementById('admin-block-list');
+      if (!blockListContainer) return;
+      
+      if (!currentBlocks || !Array.isArray(currentBlocks) || currentBlocks.length === 0) {
+        blockListContainer.innerHTML = '<div style="color: #64748b; font-size: 0.75rem; text-align: center; padding: 20px;">등록된 블록이 없습니다.</div>';
         return;
       }
-      filenameSpan.textContent = file.name;
 
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const jsonText = e.target.result;
-        textareaMarkdown.value = jsonText;
-        renderPreview(jsonText);
-        showToast('JSON 데이터 파일이 에디터에 로드되었습니다! 미리보기를 확인한 후 저장해 주세요.', 'success');
-      };
-      reader.readAsText(file);
-    });
-  }
+      blockListContainer.innerHTML = '';
+      currentBlocks.forEach((block, index) => {
+        const blockCard = document.createElement('div');
+        blockCard.className = `block-hierarchy-card${index === activeBlockIndex ? ' active' : ''}`;
+        blockCard.style.cursor = 'pointer';
+        
+        let titlePreview = '';
+        let icon = '📦';
+        if (block.type === 'banner') { icon = '📢'; titlePreview = block.title || ''; }
+        else if (block.type === 'header') { icon = '🏷️'; titlePreview = block.title || ''; }
+        else if (block.type === 'features') { icon = '🎴'; titlePreview = `카드 ${block.items?.length || 0}개`; }
+        else if (block.type === 'spacer') { icon = '↕️'; titlePreview = block.height || '1.5rem'; }
+        else if (block.type === 'phases') { icon = '🗺️'; titlePreview = `단계 ${block.items?.length || 0}개`; }
+        else if (block.type === 'timeline') { icon = '📅'; titlePreview = `아이템 ${block.items?.length || 0}개`; }
+        else if (block.type === 'ctf_dashboard') { icon = '🏆'; titlePreview = '대시보드'; }
 
-  async function loadSectionMarkdown(sectionId) {
-    try {
-      const response = await fetch(`/admin/content/${sectionId}?_t=${Date.now()}`);
-      if (response.ok) {
-        const payload = await response.json();
-        if (payload.ok && payload.data) {
-          let content = payload.data.content || '';
-          
-          // Formats JSON with 2-spaces indent for readability
-          try {
-            const parsed = JSON.parse(content);
-            content = JSON.stringify(parsed, null, 2);
-          } catch (e) {}
-
-          textareaMarkdown.value = content;
-          renderPreview(content);
+        if (titlePreview && titlePreview.length > 15) {
+          titlePreview = titlePreview.substring(0, 15) + '...';
         }
-      }
-    } catch (e) {
-      console.error('Failed to load section content:', e);
-      showToast('섹션 데이터를 가져오는데 실패했습니다.', 'error');
-    }
-  }
 
-  if (saveBtn) {
-    saveBtn.addEventListener('click', () => {
-      const sectionId = selectSection.value;
-      const content_md = textareaMarkdown.value;
+        blockCard.innerHTML = `
+          <div class="block-select-zone" style="display: flex; flex-direction: column; flex: 1; min-width: 0; text-align: left;">
+            <span style="font-size: 0.65rem; color: #64748b; font-family: monospace;">#${index + 1} ${block.type.toUpperCase()}</span>
+            <span style="font-size: 0.75rem; color: #e2e8f0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${icon} ${titlePreview || block.type}</span>
+          </div>
+          <div style="display: flex; gap: 4px; flex-shrink: 0; align-items: center;">
+            <button type="button" class="hierarchy-btn move-up" data-index="${index}" title="위로 이동" style="padding: 4px 6px; font-size: 0.65rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: #fff; cursor: pointer;">↑</button>
+            <button type="button" class="hierarchy-btn move-down" data-index="${index}" title="아래로 이동" style="padding: 4px 6px; font-size: 0.65rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: #fff; cursor: pointer;">↓</button>
+            <button type="button" class="hierarchy-btn delete-block" data-index="${index}" title="삭제" style="padding: 4px 6px; font-size: 0.65rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 3px; color: #ef4444; cursor: pointer;">🗑️</button>
+          </div>
+        `;
+        
+        blockCard.querySelector('.block-select-zone').addEventListener('click', () => {
+          activeBlockIndex = index;
+          renderBlockList();
+          renderActiveBlockForm();
+        });
 
-      showSaveConfirmationModal(sectionId, async () => {
-        showToast('저장 중...', 'info', 0);
-        try {
-          const res = await fetch('/admin/update-content', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sectionId, content_md })
-          });
-          const data = await res.json();
-          if (res.ok && data.ok) {
-            showToast('컨텐츠가 안전하게 업데이트되었습니다!', 'success');
-          } else {
-            showToast(data.message || '저장 실패', 'error');
-          }
-        } catch (err) {
-          console.error(err);
-          showToast('서버 통신 오류', 'error');
-        }
+        blockCard.querySelector('.move-up').addEventListener('click', (e) => {
+          e.stopPropagation();
+          moveBlock(index, -1);
+        });
+        blockCard.querySelector('.move-down').addEventListener('click', (e) => {
+          e.stopPropagation();
+          moveBlock(index, 1);
+        });
+        blockCard.querySelector('.delete-block').addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteBlock(index);
+        });
+
+        blockListContainer.appendChild(blockCard);
       });
-    });
+    }
+
+    function moveBlock(idx, direction) {
+      const targetIdx = idx + direction;
+      if (targetIdx < 0 || targetIdx >= currentBlocks.length) return;
+
+      const temp = currentBlocks[idx];
+      currentBlocks[idx] = currentBlocks[targetIdx];
+      currentBlocks[targetIdx] = temp;
+
+      if (activeBlockIndex === idx) {
+        activeBlockIndex = targetIdx;
+      } else if (activeBlockIndex === targetIdx) {
+        activeBlockIndex = idx;
+      }
+
+      renderBlockList();
+      renderActiveBlockForm();
+      renderPreview();
+      showToast('블록 순서가 변경되었습니다.', 'success');
+    }
+
+    function deleteBlock(idx) {
+      if (!confirm('정말로 이 블록을 삭제하시겠습니까?')) return;
+
+      currentBlocks.splice(idx, 1);
+
+      if (currentBlocks.length === 0) {
+        activeBlockIndex = null;
+      } else if (activeBlockIndex === idx) {
+        activeBlockIndex = Math.max(0, idx - 1);
+      } else if (activeBlockIndex > idx) {
+        activeBlockIndex--;
+      }
+
+      renderBlockList();
+      renderActiveBlockForm();
+      renderPreview();
+      showToast('블록이 삭제되었습니다.', 'success');
+    }
+
+    function renderActiveBlockForm() {
+      if (!formContainer) return;
+
+      if (activeBlockIndex === null || activeBlockIndex < 0 || activeBlockIndex >= currentBlocks.length) {
+        formContainer.innerHTML = `<div style="color: #64748b; font-size: 0.8rem; text-align: center; margin-top: 50px;">왼쪽에서 편집할 블록을 선택하거나 새로운 블록을 추가해 주세요.</div>`;
+        return;
+      }
+
+      const block = currentBlocks[activeBlockIndex];
+      formContainer.innerHTML = '';
+
+      const wrapper = document.createElement('div');
+      wrapper.style.display = 'flex';
+      wrapper.style.flexDirection = 'column';
+      wrapper.style.gap = '12px';
+
+      const headerTitle = document.createElement('div');
+      headerTitle.style.cssText = "font-size: 0.8rem; color: var(--color-cyan); font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 10px; text-transform: uppercase;";
+      headerTitle.textContent = `✍️ ${block.type} 블록 편집`;
+      wrapper.appendChild(headerTitle);
+
+      if (block.type === 'banner') {
+        wrapper.innerHTML += `
+          <div class="block-form-group">
+            <label>배너 제목 (Title)</label>
+            <input type="text" class="block-form-input block-field" data-field="title" value="${block.title || ''}">
+          </div>
+          <div class="block-form-group">
+            <label>서브 타이틀 / 리드 텍스트 (Lead)</label>
+            <input type="text" class="block-form-input block-field" data-field="lead" value="${block.lead || ''}">
+          </div>
+          <div class="block-form-group">
+            <label>설명 (Description)</label>
+            <textarea class="block-form-input block-field" data-field="desc" style="min-height: 100px;">${block.desc || ''}</textarea>
+          </div>
+        `;
+      } 
+      else if (block.type === 'header') {
+        wrapper.innerHTML += `
+          <div class="block-form-group">
+            <label>헤더 제목 (Title)</label>
+            <input type="text" class="block-form-input block-field" data-field="title" value="${block.title || ''}">
+          </div>
+          <div class="block-form-group">
+            <label>설명 (Description)</label>
+            <textarea class="block-form-input block-field" data-field="desc" style="min-height: 100px;">${block.desc || ''}</textarea>
+          </div>
+        `;
+      } 
+      else if (block.type === 'spacer') {
+        wrapper.innerHTML += `
+          <div class="block-form-group">
+            <label>여백 높이 (Height - px, rem, em 등 단위 포함)</label>
+            <input type="text" class="block-form-input block-field" data-field="height" value="${block.height || '1.5rem'}">
+          </div>
+        `;
+      } 
+      else if (block.type === 'features') {
+        const items = block.items || [];
+        let itemsHtml = items.map((item, idx) => `
+          <div class="block-card-item feature-item" data-item-index="${idx}">
+            <div class="block-card-header">
+              <span class="block-card-title-label">CARD #${idx + 1}</span>
+              <button type="button" class="hierarchy-btn delete-card-item" data-item-index="${idx}" style="padding: 4px 8px; font-size: 0.7rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; color: #ef4444; cursor: pointer;">삭제</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="block-form-group">
+                <label>태그 (Tag)</label>
+                <input type="text" class="block-form-input item-field" data-field="tag" value="${item.tag || ''}">
+              </div>
+              <div class="block-form-group">
+                <label>제목 (Title)</label>
+                <input type="text" class="block-form-input item-field" data-field="title" value="${item.title || ''}">
+              </div>
+            </div>
+            <div class="block-form-group">
+              <label>링크 URL (선택 사항)</label>
+              <input type="text" class="block-form-input item-field" data-field="url" value="${item.url || ''}">
+            </div>
+            <div class="block-form-group" style="margin-bottom: 0;">
+              <label>설명 (Description)</label>
+              <textarea class="block-form-input item-field" data-field="desc" style="min-height: 60px;">${item.desc || ''}</textarea>
+            </div>
+          </div>
+        `).join('');
+
+        wrapper.innerHTML += `
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${itemsHtml}
+            <button type="button" class="action-btn add-card-item" style="border-color: #10b981; color: #10b981; font-size: 0.75rem; padding: 8px; width: 100%;">+ 새 카드 추가</button>
+          </div>
+        `;
+      } 
+      else if (block.type === 'phases') {
+        const items = block.items || [];
+        let itemsHtml = items.map((item, idx) => `
+          <div class="block-card-item phase-item" data-item-index="${idx}">
+            <div class="block-card-header">
+              <span class="block-card-title-label">PHASE #${idx + 1}</span>
+              <button type="button" class="hierarchy-btn delete-card-item" data-item-index="${idx}" style="padding: 4px 8px; font-size: 0.7rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; color: #ef4444; cursor: pointer;">삭제</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="block-form-group">
+                <label>단계명 (Phase)</label>
+                <input type="text" class="block-form-input item-field" data-field="phase" value="${item.phase || ''}">
+              </div>
+              <div class="block-form-group">
+                <label>제목 (Title)</label>
+                <input type="text" class="block-form-input item-field" data-field="title" value="${item.title || ''}">
+              </div>
+            </div>
+            <div class="block-form-group">
+              <label>설명 (Description)</label>
+              <textarea class="block-form-input item-field" data-field="desc" style="min-height: 60px;">${item.desc || ''}</textarea>
+            </div>
+            <div class="block-form-group" style="margin-bottom: 0;">
+              <label>상세 주제 목록 (Topics - 한 줄에 하나씩 입력)</label>
+              <textarea class="block-form-input topics-field" style="min-height: 80px;">${(item.topics || []).join('\n')}</textarea>
+            </div>
+          </div>
+        `).join('');
+
+        wrapper.innerHTML += `
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${itemsHtml}
+            <button type="button" class="action-btn add-card-item" style="border-color: #10b981; color: #10b981; font-size: 0.75rem; padding: 8px; width: 100%;">+ 새 단계 추가</button>
+          </div>
+        `;
+      } 
+      else if (block.type === 'timeline') {
+        const items = block.items || [];
+        let itemsHtml = items.map((item, idx) => `
+          <div class="block-card-item timeline-item" data-item-index="${idx}">
+            <div class="block-card-header">
+              <span class="block-card-title-label">WEEK/ITEM #${idx + 1}</span>
+              <button type="button" class="hierarchy-btn delete-card-item" data-item-index="${idx}" style="padding: 4px 8px; font-size: 0.7rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; color: #ef4444; cursor: pointer;">삭제</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="block-form-group">
+                <label>주차/날짜 (Week)</label>
+                <input type="text" class="block-form-input item-field" data-field="week" value="${item.week || ''}">
+              </div>
+              <div class="block-form-group">
+                <label>발표자 (Presenter)</label>
+                <input type="text" class="block-form-input item-field" data-field="presenter" value="${item.presenter || ''}">
+              </div>
+            </div>
+            <div class="block-form-group">
+              <label>주제/제목 (Title)</label>
+              <input type="text" class="block-form-input item-field" data-field="title" value="${item.title || ''}">
+            </div>
+            <div class="block-form-group" style="margin-bottom: 0;">
+              <label>설명 (Description)</label>
+              <textarea class="block-form-input item-field" data-field="desc" style="min-height: 60px;">${item.desc || ''}</textarea>
+            </div>
+          </div>
+        `).join('');
+
+        wrapper.innerHTML += `
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${itemsHtml}
+            <button type="button" class="action-btn add-card-item" style="border-color: #10b981; color: #10b981; font-size: 0.75rem; padding: 8px; width: 100%;">+ 새 일정 추가</button>
+          </div>
+        `;
+      } 
+      else if (block.type === 'ctf_dashboard') {
+        const leaderboard = block.leaderboard || [];
+        const challenges = block.challenges || [];
+
+        let leaderboardHtml = leaderboard.map((user, idx) => `
+          <div class="block-card-item ctf-leaderboard-item" data-item-index="${idx}">
+            <div class="block-card-header">
+              <span class="block-card-title-label">RANK #${idx + 1}</span>
+              <button type="button" class="hierarchy-btn delete-leaderboard-item" data-item-index="${idx}" style="padding: 4px 8px; font-size: 0.7rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; color: #ef4444; cursor: pointer;">삭제</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="block-form-group">
+                <label>순위 (Rank)</label>
+                <input type="text" class="block-form-input leaderboard-field" data-field="rank" value="${user.rank || ''}">
+              </div>
+              <div class="block-form-group">
+                <label>닉네임 (User)</label>
+                <input type="text" class="block-form-input leaderboard-field" data-field="user" value="${user.user || ''}">
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px;">
+              <div class="block-form-group" style="margin-bottom: 0;">
+                <label>점수 (Score)</label>
+                <input type="text" class="block-form-input leaderboard-field" data-field="score" value="${user.score || ''}">
+              </div>
+              <div class="block-form-group" style="margin-bottom: 0;">
+                <label>해결 현황 (Status)</label>
+                <input type="text" class="block-form-input leaderboard-field" data-field="status" value="${user.status || ''}">
+              </div>
+            </div>
+          </div>
+        `).join('');
+
+        let challengesHtml = challenges.map((chal, idx) => `
+          <div class="block-card-item ctf-challenge-item" data-item-index="${idx}">
+            <div class="block-card-header">
+              <span class="block-card-title-label">CHALLENGE #${idx + 1}</span>
+              <button type="button" class="hierarchy-btn delete-challenge-item" data-item-index="${idx}" style="padding: 4px 8px; font-size: 0.7rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; color: #ef4444; cursor: pointer;">삭제</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px;">
+              <div class="block-form-group">
+                <label>분류 (Category)</label>
+                <input type="text" class="block-form-input challenge-field" data-field="category" value="${chal.category || ''}">
+              </div>
+              <div class="block-form-group">
+                <label>문제 제목 (Title)</label>
+                <input type="text" class="block-form-input challenge-field" data-field="title" value="${chal.title || ''}">
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px;">
+              <div class="block-form-group" style="margin-bottom: 0;">
+                <label>점수 (Score)</label>
+                <input type="text" class="block-form-input challenge-field" data-field="score" value="${chal.score || ''}">
+              </div>
+              <div class="block-form-group" style="margin-bottom: 0;">
+                <label>상태 (Status)</label>
+                <select class="block-form-input challenge-field" data-field="status">
+                  <option value="solved" ${chal.status === 'solved' ? 'selected' : ''}>Solved (COMPLETED)</option>
+                  <option value="open" ${chal.status !== 'solved' ? 'selected' : ''}>Open (ACTIVE)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        `).join('');
+
+        wrapper.innerHTML += `
+          <div>
+            <h4 style="color: var(--color-cyan); margin: 0 0 10px 0; font-size: 0.85rem; border-bottom: 1px solid rgba(59,130,246,0.2); padding-bottom: 6px;">🏆 LEADERBOARD</h4>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+              ${leaderboardHtml}
+              <button type="button" class="action-btn add-leaderboard-item" style="border-color: #10b981; color: #10b981; font-size: 0.75rem; padding: 6px 12px; width: 100%;">+ 리더보드 항목 추가</button>
+            </div>
+            <h4 style="color: var(--color-cyan); margin: 20px 0 10px 0; font-size: 0.85rem; border-bottom: 1px solid rgba(59,130,246,0.2); padding-bottom: 6px;">🧩 ACTIVE CHALLENGES</h4>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              ${challengesHtml}
+              <button type="button" class="action-btn add-challenge-item" style="border-color: #10b981; color: #10b981; font-size: 0.75rem; padding: 6px 12px; width: 100%;">+ 챌린지 추가</button>
+            </div>
+          </div>
+        `;
+      }
+
+      formContainer.appendChild(wrapper);
+
+      // Attach dynamic listeners for block-level basic fields
+      formContainer.querySelectorAll('.block-field').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const field = e.target.getAttribute('data-field');
+          block[field] = e.target.value;
+          renderPreview();
+          if (field === 'title' || field === 'height') {
+            renderBlockList();
+          }
+        });
+      });
+
+      // Attach dynamic listeners for card items
+      formContainer.querySelectorAll('.item-field').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const cardItem = e.target.closest('.block-card-item');
+          const itemIndex = parseInt(cardItem.getAttribute('data-item-index'));
+          const field = e.target.getAttribute('data-field');
+          if (block.items && block.items[itemIndex]) {
+            block.items[itemIndex][field] = e.target.value;
+            renderPreview();
+          }
+        });
+      });
+
+      // Attach select listeners
+      formContainer.querySelectorAll('select.item-field, select.challenge-field').forEach(select => {
+        select.addEventListener('change', (e) => {
+          const cardItem = e.target.closest('.block-card-item');
+          const itemIndex = parseInt(cardItem.getAttribute('data-item-index'));
+          const field = e.target.getAttribute('data-field');
+          if (cardItem.classList.contains('ctf-challenge-item')) {
+            if (block.challenges && block.challenges[itemIndex]) {
+              block.challenges[itemIndex][field] = e.target.value;
+            }
+          } else if (block.items && block.items[itemIndex]) {
+            block.items[itemIndex][field] = e.target.value;
+          }
+          renderPreview();
+        });
+      });
+
+      // Attach topics textareas listener
+      formContainer.querySelectorAll('.topics-field').forEach(textarea => {
+        textarea.addEventListener('input', (e) => {
+          const cardItem = e.target.closest('.block-card-item');
+          const itemIndex = parseInt(cardItem.getAttribute('data-item-index'));
+          const lines = e.target.value.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+          if (block.items && block.items[itemIndex]) {
+            block.items[itemIndex].topics = lines;
+            renderPreview();
+          }
+        });
+      });
+
+      // Attach delete card item listeners (for features, phases, timeline)
+      formContainer.querySelectorAll('.delete-card-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const itemIndex = parseInt(e.target.getAttribute('data-item-index'));
+          if (block.items) {
+            block.items.splice(itemIndex, 1);
+            renderActiveBlockForm();
+            renderPreview();
+            renderBlockList();
+          }
+        });
+      });
+
+      // Add item listener (for features, phases, timeline)
+      const addCardItemBtn = formContainer.querySelector('.add-card-item');
+      if (addCardItemBtn) {
+        addCardItemBtn.addEventListener('click', () => {
+          if (!block.items) block.items = [];
+          if (block.type === 'features') {
+            block.items.push({
+              tag: `TAG ${String(block.items.length + 1).padStart(2, '0')} //`,
+              title: "새로운 카드 제목",
+              desc: "카드 설명 내용",
+              url: ""
+            });
+          } else if (block.type === 'phases') {
+            block.items.push({
+              phase: `Phase ${String(block.items.length + 1).padStart(2, '0')}`,
+              title: "새로운 단계 제목",
+              desc: "단계 설명 내용",
+              topics: ["상세 주제 1"]
+            });
+          } else if (block.type === 'timeline') {
+            block.items.push({
+              week: `Week ${String(block.items.length + 1).padStart(2, '0')}`,
+              title: "새로운 일정 주제",
+              desc: "일정 설명 내용",
+              presenter: "Presenter: 발표자"
+            });
+          }
+          renderActiveBlockForm();
+          renderPreview();
+          renderBlockList();
+        });
+      }
+
+      // CTF dashboard fields
+      formContainer.querySelectorAll('.leaderboard-field').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const cardItem = e.target.closest('.ctf-leaderboard-item');
+          const idx = parseInt(cardItem.getAttribute('data-item-index'));
+          const field = e.target.getAttribute('data-field');
+          if (block.leaderboard && block.leaderboard[idx]) {
+            block.leaderboard[idx][field] = e.target.value;
+            renderPreview();
+          }
+        });
+      });
+
+      formContainer.querySelectorAll('.challenge-field').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const cardItem = e.target.closest('.ctf-challenge-item');
+          const idx = parseInt(cardItem.getAttribute('data-item-index'));
+          const field = e.target.getAttribute('data-field');
+          if (block.challenges && block.challenges[idx]) {
+            block.challenges[idx][field] = e.target.value;
+            renderPreview();
+          }
+        });
+      });
+
+      // Delete leaderboard item
+      formContainer.querySelectorAll('.delete-leaderboard-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.target.getAttribute('data-item-index'));
+          if (block.leaderboard) {
+            block.leaderboard.splice(idx, 1);
+            renderActiveBlockForm();
+            renderPreview();
+          }
+        });
+      });
+
+      // Add leaderboard item
+      const addLeaderboardItemBtn = formContainer.querySelector('.add-leaderboard-item');
+      if (addLeaderboardItemBtn) {
+        addLeaderboardItemBtn.addEventListener('click', () => {
+          if (!block.leaderboard) block.leaderboard = [];
+          block.leaderboard.push({
+            rank: `${block.leaderboard.length + 1}th`,
+            user: "new_player",
+            score: "0 PTS",
+            status: "0 / 5 SOLVED"
+          });
+          renderActiveBlockForm();
+          renderPreview();
+        });
+      }
+
+      // Delete challenge item
+      formContainer.querySelectorAll('.delete-challenge-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.target.getAttribute('data-item-index'));
+          if (block.challenges) {
+            block.challenges.splice(idx, 1);
+            renderActiveBlockForm();
+            renderPreview();
+          }
+        });
+      });
+
+      // Add challenge item
+      const addChallengeItemBtn = formContainer.querySelector('.add-challenge-item');
+      if (addChallengeItemBtn) {
+        addChallengeItemBtn.addEventListener('click', () => {
+          if (!block.challenges) block.challenges = [];
+          block.challenges.push({
+            category: "WEB",
+            title: "New Challenge",
+            score: "100 PTS",
+            status: "open"
+          });
+          renderActiveBlockForm();
+          renderPreview();
+        });
+      }
+    }
+
+    async function loadSectionMarkdown(sectionId) {
+      try {
+        const response = await fetch(`/admin/content/${sectionId}?_t=${Date.now()}`);
+        if (response.ok) {
+          const payload = await response.json();
+          if (payload.ok && payload.data) {
+            let content = payload.data.content || '';
+            try {
+              currentBlocks = JSON.parse(content);
+              if (!Array.isArray(currentBlocks)) {
+                currentBlocks = legacyFallback(currentBlocks, sectionId);
+              }
+            } catch (e) {
+              console.error(e);
+              currentBlocks = [];
+            }
+            activeBlockIndex = currentBlocks.length > 0 ? 0 : null;
+            renderBlockList();
+            renderActiveBlockForm();
+            renderPreview();
+          }
+        }
+      } catch (e) {
+        console.error(e);
+        showToast('섹션 데이터를 가져오는데 실패했습니다.', 'error');
+      }
+    }
+
+    // JSON File Upload and Parse
+    const fileInput = document.getElementById('admin-md-file');
+    const fileTrigger = document.getElementById('admin-upload-trigger-btn');
+    const filenameSpan = document.getElementById('admin-md-filename');
+
+    if (fileTrigger && fileInput) {
+      fileTrigger.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) {
+          filenameSpan.textContent = '선택된 파일 없음';
+          return;
+        }
+        filenameSpan.textContent = file.name;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const parsed = JSON.parse(e.target.result);
+            if (Array.isArray(parsed)) {
+              currentBlocks = parsed;
+            } else {
+              currentBlocks = legacyFallback(parsed, selectSection.value);
+            }
+            activeBlockIndex = currentBlocks.length > 0 ? 0 : null;
+            renderBlockList();
+            renderActiveBlockForm();
+            renderPreview();
+            showToast('JSON 데이터 파일이 에디터에 로드되었습니다! 미리보기를 확인한 후 저장해 주세요.', 'success');
+          } catch (err) {
+            console.error(err);
+            showToast('파일 파싱 실패: 올바른 JSON 형식이 아닙니다.', 'error');
+          }
+        };
+        reader.readAsText(file);
+      });
+    }
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        const sectionId = selectSection.value;
+        const content_md = JSON.stringify(currentBlocks, null, 2);
+
+        showSaveConfirmationModal(sectionId, async () => {
+          showToast('저장 중...', 'info', 0);
+          try {
+            const res = await fetch('/admin/update-content', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sectionId, content_md })
+            });
+            const data = await res.json();
+            if (res.ok && data.ok) {
+              showToast('컨텐츠가 안전하게 업데이트되었습니다!', 'success');
+            } else {
+              showToast(data.message || '저장 실패', 'error');
+            }
+          } catch (err) {
+            console.error(err);
+            showToast('서버 통신 오류', 'error');
+          }
+        });
+      });
+    }
   }
 
   if (registerForm) {
