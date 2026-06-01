@@ -38,6 +38,15 @@ router.post('/login', validateLogin, (req, res) => {
                 });
             }
 
+            // Check if user is blocked
+            if (row.is_blocked === 1) {
+                return sendJson(res, {
+                    status: 403, ok: false, action: 'auth', resource: 'users',
+                    message: '차단된 계정입니다. 관리자에게 문의해 주세요.',
+                    code: 'BLOCKED_USER'
+                });
+            }
+
             const adminUser = env.ADMIN_USERNAME;
             const isAdmin = (row.username === adminUser);
             req.session.user = { 

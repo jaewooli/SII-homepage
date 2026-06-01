@@ -35,7 +35,7 @@ router.get('/users', (req, res) => {
     return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
   }
 
-  db.all(`SELECT id, username, name FROM users ORDER BY id DESC`, [], (err, rows) => {
+  db.all(`SELECT id, username, name, is_blocked FROM users ORDER BY id DESC`, [], (err, rows) => {
     if (err) {
       console.error('[Database Error] Failed to list users:', err.message);
       return sendJson(res, { status: 500, ok: false, message: '사용자 목록 조회 실패', code: 'DB_ERROR' });
@@ -47,6 +47,159 @@ router.get('/users', (req, res) => {
       code: 'SUCCESS'
     });
   });
+});
+
+// Admin Route: Block/Unblock a user
+router.post('/block-user', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+
+  const { id, username, is_blocked } = req.body;
+  if (!id && !username) {
+    return sendJson(res, { status: 400, ok: false, message: '사용자 ID 또는 Username이 필요합니다.', code: 'BAD_REQUEST' });
+  }
+
+  const currentUsername = req.session.user.username;
+  const targetUsername = username || '';
+
+  if (targetUsername === 'developer' || targetUsername === currentUsername) {
+    return sendJson(res, {
+      status: 400,
+      ok: false,
+      message: '시스템 관리자 계정 및 본인의 계정은 차단할 수 없습니다.',
+      code: 'NOT_ALLOWED'
+    });
+  }
+
+  const blockVal = is_blocked ? 1 : 0;
+
+  if (id) {
+    db.get(`SELECT username FROM users WHERE id = ?`, [id], (err, row) => {
+      if (err) {
+        console.error('[Database Error] Failed to fetch user during block check:', err.message);
+        return sendJson(res, { status: 500, ok: false, message: '데이터베이스 에러', code: 'DB_ERROR' });
+      }
+      if (!row) {
+        return sendJson(res, { status: 404, ok: false, message: '해당 사용자를 찾을 수 없습니다.', code: 'NOT_FOUND' });
+      }
+      if (row.username === 'developer' || row.username === currentUsername) {
+        return sendJson(res, {
+          status: 400,
+          ok: false,
+          message: '시스템 관리자 계정 및 본인의 계정은 차단할 수 없습니다.',
+          code: 'NOT_ALLOWED'
+        });
+      }
+      performBlock(id, null);
+    });
+  } else {
+    performBlock(null, username);
+  }
+
+  function performBlock(userId, userNm) {
+    const query = userId ? `UPDATE users SET is_blocked = ? WHERE id = ?` : `UPDATE users SET is_blocked = ? WHERE username = ?`;
+    const param = userId || userNm;
+
+    db.run(query, [blockVal, param], function(err) {
+      if (err) {
+        console.error('[Database Error] Failed to block/unblock user:', err.message);
+        return sendJson(res, { status: 500, ok: false, message: '사용자 차단 상태 변경 실패', code: 'DB_ERROR' });
+      }
+      if (this.changes === 0) {
+        return sendJson(res, { status: 404, ok: false, message: '해당 사용자를 찾을 수 없습니다.', code: 'NOT_FOUND' });
+      }
+      sendJson(res, {
+        status: 200,
+        ok: true,
+        message: `사용자가 성공적으로 ${blockVal ? '차단' : '차단 해제'}되었습니다.`,
+        code: 'SUCCESS'
+      });
+    });
+  }
+});
+
+// Admin Route: Register multiple users in bulk
+router.post('/register-users-bulk', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+
+  const { users } = req.body;
+  if (!users || !Array.isArray(users) || users.length === 0) {
+    return sendJson(res, { status: 400, ok: false, message: '등록할 사용자 목록이 비어있거나 올바르지 않습니다.', code: 'BAD_REQUEST' });
+  }
+
+  const results = {
+    successCount: 0,
+    failCount: 0,
+    failures: []
+  };
+
+  let index = 0;
+
+  function processNext() {
+    if (index >= users.length) {
+      const summaryMsg = `일괄 등록 완료 - 성공: ${results.successCount}명, 실패: ${results.failCount}명`;
+      return sendJson(res, {
+        status: 200,
+        ok: true,
+        message: summaryMsg,
+        data: results,
+        code: 'SUCCESS'
+      });
+    }
+
+    const user = users[index];
+    const username = (user.username || '').trim();
+    const name = (user.name || '').trim();
+    const password = (user.password || '').trim();
+
+    if (!username || !name || !password) {
+      results.failCount++;
+      results.failures.push({
+        username: username || `행 ${index + 1}`,
+        reason: '아이디, 이름, 비밀번호 중 누락된 필드가 있습니다.'
+      });
+      index++;
+      processNext();
+      return;
+    }
+
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    db.run(
+      `INSERT INTO users (username, password, name) VALUES (?, ?, ?)`,
+      [username, hashedPassword, name],
+      (err) => {
+        if (err) {
+          results.failCount++;
+          let reason = '사용자 등록 실패';
+          if (err.message.includes('UNIQUE constraint failed')) {
+            reason = '이미 존재하는 사용자 아이디입니다.';
+          }
+          results.failures.push({ username, reason });
+        } else {
+          results.successCount++;
+        }
+        index++;
+        processNext();
+      }
+    );
+  }
+
+  processNext();
+});
+
+// Admin Route: Download example CSV file
+router.get('/sample-csv', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+
+  const csvContent = "\ufeffusername,name,password\ntestuser1,홍길동,Password123!\ntestuser2,이순신,SecurePass456!\n";
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename=user_import_sample.csv');
+  return res.send(csvContent);
 });
 
 // Admin Route: Delete a user

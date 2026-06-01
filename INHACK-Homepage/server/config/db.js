@@ -27,6 +27,13 @@ db.serialize(() => {
             console.error('[Database Migration] Failed to add password_changed column:', err.message);
         }
     });
+
+    // Add is_blocked column for blocking users (Admin Panel Upgrade)
+    db.run(`ALTER TABLE users ADD COLUMN is_blocked INTEGER DEFAULT 0`, [], (err) => {
+        if (err && !err.message.includes('duplicate column name') && !err.message.includes('already exists')) {
+            console.error('[Database Migration] Failed to add is_blocked column:', err.message);
+        }
+    });
     
     // Create dreamhack access tracking log table
     db.run(`CREATE TABLE IF NOT EXISTS dreamhack_access_logs (

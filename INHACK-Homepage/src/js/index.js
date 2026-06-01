@@ -1982,14 +1982,49 @@ async function initializeAdminPanel() {
         const userRow = document.createElement('div');
         userRow.style.cssText = "display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 0.8rem; color: #e2e8f0;";
         
+        const isBlocked = user.is_blocked === 1;
+        const blockText = isBlocked ? '해제' : '차단';
+        const blockColor = isBlocked ? '#10b981' : '#f59e0b';
+        const blockBorder = isBlocked ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)';
+
         userRow.innerHTML = `
-          <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px;">${user.username}</div>
-          <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px;">${user.name}</div>
-          <div style="width: 60px; display: flex; justify-content: center;">
-            <button class="delete-user-btn action-btn">삭제</button>
+          <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; ${isBlocked ? 'text-decoration: line-through; color: #64748b;' : ''}">${user.username}</div>
+          <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; ${isBlocked ? 'color: #64748b;' : ''}">
+            ${user.name} ${isBlocked ? '<span style="font-size: 0.65rem; color: #f59e0b; padding: 1px 4px; border: 1px solid rgba(245,158,11,0.3); border-radius: 3px; margin-left: 4px;">차단됨</span>' : ''}
+          </div>
+          <div style="width: 110px; display: flex; gap: 4px; justify-content: center;">
+            <button class="block-user-btn action-btn" style="padding: 3px 6px; font-size: 0.7rem; border-color: ${blockBorder}; color: ${blockColor};">${blockText}</button>
+            <button class="delete-user-btn action-btn" style="padding: 3px 6px; font-size: 0.7rem; border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">삭제</button>
           </div>
         `;
 
+        // Block/Unblock Button Event Listener
+        const blockBtn = userRow.querySelector('.block-user-btn');
+        blockBtn.addEventListener('click', async () => {
+          const actionWord = isBlocked ? '차단 해제' : '차단';
+          if (confirm(`정말로 사용자 '${user.username}' (${user.name}) 계정을 ${actionWord}하시겠습니까?`)) {
+            showToast(`${actionWord} 처리 중...`, 'info', 0);
+            try {
+              const blockRes = await fetch('/admin/block-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: user.id, username: user.username, is_blocked: !isBlocked })
+              });
+              const blockData = await blockRes.json();
+              if (blockRes.ok && blockData.ok) {
+                showToast(`사용자 계정이 ${actionWord}되었습니다.`, 'success');
+                loadUserList();
+              } else {
+                showToast(blockData.message || '처리 실패', 'error');
+              }
+            } catch (err) {
+              console.error(err);
+              showToast('서버 통신 오류', 'error');
+            }
+          }
+        });
+
+        // Delete Button Event Listener
         const deleteBtn = userRow.querySelector('.delete-user-btn');
         deleteBtn.addEventListener('click', async () => {
           if (confirm(`정말로 사용자 '${user.username}' (${user.name}) 계정을 삭제하시겠습니까?`)) {
@@ -2020,6 +2055,141 @@ async function initializeAdminPanel() {
       console.error(e);
       userListContainer.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px; font-size: 0.8rem;">서버 통신 오류 발생</div>`;
     }
+  }
+
+  // CSV file parsing function
+  function parseCSV(text) {
+    const lines = text.split(/\r?\n/);
+    const users = [];
+    
+    let startIdx = 0;
+    if (lines.length > 0) {
+      const firstLine = lines[0].toLowerCase();
+      if (firstLine.includes('username') || firstLine.includes('name') || firstLine.includes('password') || firstLine.includes('아이디') || firstLine.includes('이름') || firstLine.includes('비밀번호')) {
+        startIdx = 1;
+      }
+    }
+
+    for (let i = startIdx; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const parts = [];
+      let current = '';
+      let inQuotes = false;
+      for (let c = 0; c < line.length; c++) {
+        const char = line[c];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          parts.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      parts.push(current.trim());
+
+      if (parts.length >= 3) {
+        const cleanParts = parts.map(p => p.replace(/^"|"$/g, ''));
+        users.push({
+          username: cleanParts[0],
+          name: cleanParts[1],
+          password: cleanParts[2]
+        });
+      }
+    }
+    return users;
+  }
+
+  // CSV upload handler
+  const csvForm = document.getElementById('admin-csv-upload-form');
+  const csvFileInput = document.getElementById('admin-csv-file');
+  const csvResultDiv = document.getElementById('admin-csv-result');
+
+  if (csvForm) {
+    csvForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const file = csvFileInput.files[0];
+      if (!file) {
+        showToast('파일을 선택해 주세요.', 'error');
+        return;
+      }
+
+      showToast('CSV 파일 분석 중...', 'info', 0);
+      
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const text = event.target.result;
+          const parsedUsers = parseCSV(text);
+          
+          if (parsedUsers.length === 0) {
+            showToast('등록 가능한 사용자 데이터가 존재하지 않습니다.', 'error');
+            if (csvResultDiv) {
+              csvResultDiv.style.display = 'block';
+              csvResultDiv.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+              csvResultDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+              csvResultDiv.style.color = '#f87171';
+              csvResultDiv.textContent = 'CSV 파일에서 유효한 사용자 행을 찾을 수 없습니다. (헤더 제외 최소 1개 행 필요)';
+            }
+            return;
+          }
+
+          showToast(`${parsedUsers.length}명의 사용자 업로드 중...`, 'info', 0);
+
+          const res = await fetch('/admin/register-users-bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ users: parsedUsers })
+          });
+          
+          const data = await res.json();
+          if (res.ok && data.ok) {
+            showToast(data.message || '일괄 등록 성공', 'success');
+            
+            if (csvResultDiv) {
+              csvResultDiv.style.display = 'block';
+              csvResultDiv.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+              csvResultDiv.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+              csvResultDiv.style.color = '#34d399';
+              
+              let resultHtml = `<strong>${data.message}</strong>`;
+              if (data.data && data.data.failures && data.data.failures.length > 0) {
+                resultHtml += `<div style="margin-top: 5px; max-height: 100px; overflow-y: auto; font-size: 0.7rem; color: #f87171;">`;
+                data.data.failures.forEach(f => {
+                  resultHtml += `<div>- ${f.username}: ${f.reason}</div>`;
+                });
+                resultHtml += `</div>`;
+              }
+              csvResultDiv.innerHTML = resultHtml;
+            }
+            
+            csvForm.reset();
+            loadUserList();
+          } else {
+            showToast(data.message || '등록 실패', 'error');
+            if (csvResultDiv) {
+              csvResultDiv.style.display = 'block';
+              csvResultDiv.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+              csvResultDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+              csvResultDiv.style.color = '#f87171';
+              csvResultDiv.textContent = data.message || '일괄 등록에 실패했습니다.';
+            }
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('CSV 파일 처리 오류', 'error');
+        }
+      };
+      
+      reader.onerror = () => {
+        showToast('파일 읽기 실패', 'error');
+      };
+      
+      reader.readAsText(file, 'utf-8');
+    });
   }
 
   // Trigger initial list load
