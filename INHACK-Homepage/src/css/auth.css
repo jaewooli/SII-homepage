@@ -574,19 +574,30 @@ p a:hover {
 }
 
 .tool-btn {
-    padding: 6px 10px;
-    font-size: 0.7rem;
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    border-radius: 3px;
-    color: var(--color-cyan);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-family: 'Space Grotesk', var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 6px;
+    color: #e2e8f0;
     cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: var(--font-mono);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(4px);
 }
 
 .tool-btn:hover {
-    background: rgba(59, 130, 246, 0.25);
+    background: rgba(59, 130, 246, 0.15);
     border-color: var(--color-cyan);
-    box-shadow: 0 0 6px rgba(0, 240, 255, 0.2);
+    color: #00f0ff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 240, 255, 0.15);
+}
+
+.tool-btn:active {
+    transform: translateY(1px);
 }

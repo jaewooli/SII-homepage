@@ -633,21 +633,7 @@ async function initializeAdminPanel() {
     }
 
     function injectBlockTemplate(type) {
-      let currentVal = textareaMarkdown.value.trim();
-      let arr = [];
-      try {
-        if (currentVal) {
-          arr = JSON.parse(currentVal);
-          if (!Array.isArray(arr)) {
-            arr = [];
-          }
-        }
-      } catch (e) {
-        if (!confirm('현재 에디터에 올바르지 않은 JSON 데이터가 있어 초기화 후 블록이 추가됩니다. 진행할까요?')) {
-          return;
-        }
-        arr = [];
-      }
+      const currentVal = textareaMarkdown.value;
 
       const templates = {
         banner: {
@@ -729,12 +715,68 @@ async function initializeAdminPanel() {
       };
 
       const blockObj = templates[type];
-      if (blockObj) {
-        arr.push(blockObj);
-        textareaMarkdown.value = JSON.stringify(arr, null, 2);
+      if (!blockObj) return;
+
+      // If the editor is empty or just whitespace or empty array/object
+      if (!currentVal.trim() || currentVal.trim() === '[]' || currentVal.trim() === '{}') {
+        textareaMarkdown.value = JSON.stringify([blockObj], null, 2);
         renderPreview(textareaMarkdown.value);
         showToast(`새로운 ${type} 블록이 추가되었습니다!`, 'success');
+        return;
       }
+
+      // Check if overall JSON is valid to give confidence
+      try {
+        JSON.parse(currentVal);
+      } catch (e) {
+        if (!confirm('현재 에디터에 올바르지 않은 JSON 데이터가 있습니다. 커서 위치에 강제로 텍스트를 삽입할까요? (그렇지 않으면 삽입이 취소됩니다)')) {
+          return;
+        }
+      }
+
+      const startPos = textareaMarkdown.selectionStart;
+      const endPos = textareaMarkdown.selectionEnd;
+      const beforeText = currentVal.substring(0, startPos);
+      const afterText = currentVal.substring(endPos);
+
+      // Stringify block
+      let insertStr = JSON.stringify(blockObj, null, 2);
+      
+      // Indent block body
+      insertStr = insertStr.split('\n').map((line, idx) => idx === 0 ? line : '  ' + line).join('\n');
+
+      let prefix = '';
+      let suffix = '';
+
+      const trimmedBefore = beforeText.trim();
+      const trimmedAfter = afterText.trim();
+
+      if (trimmedBefore.endsWith('}')) {
+        prefix = ',\n  ';
+      } else if (trimmedBefore.endsWith('[')) {
+        prefix = '\n  ';
+      } else if (trimmedBefore && !trimmedBefore.endsWith(',') && !trimmedBefore.endsWith('[')) {
+        prefix = ',\n  ';
+      }
+
+      if (trimmedAfter.startsWith('{')) {
+        suffix = ',\n';
+      } else if (trimmedAfter.startsWith(']')) {
+        suffix = '\n';
+      }
+
+      const finalInsert = prefix + insertStr + suffix;
+
+      textareaMarkdown.value = beforeText + finalInsert + afterText;
+      
+      // Focus and set selection range right after insertion
+      const newCursorPos = startPos + finalInsert.length;
+      textareaMarkdown.selectionStart = newCursorPos;
+      textareaMarkdown.selectionEnd = newCursorPos;
+      textareaMarkdown.focus();
+
+      renderPreview(textareaMarkdown.value);
+      showToast(`커서 위치에 ${type} 블록이 주입되었습니다!`, 'success');
     }
 
     selectSection.addEventListener('change', async () => {
