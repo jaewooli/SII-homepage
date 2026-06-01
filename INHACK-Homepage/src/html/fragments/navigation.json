@@ -25,6 +25,7 @@
     "title": "Dreamhack",
     "url": "/dreamhack",
     "external": false,
+    "deleteLocked": true,
     "submenus": []
   },
   {

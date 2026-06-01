@@ -1184,6 +1184,11 @@ async function initializeAdminPanel() {
     }
 
     function deleteBlock(idx) {
+      const block = currentBlocks[idx];
+      if (block && block.deleteLocked) {
+        showToast(`'${block.title || block.type}' 메뉴는 삭제 방지 보호가 활성화되어 있어 삭제할 수 없습니다. 먼저 편집 창에서 '메뉴 삭제 방지 보호' 체크박스를 해제해 주세요.`, 'error');
+        return;
+      }
       if (!confirm('정말로 이 블록을 삭제하시겠습니까?')) return;
 
       currentBlocks.splice(idx, 1);
@@ -1489,6 +1494,12 @@ async function initializeAdminPanel() {
               <span>외부 링크 (새 탭으로 열기)</span>
             </label>
           </div>
+          <div class="block-form-group" style="margin-top: 10px; padding: 10px; background: rgba(244, 63, 94, 0.05); border: 1px solid rgba(244, 63, 94, 0.15); border-radius: 4px;">
+            <label style="display:flex; align-items:center; gap: 8px; cursor:pointer; color: #f43f5e; font-weight: 600; font-size: 0.8rem;">
+              <input type="checkbox" class="block-delete-lock-check" ${block.deleteLocked ? 'checked' : ''}>
+              <span>⚠️ 메뉴 삭제 방지 보호 (활성화 시 삭제 불가)</span>
+            </label>
+          </div>
           <h4 style="color: var(--color-cyan); margin: 16px 0 8px 0; font-size: 0.82rem; border-bottom: 1px solid rgba(59,130,246,0.2); padding-bottom: 6px;">📂 세부 메뉴 (Submenus)</h4>
           <div style="display: flex; flex-direction: column; gap: 10px;">
             ${submenusHtml}
@@ -1691,6 +1702,14 @@ async function initializeAdminPanel() {
         });
       }
 
+      const deleteLockCheck = formContainer.querySelector('.block-delete-lock-check');
+      if (deleteLockCheck) {
+        deleteLockCheck.addEventListener('change', () => {
+          block.deleteLocked = deleteLockCheck.checked;
+          renderPreview();
+        });
+      }
+
       // Submenu text field input listener
       formContainer.querySelectorAll('.submenu-field:not(.submenu-external-check)').forEach(input => {
         // Change handler triggers when focus is lost, ensuring proper formatting of local hash
@@ -1758,7 +1777,9 @@ async function initializeAdminPanel() {
       if (addSubmenuBtn) {
         addSubmenuBtn.addEventListener('click', () => {
           if (!block.submenus) block.submenus = [];
-          block.submenus.push({ title: '새 서브메뉴', url: '#', external: false });
+          const parentUrl = block.url || '#';
+          const defaultSubUrl = parentUrl.startsWith('#') ? `${parentUrl}/` : `#${parentUrl}/`;
+          block.submenus.push({ title: '새 서브메뉴', url: defaultSubUrl, external: false });
           renderActiveBlockForm();
           renderPreview();
         });
