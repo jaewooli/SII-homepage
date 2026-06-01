@@ -1931,7 +1931,36 @@ async function initializeAdminPanel() {
     if (saveBtn) {
       saveBtn.addEventListener('click', () => {
         const sectionId = selectSection.value;
-        const content_md = JSON.stringify(currentBlocks, null, 2);
+        
+        // Deep copy currentBlocks and clean any img-broken classes or titles in HTML fields
+        const cleanedBlocks = JSON.parse(JSON.stringify(currentBlocks));
+        const cleanHtml = (html) => {
+          if (!html || typeof html !== 'string') return html;
+          const temp = document.createElement('div');
+          temp.innerHTML = html;
+          temp.querySelectorAll('img').forEach(img => {
+            img.classList.remove('img-broken');
+            if (img.classList.length === 0) {
+              img.removeAttribute('class');
+            }
+            if (img.getAttribute('title') && img.getAttribute('title').includes('불러올 수 없습니다')) {
+              img.removeAttribute('title');
+            }
+          });
+          return temp.innerHTML;
+        };
+        
+        cleanedBlocks.forEach(block => {
+          if (block.desc) block.desc = cleanHtml(block.desc);
+          if (block.lead) block.lead = cleanHtml(block.lead);
+          if (block.items) {
+            block.items.forEach(item => {
+              if (item.desc) item.desc = cleanHtml(item.desc);
+            });
+          }
+        });
+
+        const content_md = JSON.stringify(cleanedBlocks, null, 2);
 
         showSaveConfirmationModal(sectionId, async () => {
           showToast('저장 중...', 'info', 0);
@@ -2382,18 +2411,40 @@ async function initializeAdminPanel() {
       const sizeBtn = createBtn('📏 크기', '글씨 크기 (Font Size)', (e) => {
         e.preventDefault();
         const selectedText = savedRange ? savedRange.toString() : '';
+        const modeHintHtml = selectedText.trim()
+          ? `<div style="font-size: 0.65rem; color: var(--color-cyan, #00f0ff); margin-top: 4px; width: 100%;">선택한 텍스트 (${selectedText.length > 8 ? selectedText.substring(0, 8) + '...' : selectedText})의 크기를 변경합니다.</div>`
+          : `<div style="font-size: 0.65rem; color: #94a3b8; margin-top: 4px; width: 100%;">현재 커서 위치부터 새로 작성할 글자의 크기를 지정합니다.</div>`;
         showInputPanel(`
-          <span style="font-size: 0.72rem; color: #94a3b8;">글씨 크기:</span>
-          <input type="text" class="panel-input" value="18px" style="width: 80px; padding: 2px 6px; font-size: 0.72rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 2px;">
-          <button type="button" class="panel-apply-btn" style="padding: 2px 8px; font-size: 0.7rem; background: var(--color-cyan); color: #000; border: none; border-radius: 2px; cursor: pointer; font-weight: bold;">적용</button>
-          <button type="button" class="panel-cancel-btn" style="padding: 2px 8px; font-size: 0.7rem; background: #475569; color: #fff; border: none; border-radius: 2px; cursor: pointer;">취소</button>
+          <div style="display: flex; gap: 6px; align-items: center; width: 100%;">
+            <span style="font-size: 0.72rem; color: #94a3b8;">글씨 크기:</span>
+            <input type="number" class="panel-input" value="18" min="8" max="72" style="width: 60px; padding: 2px 6px; font-size: 0.72rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 2px;">
+            <span style="font-size: 0.72rem; color: #94a3b8;">px</span>
+            <button type="button" class="panel-apply-btn" style="padding: 2px 8px; font-size: 0.7rem; background: var(--color-cyan); color: #000; border: none; border-radius: 2px; cursor: pointer; font-weight: bold; margin-left: 6px;">적용</button>
+            <button type="button" class="panel-cancel-btn" style="padding: 2px 8px; font-size: 0.7rem; background: #475569; color: #fff; border: none; border-radius: 2px; cursor: pointer;">취소</button>
+          </div>
+          ${modeHintHtml}
         `, () => {
-          const val = inputPanel.querySelector('.panel-input').value.trim();
-          if (val) {
+          const val = parseInt(inputPanel.querySelector('.panel-input').value.trim(), 10);
+          if (val && !isNaN(val)) {
             const span = document.createElement('span');
-            span.style.fontSize = val;
-            span.textContent = selectedText || '크기 변경된 텍스트';
-            insertNodeAtSelection(editor, span, savedRange);
+            span.style.fontSize = `${val}px`;
+            
+            if (savedRange && !savedRange.collapsed) {
+              const fragment = savedRange.cloneContents();
+              span.appendChild(fragment);
+              insertNodeAtSelection(editor, span, savedRange);
+            } else {
+              span.innerHTML = '&#8203;'; // zero-width space
+              insertNodeAtSelection(editor, span, savedRange);
+              
+              // Place cursor inside the empty span
+              const sel = window.getSelection();
+              const range = document.createRange();
+              range.selectNodeContents(span);
+              range.collapse(false);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
           }
         });
       });
@@ -2403,15 +2454,18 @@ async function initializeAdminPanel() {
         const selectedText = savedRange ? savedRange.toString() : '';
         showInputPanel(`
           <span style="font-size: 0.72rem; color: #94a3b8;">URL:</span>
-          <input type="text" class="panel-url-input" value="https://" style="width: 150px; padding: 2px 6px; font-size: 0.72rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 2px;">
+          <input type="text" class="panel-url-input" placeholder="https://example.com" style="width: 150px; padding: 2px 6px; font-size: 0.72rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 2px;">
           <span style="font-size: 0.72rem; color: #94a3b8;">텍스트:</span>
           <input type="text" class="panel-text-input" value="${selectedText}" placeholder="링크 텍스트" style="width: 100px; padding: 2px 6px; font-size: 0.72rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 2px;">
           <button type="button" class="panel-apply-btn" style="padding: 2px 8px; font-size: 0.7rem; background: var(--color-cyan); color: #000; border: none; border-radius: 2px; cursor: pointer; font-weight: bold;">적용</button>
           <button type="button" class="panel-cancel-btn" style="padding: 2px 8px; font-size: 0.7rem; background: #475569; color: #fff; border: none; border-radius: 2px; cursor: pointer;">취소</button>
         `, () => {
-          const url = inputPanel.querySelector('.panel-url-input').value.trim();
+          let url = inputPanel.querySelector('.panel-url-input').value.trim();
           const textVal = inputPanel.querySelector('.panel-text-input').value.trim();
           if (url) {
+            if (!/^https?:\/\//i.test(url)) {
+              url = 'https://' + url;
+            }
             const a = document.createElement('a');
             a.href = url;
             a.target = '_blank';
@@ -2426,16 +2480,25 @@ async function initializeAdminPanel() {
         e.preventDefault();
         showInputPanel(`
           <span style="font-size: 0.72rem; color: #94a3b8;">이미지 URL:</span>
-          <input type="text" class="panel-input" value="https://" style="width: 200px; padding: 2px 6px; font-size: 0.72rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 2px;">
+          <input type="text" class="panel-input" placeholder="https://example.com/image.png" style="width: 200px; padding: 2px 6px; font-size: 0.72rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 2px;">
           <button type="button" class="panel-apply-btn" style="padding: 2px 8px; font-size: 0.7rem; background: var(--color-cyan); color: #000; border: none; border-radius: 2px; cursor: pointer; font-weight: bold;">적용</button>
           <button type="button" class="panel-cancel-btn" style="padding: 2px 8px; font-size: 0.7rem; background: #475569; color: #fff; border: none; border-radius: 2px; cursor: pointer;">취소</button>
         `, () => {
-          const val = inputPanel.querySelector('.panel-input').value.trim();
+          let val = inputPanel.querySelector('.panel-input').value.trim();
           if (val) {
+            if (!/^https?:\/\//i.test(val)) {
+              val = 'https://' + val;
+            }
             const img = document.createElement('img');
             img.src = val;
             img.style.cssText = "max-width: 100%; border-radius: 4px; display: block; margin: 10px 0;";
             insertNodeAtSelection(editor, img, savedRange);
+
+            // Register error handler to style immediately
+            img.onerror = () => {
+              img.classList.add('img-broken');
+              img.title = "이미지를 불러올 수 없습니다 (클릭 선택 후 Delete로 삭제)";
+            };
           }
         });
       });
@@ -2469,6 +2532,11 @@ async function initializeAdminPanel() {
               img.src = data.data.url;
               img.style.cssText = "max-width: 100%; border-radius: 4px; display: block; margin: 10px 0;";
               insertNodeAtSelection(editor, img, savedRange);
+              
+              img.onerror = () => {
+                img.classList.add('img-broken');
+                img.title = "이미지를 불러올 수 없습니다 (클릭 선택 후 Delete로 삭제)";
+              };
             } else {
               showToast(data.message || '이미지 업로드 실패', 'error');
             }
@@ -2495,6 +2563,35 @@ async function initializeAdminPanel() {
       btnRow.appendChild(fileInput);
 
       editor.parentNode.insertBefore(toolbar, editor);
+
+      // Capture error events on images in the content editor to style broken images
+      editor.addEventListener('error', (e) => {
+        if (e.target && e.target.tagName === 'IMG') {
+          e.target.classList.add('img-broken');
+          e.target.title = "이미지를 불러올 수 없습니다 (클릭 선택 후 Delete로 삭제)";
+        }
+      }, true); // Capture phase is required since 'error' does not bubble
+
+      // Scan for already broken/loading images inside this editor
+      const scanBrokenImages = () => {
+        editor.querySelectorAll('img').forEach(img => {
+          if (img.classList.contains('img-broken')) return;
+          if (img.complete) {
+            if (img.naturalWidth === 0) {
+              img.classList.add('img-broken');
+              img.title = "이미지를 불러올 수 없습니다 (클릭 선택 후 Delete로 삭제)";
+            }
+          } else {
+            img.onerror = () => {
+              img.classList.add('img-broken');
+              img.title = "이미지를 불러올 수 없습니다 (클릭 선택 후 Delete로 삭제)";
+            };
+          }
+        });
+      };
+      // Scan initially and on content updates/input
+      setTimeout(scanBrokenImages, 300);
+      editor.addEventListener('input', scanBrokenImages);
     });
   }
 
