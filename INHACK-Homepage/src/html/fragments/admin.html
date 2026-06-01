@@ -26,8 +26,8 @@
         </div>
 
         <!-- Card 2: Content Modification -->
-        <div class="log-card" style="padding: 2rem; background-color: var(--bg-surface); border: 1px solid rgba(59, 130, 246, 0.15); display: flex; flex-direction: column;">
-            <div class="log-card-title" style="color: var(--color-cyan); font-size: 0.95rem; margin-bottom: 1.5rem;">섹션 컨텐츠 HTML 수정</div>
+        <div class="log-card" style="padding: 2rem; background-color: var(--bg-surface); border: 1px solid rgba(59, 130, 246, 0.15); display: flex; flex-direction: column; grid-column: span 1;">
+            <div class="log-card-title" style="color: var(--color-cyan); font-size: 0.95rem; margin-bottom: 1.5rem;">섹션 컨텐츠 관리 (JSON 데이터)</div>
             
             <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 1rem;">
                 <label for="admin-edit-section" style="font-size: 0.75rem; color: #64748b;">수정할 섹션 선택</label>
@@ -40,17 +40,25 @@
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 1rem;">
-                <label style="font-size: 0.75rem; color: #64748b;">마크다운 (.md) 파일 업로드</label>
+                <label style="font-size: 0.75rem; color: #64748b;">구조화 데이터 (.json) 파일 업로드</label>
                 <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="file" id="admin-md-file" accept=".md" style="display: none;">
-                    <button type="button" id="admin-upload-trigger-btn" class="action-btn" style="margin: 0; padding: 10px 14px; font-size: 0.75rem; border-color: #10b981; color: #10b981;">MD 파일 선택</button>
+                    <input type="file" id="admin-md-file" accept=".json" style="display: none;">
+                    <button type="button" id="admin-upload-trigger-btn" class="action-btn" style="margin: 0; padding: 10px 14px; font-size: 0.75rem; border-color: #10b981; color: #10b981;">JSON 파일 선택</button>
                     <span id="admin-md-filename" style="font-size: 0.75rem; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;">선택된 파일 없음</span>
                 </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
-                <label for="admin-edit-content" style="font-size: 0.75rem; color: #64748b;">HTML 코드 편집</label>
-                <textarea id="admin-edit-content" style="width: 100%; height: 260px; min-height: 200px; padding: 12px; background: #080b12; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #00f0ff; font-family: 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.5; resize: vertical; outline: none;"></textarea>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; flex: 1; min-height: 420px;">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label for="admin-edit-content" style="font-size: 0.75rem; color: #64748b;">데이터 에디터 (JSON 포맷)</label>
+                    <textarea id="admin-edit-content" placeholder="{}" style="width: 100%; height: 100%; min-height: 350px; padding: 12px; background: #080b12; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #00f0ff; font-family: 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.5; resize: none; outline: none; transition: border-color 0.2s;"></textarea>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="font-size: 0.75rem; color: #64748b;">실시간 렌더링 미리보기 (Live Preview)</label>
+                    <div id="admin-html-preview" style="width: 100%; height: 100%; min-height: 350px; padding: 12px; background: #0f172a; border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; overflow-y: auto; color: #fff; font-size: 0.9rem; line-height: 1.6;">
+                        <!-- Rendered HTML will appear here -->
+                    </div>
+                </div>
             </div>
 
             <button type="button" id="admin-save-content-btn" class="action-btn" style="border-color: var(--color-cyan); color: var(--color-cyan); margin-top: 1.5rem; width: 100%;">변경 사항 저장</button>

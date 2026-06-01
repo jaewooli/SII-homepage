@@ -390,9 +390,194 @@ function showSaveConfirmationModal(sectionId, onConfirm) {
   });
 }
 
+// Client-side JSON layout compiler (matches backend template compile logic)
+function clientCompileJsonToHtml(sectionId, data) {
+  function renderInline(text) {
+    if (!text) return '';
+    if (window.marked && window.marked.parseInline) {
+      return window.marked.parseInline(text);
+    }
+    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  }
+
+  try {
+    if (sectionId === 'home') {
+      const bannerTitle = renderInline(data.banner.title);
+      const bannerLead = renderInline(data.banner.lead);
+      const bannerDesc = renderInline(data.banner.desc);
+      
+      let featuresHtml = '';
+      (data.features || []).forEach(f => {
+        featuresHtml += `<div class="feat-card">
+<div class="feat-card-header">
+<span class="feat-card-id">${f.tag}</span>
+<h4>${f.title}</h4>
+</div>
+<p>${renderInline(f.desc)}</p>
+</div>\n`;
+      });
+
+      let linksHtml = '';
+      (data.links || []).forEach(l => {
+        linksHtml += `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+<div class="feat-card" style="height: 100%; border: 1px solid rgba(59, 130, 246, 0.15);">
+<div class="feat-card-header">
+<span class="feat-card-id">${l.tag}</span>
+<h4 style="color: var(--color-cyan);">${l.title}</h4>
+</div>
+<p>${renderInline(l.desc)}</p>
+</div>
+</a>\n`;
+      });
+
+      return `<section class="page-home animate-fade-in">
+<div class="terminal-banner">
+<h2 class="hero-title">${bannerTitle}</h2>
+<p class="lead-text">${bannerLead}</p>
+<p class="hero-desc">${bannerDesc}</p>
+</div>
+
+<!-- Feature Grids -->
+<div class="features-grid">
+${featuresHtml}</div>
+
+<!-- External Links Grids -->
+<div class="features-grid" style="margin-top: 1.75rem;">
+${linksHtml}</div>
+</section>`;
+    }
+
+    if (sectionId === 'curriculum') {
+      const headerTitle = renderInline(data.header.title);
+      const headerDesc = renderInline(data.header.desc);
+
+      let phasesHtml = '';
+      (data.phases || []).forEach((p, idx) => {
+        let topicsHtml = '';
+        (p.topics || []).forEach(t => {
+          topicsHtml += `<li><span class="topic-dot"></span> ${renderInline(t)}</li>\n`;
+        });
+
+        phasesHtml += `<div class="roadmap-card">
+<div class="card-badge">${p.phase}</div>
+<h3 class="card-title">${p.title}</h3>
+<p class="card-desc">${renderInline(p.desc)}</p>
+<ul class="card-topics">
+${topicsHtml}</ul>
+</div>\n`;
+      });
+
+      return `<section id="curriculum" class="curriculum-view animate-fade-in">
+<div class="section-header">
+<h2>${headerTitle}</h2>
+<p class="section-desc">${headerDesc}</p>
+</div>
+<div class="roadmap-grid">
+${phasesHtml}</div>
+</section>`;
+    }
+
+    if (sectionId === 'seminar') {
+      const headerTitle = renderInline(data.header.title);
+      const headerDesc = renderInline(data.header.desc);
+
+      let itemsHtml = '';
+      (data.items || []).forEach(item => {
+        itemsHtml += `<div class="timeline-item">
+<div class="timeline-date">${item.week}</div>
+<div class="timeline-content">
+<h3 class="timeline-title">${item.title}</h3>
+<p>${renderInline(item.desc)}</p>
+<span class="presenter">${item.presenter}</span>
+</div>
+</div>\n`;
+      });
+
+      return `<section id="seminar" class="seminar-view animate-fade-in">
+<div class="section-header">
+<h2>${headerTitle}</h2>
+<p class="section-desc">${headerDesc}</p>
+</div>
+<div class="timeline">
+${itemsHtml}</div>
+</section>`;
+    }
+
+    if (sectionId === 'ctf') {
+      const headerTitle = renderInline(data.header.title);
+      const headerDesc = renderInline(data.header.desc);
+
+      let ranksHtml = '';
+      (data.leaderboard || []).forEach((r, idx) => {
+        ranksHtml += `<tr class="rank-${idx + 1}">
+<td>${r.rank}</td>
+<td class="user-cell">${r.user}</td>
+<td class="pts-cell">${r.score}</td>
+<td class="status-cell">${r.status}</td>
+</tr>\n`;
+      });
+
+      let chalsHtml = '';
+      (data.challenges || []).forEach(c => {
+        const isSolved = c.status.toLowerCase() === 'solved';
+        const cardClass = isSolved ? 'challenge-card solved' : 'challenge-card';
+        const badgeClass = `status-badge ${isSolved ? 'solved' : 'open'}`;
+        const badgeText = isSolved ? 'COMPLETED' : 'ACTIVE';
+        const categoryClass = `chal-category ${c.category.toLowerCase()}`;
+
+        chalsHtml += `<div class="${cardClass}">
+<span class="${categoryClass}">${c.category}</span>
+<div class="chal-details">
+<h4>${c.title}</h4>
+<p class="chal-pts">${c.score}</p>
+</div>
+<span class="${badgeClass}">${badgeText}</span>
+</div>\n`;
+      });
+
+      return `<section id="ctf" class="ctf-view animate-fade-in">
+<div class="section-header">
+<h2>${headerTitle}</h2>
+<p class="section-desc">${headerDesc}</p>
+</div>
+<div class="ctf-container">
+<!-- Scoreboard Panel -->
+<div class="scoreboard-section">
+  <h3 class="panel-title">Leaderboard</h3>
+  <table class="ctf-table">
+  <thead>
+  <tr>
+  <th>RANK</th>
+  <th>USER</th>
+  <th>SCORE</th>
+  <th>STATUS</th>
+  </tr>
+  </thead>
+  <tbody>
+  ${ranksHtml}</tbody>
+  </table>
+</div>
+<!-- Challenges Panel -->
+<div class="challenges-section">
+  <h3 class="panel-title">Active Challenges</h3>
+  <div class="challenge-list">
+  ${chalsHtml}</div>
+</div>
+</div>
+</section>`;
+    }
+  } catch (err) {
+    return `<div style="color: #ef4444; padding: 1.5rem; border: 1px dashed rgba(239, 68, 68, 0.3); border-radius: 6px; background: rgba(239, 68, 68, 0.05);">
+      <h4 style="margin: 0 0 0.5rem 0;">⚠️ 템플릿 컴파일 오류</h4>
+      <p style="margin: 0; font-size: 0.8rem;">데이터가 올바른 구조를 갖고 있지 않습니다: ${err.message}</p>
+    </div>`;
+  }
+  return '';
+}
+
 async function initializeAdminPanel() {
   const selectSection = document.getElementById('admin-edit-section');
-  const textareaMarkdown = document.getElementById('admin-edit-markdown');
+  const textareaMarkdown = document.getElementById('admin-edit-content') || document.getElementById('admin-edit-markdown');
   const previewArea = document.getElementById('admin-html-preview');
   const saveBtn = document.getElementById('admin-save-content-btn');
   const registerForm = document.getElementById('admin-register-form');
@@ -405,44 +590,39 @@ async function initializeAdminPanel() {
       await loadSectionMarkdown(selectSection.value);
     });
 
-    // Real-time Preview Logic
+    // Real-time Preview Logic (Validates JSON and draws preview)
     textareaMarkdown.addEventListener('input', () => {
       renderPreview(textareaMarkdown.value);
     });
   }
 
-  function renderPreview(markdownText) {
+  function renderPreview(jsonText) {
     if (!previewArea) return;
-    let htmlResult = '';
+    const sectionId = selectSection.value;
     
-    if (window.marked && window.marked.parse) {
-      try {
-        if (window.marked.Lexer && window.marked.Lexer.rules && window.marked.Lexer.rules.block) {
-          if (window.marked.Lexer.rules.block.normal) window.marked.Lexer.rules.block.normal.code = /$^/;
-          if (window.marked.Lexer.rules.block.gfm) window.marked.Lexer.rules.block.gfm.code = /$^/;
-        }
-      } catch (e) {
-        console.error('Failed to configure marked Lexer rules:', e);
-      }
-      htmlResult = window.marked.parse(markdownText);
-    } else {
-      // Simple regex markdown-to-html fallback if marked CDN fails to load
-      htmlResult = markdownText
-        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-        .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-        .replace(/\*(.*)\*/gim, '<em>$1</em>')
-        .replace(/`(.*)`/gim, '<code>$1</code>')
-        .replace(/\[(.*?)\]\((.*?)\)/gim, "<a href='$2' target='_blank' rel='noopener noreferrer'>$1</a>")
-        .split('\n')
-        .map(line => line.trim() ? `<p>${line.trim()}</p>` : '')
-        .join('\n');
+    try {
+      const data = JSON.parse(jsonText);
+      const htmlResult = clientCompileJsonToHtml(sectionId, data);
+      previewArea.innerHTML = htmlResult;
+      
+      // Clear error highlights
+      textareaMarkdown.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+      if (saveBtn) saveBtn.disabled = false;
+    } catch (err) {
+      // Draw error message in the preview panel
+      previewArea.innerHTML = `<div style="color: #ef4444; padding: 1.5rem; border: 1px dashed rgba(239, 68, 68, 0.3); border-radius: 6px; background: rgba(239, 68, 68, 0.05); font-family: monospace; font-size: 0.85rem;">
+        <h4 style="margin-top: 0; margin-bottom: 0.5rem; text-transform: uppercase;">⚠️ JSON 문법 에러</h4>
+        <p style="margin: 0; line-height: 1.5;">${err.message}</p>
+        <p style="margin-top: 10px; margin-bottom: 0; font-size: 0.75rem; color: #94a3b8;">중괄호, 쉼표, 큰따옴표의 정렬이 올바른지 확인해 주세요.</p>
+      </div>`;
+      
+      // Highlight editor border as error and block save
+      textareaMarkdown.style.borderColor = '#ef4444';
+      if (saveBtn) saveBtn.disabled = true;
     }
-    previewArea.innerHTML = htmlResult;
   }
 
-  // Markdown File Upload and Parse
+  // JSON File Upload and Parse
   const fileInput = document.getElementById('admin-md-file');
   const fileTrigger = document.getElementById('admin-upload-trigger-btn');
   const filenameSpan = document.getElementById('admin-md-filename');
@@ -462,10 +642,10 @@ async function initializeAdminPanel() {
 
       const reader = new FileReader();
       reader.onload = function(e) {
-        const markdownText = e.target.result;
-        textareaMarkdown.value = markdownText;
-        renderPreview(markdownText);
-        showToast('마크다운 파일이 에디터에 로드되었습니다! 미리보기를 확인한 후 저장해 주세요.', 'success');
+        const jsonText = e.target.result;
+        textareaMarkdown.value = jsonText;
+        renderPreview(jsonText);
+        showToast('JSON 데이터 파일이 에디터에 로드되었습니다! 미리보기를 확인한 후 저장해 주세요.', 'success');
       };
       reader.readAsText(file);
     });
@@ -477,7 +657,14 @@ async function initializeAdminPanel() {
       if (response.ok) {
         const payload = await response.json();
         if (payload.ok && payload.data) {
-          const content = payload.data.content || '';
+          let content = payload.data.content || '';
+          
+          // Formats JSON with 2-spaces indent for readability
+          try {
+            const parsed = JSON.parse(content);
+            content = JSON.stringify(parsed, null, 2);
+          } catch (e) {}
+
           textareaMarkdown.value = content;
           renderPreview(content);
         }

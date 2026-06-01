@@ -108,40 +108,32 @@ db.serialize(() => {
                 VALUES ('123', '$2a$10$eTZ.B/MOrL.i7qceTaDnM.fLD627Xp/yFhTqQZaeFbgNGPBhWyXay', 'TestUser123')`);
     }
 
-    // Compile physical markdown files to HTML and seed/update database on server startup
+    // Seed and compile site contents from JSON files on server startup
+    const { compileJsonToHtml } = require('../helpers/template');
     const sections = ['home', 'curriculum', 'seminar', 'ctf'];
+    
     sections.forEach(sec => {
         try {
-            const mdPath = path.join(__dirname, `../../src/html/fragments/${sec}.md`);
+            const jsonPath = path.join(__dirname, `../../src/html/fragments/${sec}.json`);
             const htmlPath = path.join(__dirname, `../../src/html/fragments/${sec}.html`);
             
-            let contentMd = '';
-            
-            // If the .md file doesn't exist, try initializing it from the static HTML content
-            if (!fs.existsSync(mdPath)) {
-                if (fs.existsSync(htmlPath)) {
-                    const contentHtml = fs.readFileSync(htmlPath, 'utf8');
-                    // Trim indentation from each line to prevent marked from parsing it as indented code blocks
-                    contentMd = contentHtml.split('\n').map(line => line.trim()).join('\n');
-                    fs.writeFileSync(mdPath, contentMd, 'utf8');
-                } else {
-                    contentMd = `# ${sec.toUpperCase()} Section\n\nDefault content for ${sec}.`;
-                    fs.writeFileSync(mdPath, contentMd, 'utf8');
-                }
+            if (fs.existsSync(jsonPath)) {
+                const jsonRaw = fs.readFileSync(jsonPath, 'utf8');
+                const jsonData = JSON.parse(jsonRaw);
+                
+                // Compile JSON to HTML using our template helper
+                const contentHtml = compileJsonToHtml(sec, jsonData);
+                
+                // Write HTML to physical file
+                fs.writeFileSync(htmlPath, contentHtml, 'utf8');
+                
+                // Update database: content_md stores the JSON stringified data
+                const timestamp = new Date().toISOString();
+                db.run(`INSERT OR REPLACE INTO site_contents (section_id, content_md, content_html, updated_at) VALUES (?, ?, ?, ?)`,
+                    [sec, jsonRaw, contentHtml, timestamp]);
             } else {
-                contentMd = fs.readFileSync(mdPath, 'utf8');
+                console.error(`[Startup Seed Error] JSON file not found for section ${sec}`);
             }
-            
-            // Convert .md to HTML on server startup
-            const contentHtml = marked.parse(contentMd);
-            
-            // Apply HTML back to static html fragment
-            fs.writeFileSync(htmlPath, contentHtml, 'utf8');
-            
-            // Store / update content in DB
-            const timestamp = new Date().toISOString();
-            db.run(`INSERT OR REPLACE INTO site_contents (section_id, content_md, content_html, updated_at) VALUES (?, ?, ?, ?)`,
-                [sec, contentMd, contentHtml, timestamp]);
         } catch (e) {
             console.error(`[Startup Seed/Compile Error] Failed for section ${sec}:`, e.message);
         }

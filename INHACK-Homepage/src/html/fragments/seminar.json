@@ -1,0 +1,26 @@
+{
+  "header": {
+    "title": "Seminar",
+    "desc": "INHACK 정회원들이 매주 진행하는 기술 세미나 발표 내역 및 활성 타임라인입니다."
+  },
+  "items": [
+    {
+      "week": "Week 01",
+      "title": "OT 및 웹 해킹 기초 세미나",
+      "desc": "신규 학회원 오리엔테이션 및 웹 동작 메커니즘(HTTP/HTTPS)과 기초적인 SQL Injection 취약점 인젝션을 직접 설계/실습합니다.",
+      "presenter": "Presenter: 김철수"
+    },
+    {
+      "week": "Week 02",
+      "title": "시스템 해킹과 ROP 기법",
+      "desc": "메모리 충돌 취약점을 이용해 현대 바이너리 익스플로잇 보안 장치(ASLR, NX)를 무력화하는 Return-Oriented Programming 공격 체인을 구성합니다.",
+      "presenter": "Presenter: 이영희"
+    },
+    {
+      "week": "Week 03",
+      "title": "리버싱 정적/동적 분석 입문",
+      "desc": "Ghidra 및 x64dbg 분석 도구를 활용해 어셈블리 로직 코드를 디버깅하고, 실행 흐름 조작 방지 및 난독화 보호 모듈 우회 기법을 탐구합니다.",
+      "presenter": "Presenter: 박민수"
+    }
+  ]
+}

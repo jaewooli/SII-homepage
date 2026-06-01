@@ -3,12 +3,8 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
-const { marked, Lexer } = require('marked');
-if (Lexer && Lexer.rules && Lexer.rules.block) {
-    if (Lexer.rules.block.normal) Lexer.rules.block.normal.code = /$^/;
-    if (Lexer.rules.block.gfm) Lexer.rules.block.gfm.code = /$^/;
-}
 const db = require('../config/db');
+const { compileJsonToHtml } = require('../helpers/template');
 const { sendJson } = require('../helpers/response');
 
 // Admin Route: Register a new user
@@ -149,12 +145,12 @@ router.get('/content/:sectionId', (req, res) => {
   });
 });
 
-// Admin Route: Update site section content (Markdown + HTML)
+// Admin Route: Update site section content (JSON Data)
 router.post('/update-content', (req, res) => {
   if (!req.session.user || !req.session.user.isAdmin) {
     return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
   }
-  const { sectionId, content_md } = req.body;
+  const { sectionId, content_md } = req.body; // content_md holds the JSON string
   const validSections = ['home', 'curriculum', 'seminar', 'ctf'];
   if (!sectionId || content_md === undefined) {
     return sendJson(res, { status: 400, ok: false, message: '필수 필드가 누락되었습니다.', code: 'BAD_REQUEST' });
@@ -163,25 +159,33 @@ router.post('/update-content', (req, res) => {
     return sendJson(res, { status: 400, ok: false, message: '유효하지 않은 섹션 ID입니다.', code: 'BAD_REQUEST' });
   }
 
+  // Server-side JSON syntax check to prevent corrupt saves
+  let jsonData;
   try {
-    const mdPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.md`);
-    const backupPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.md.bak`);
+    jsonData = JSON.parse(content_md);
+  } catch (parseErr) {
+    return sendJson(res, { status: 400, ok: false, message: '올바르지 않은 JSON 형식입니다. 문법을 다시 확인해 주세요.', code: 'INVALID_JSON' });
+  }
+
+  try {
+    const jsonPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.json`);
+    const backupPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.json.bak`);
     const htmlPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.html`);
 
-    // 1. Save previous .md file as backup if it exists
-    if (fs.existsSync(mdPath)) {
+    // 1. Save previous .json file as backup if it exists
+    if (fs.existsSync(jsonPath)) {
       try {
-        fs.copyFileSync(mdPath, backupPath);
+        fs.copyFileSync(jsonPath, backupPath);
       } catch (backupErr) {
-        console.error(`[Backup Error] Failed to backup old markdown for ${sectionId}:`, backupErr.message);
+        console.error(`[Backup Error] Failed to backup old JSON for ${sectionId}:`, backupErr.message);
       }
     }
 
-    // 2. Write new .md content
-    fs.writeFileSync(mdPath, content_md, 'utf8');
+    // 2. Write new JSON content
+    fs.writeFileSync(jsonPath, content_md, 'utf8');
 
-    // 3. Convert markdown to HTML on the server
-    const compiledHtml = marked.parse(content_md);
+    // 3. Compile JSON data to HTML using template helper
+    const compiledHtml = compileJsonToHtml(sectionId, jsonData);
 
     // 4. Save HTML file physically
     fs.writeFileSync(htmlPath, compiledHtml, 'utf8');
