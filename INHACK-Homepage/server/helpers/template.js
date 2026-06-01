@@ -61,7 +61,7 @@ ${linksHtml}</div>
     (data.phases || []).forEach((p, idx) => {
       let topicsHtml = '';
       (p.topics || []).forEach(t => {
-        topicsHtml += `<li><span class="topic-dot"></span> ${renderMarkdownInline(t)}</li>\n`;
+        topicsHtml += `<li>${renderMarkdownInline(t)}</li>\n`;
       });
 
       phasesHtml += `<div class="roadmap-card">

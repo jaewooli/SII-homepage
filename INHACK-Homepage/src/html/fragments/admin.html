@@ -1,4 +1,4 @@
-<section class="page-admin animate-fade-in" style="width: 100%; max-width: 900px; margin: 0 auto;">
+<section class="page-admin animate-fade-in" style="width: 100%; max-width: 1200px; margin: 0 auto;">
     <div class="terminal-banner" style="margin-bottom: 2rem;">
         <h2 class="hero-title" style="color: #ff4b4b;">ADMIN CONTROL PANEL</h2>
         <p class="lead-text">인핵 포탈의 사용자 계정 관리 및 사이트 주요 섹션 컨텐츠를 실시간으로 제어합니다.</p>
@@ -26,7 +26,7 @@
         </div>
 
         <!-- Card 2: Content Modification -->
-        <div class="log-card" style="padding: 2rem; background-color: var(--bg-surface); border: 1px solid rgba(59, 130, 246, 0.15); display: flex; flex-direction: column; grid-column: span 1;">
+        <div class="log-card" style="padding: 2rem; background-color: var(--bg-surface); border: 1px solid rgba(59, 130, 246, 0.15); display: flex; flex-direction: column; grid-column: 1 / -1;">
             <div class="log-card-title" style="color: var(--color-cyan); font-size: 0.95rem; margin-bottom: 1.5rem;">섹션 컨텐츠 관리 (JSON 데이터)</div>
             
             <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 1rem;">
@@ -48,14 +48,14 @@
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; flex: 1; min-height: 420px;">
+            <div class="admin-editor-workspace">
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <label for="admin-edit-content" style="font-size: 0.75rem; color: #64748b;">데이터 에디터 (JSON 포맷)</label>
-                    <textarea id="admin-edit-content" placeholder="{}" style="width: 100%; height: 100%; min-height: 350px; padding: 12px; background: #080b12; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #00f0ff; font-family: 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.5; resize: none; outline: none; transition: border-color 0.2s;"></textarea>
+                    <textarea id="admin-edit-content" placeholder="{}" style="width: 100%; height: 100%; min-height: 420px; padding: 12px; background: #080b12; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #00f0ff; font-family: 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.5; resize: none; outline: none; transition: border-color 0.2s;"></textarea>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <label style="font-size: 0.75rem; color: #64748b;">실시간 렌더링 미리보기 (Live Preview)</label>
-                    <div id="admin-html-preview" style="width: 100%; height: 100%; min-height: 350px; padding: 12px; background: #0f172a; border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; overflow-y: auto; color: #fff; font-size: 0.9rem; line-height: 1.6;">
+                    <div id="admin-html-preview" class="preview-box" style="width: 100%; height: 100%; min-height: 420px; padding: 12px; background: #0f172a; border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; overflow-y: auto; color: #fff; font-size: 0.9rem; line-height: 1.6;">
                         <!-- Rendered HTML will appear here -->
                     </div>
                 </div>

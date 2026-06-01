@@ -553,3 +553,22 @@ p a:hover {
     letter-spacing: 2px;
     margin-top: 2px;
 }
+
+.admin-editor-workspace {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    flex: 1;
+    min-height: 500px;
+}
+
+@media (max-width: 900px) {
+    .admin-editor-workspace {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+    .admin-editor-workspace textarea, 
+    .admin-editor-workspace .preview-box {
+        min-height: 350px !important;
+    }
+}
