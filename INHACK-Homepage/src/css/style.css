@@ -544,7 +544,7 @@ section h2 {
     margin-bottom: 12px;
 }
 
-.card-title {
+.card-title, .roadmap-card h3 {
     font-family: var(--font-heading);
     font-size: 1.45rem;
     font-weight: 700;
@@ -553,32 +553,41 @@ section h2 {
     letter-spacing: 0.5px;
 }
 
-.card-desc {
+.card-desc, .roadmap-card p {
     color: #94a3b8;
     font-size: 0.9rem;
     line-height: 1.6;
     margin-bottom: 1.75rem;
 }
 
-.card-topics {
+.card-topics, .roadmap-card ul {
     list-style: none;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
     padding-top: 1.25rem;
 }
 
-.card-topics li {
+.card-topics li, .roadmap-card ul li {
     font-family: var(--font-body);
     font-size: 0.88rem;
     color: #64748b;
     margin-bottom: 0.65rem;
     display: flex;
     align-items: center;
-    gap: 10px;
     transition: color var(--transition-fast);
 }
 
-.roadmap-card:hover .card-topics li {
+.roadmap-card:hover .card-topics li, .roadmap-card:hover ul li {
     color: #cbd5e1;
+}
+
+.roadmap-card ul li::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    background-color: var(--color-cyan);
+    display: inline-block;
+    flex-shrink: 0;
+    margin-right: 10px;
 }
 
 .topic-dot {
@@ -657,7 +666,7 @@ section h2 {
     background-color: rgba(255, 255, 255, 0.015);
 }
 
-.timeline-title {
+.timeline-title, .timeline-content h3 {
     font-family: var(--font-heading);
     font-size: 1.25rem;
     font-weight: 600;
@@ -698,12 +707,12 @@ section h2 {
     margin-bottom: 1.25rem;
 }
 
-.ctf-table {
+.ctf-table, .scoreboard-section table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.ctf-table th {
+.ctf-table th, .scoreboard-section table th {
     font-family: var(--font-mono);
     font-size: 0.75rem;
     color: #475569;
@@ -714,50 +723,50 @@ section h2 {
     font-weight: 700;
 }
 
-.ctf-table td {
+.ctf-table td, .scoreboard-section table td {
     padding: 1.15rem 1.25rem;
     font-size: 0.92rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
-.ctf-table tr {
+.ctf-table tr, .scoreboard-section table tr {
     transition: background-color var(--transition-fast);
 }
 
-.ctf-table tbody tr:hover {
+.ctf-table tbody tr:hover, .scoreboard-section table tbody tr:hover {
     background-color: rgba(255, 255, 255, 0.015);
 }
 
-.ctf-table td.user-cell {
+.ctf-table td.user-cell, .scoreboard-section table td:nth-child(2) {
     font-family: var(--font-heading);
     font-weight: 600;
     color: #ffffff;
 }
 
-.ctf-table td.pts-cell {
+.ctf-table td.pts-cell, .scoreboard-section table td:nth-child(3) {
     font-family: var(--font-mono);
     color: var(--color-cyan);
     font-weight: 700;
 }
 
-.ctf-table td.status-cell {
+.ctf-table td.status-cell, .scoreboard-section table td:nth-child(4) {
     font-family: var(--font-mono);
     font-size: 0.8rem;
     color: #64748b;
 }
 
 /* Ranks Styles */
-.rank-1 td {
+.rank-1 td, .scoreboard-section table tbody tr:nth-child(1) td {
     border-bottom: 1px solid rgba(255, 215, 0, 0.15);
     background-color: rgba(255, 215, 0, 0.01);
 }
-.rank-1 td.user-cell {
+.rank-1 td.user-cell, .scoreboard-section table tbody tr:nth-child(1) td:nth-child(2) {
     color: #ffd700;
 }
-.rank-2 td.user-cell {
+.rank-2 td.user-cell, .scoreboard-section table tbody tr:nth-child(2) td:nth-child(2) {
     color: #e2e8f0;
 }
-.rank-3 td.user-cell {
+.rank-3 td.user-cell, .scoreboard-section table tbody tr:nth-child(3) td:nth-child(2) {
     color: #b45309;
 }
 

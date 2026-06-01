@@ -1,54 +1,34 @@
 <section id="ctf" class="ctf-view animate-fade-in">
 <div class="section-header">
-<h2>CTF Dashboard</h2>
-<p class="section-desc">INHACK 자체 Capture The Flag 보안 경쟁 플랫폼의 실시간 스코어보드 및 활성 챌린지 리스트입니다.</p>
+
+## CTF Dashboard
+INHACK 자체 Capture The Flag 보안 경쟁 플랫폼의 실시간 스코어보드 및 활성 챌린지 리스트입니다.
 </div>
 
 <div class="ctf-container">
 <!-- Scoreboard Panel -->
 <div class="scoreboard-section">
 <h3 class="panel-title">Leaderboard</h3>
-<table class="ctf-table">
-<thead>
-<tr>
-<th>RANK</th>
-<th>USER</th>
-<th>SCORE</th>
-<th>STATUS</th>
-</tr>
-</thead>
-<tbody>
-<tr class="rank-1">
-<td>1st 🥇</td>
-<td class="user-cell">alice_sec</td>
-<td class="pts-cell">1200 PTS</td>
-<td class="status-cell">5 / 5 SOLVED</td>
-</tr>
-<tr class="rank-2">
-<td>2nd 🥈</td>
-<td class="user-cell">bob_overflow</td>
-<td class="pts-cell">950 PTS</td>
-<td class="status-cell">4 / 5 SOLVED</td>
-</tr>
-<tr class="rank-3">
-<td>3rd 🥉</td>
-<td class="user-cell">cyber_pwn</td>
-<td class="pts-cell">700 PTS</td>
-<td class="status-cell">3 / 5 SOLVED</td>
-</tr>
-</tbody>
-</table>
+
+| RANK | USER | SCORE | STATUS |
+| --- | --- | --- | --- |
+| 1st 🥇 | alice_sec | 1200 PTS | 5 / 5 SOLVED |
+| 2nd 🥈 | bob_overflow | 950 PTS | 4 / 5 SOLVED |
+| 3rd 🥉 | cyber_pwn | 700 PTS | 3 / 5 SOLVED |
+
 </div>
 
 <!-- Challenges Panel -->
 <div class="challenges-section">
 <h3 class="panel-title">Active Challenges</h3>
 <div class="challenge-list">
+
 <div class="challenge-card solved">
 <span class="chal-category web">WEB</span>
 <div class="chal-details">
-<h4>Super Simple SQL</h4>
-<p class="chal-pts">100 PTS</p>
+
+#### Super Simple SQL
+100 PTS
 </div>
 <span class="status-badge solved">COMPLETED</span>
 </div>
@@ -56,8 +36,9 @@
 <div class="challenge-card">
 <span class="chal-category pwn">PWN</span>
 <div class="chal-details">
-<h4>Stack Over Flowing</h4>
-<p class="chal-pts">300 PTS</p>
+
+#### Stack Over Flowing
+300 PTS
 </div>
 <span class="status-badge open">ACTIVE</span>
 </div>
@@ -65,11 +46,13 @@
 <div class="challenge-card">
 <span class="chal-category rev">REV</span>
 <div class="chal-details">
-<h4>Ghidra's Secret</h4>
-<p class="chal-pts">500 PTS</p>
+
+#### Ghidra's Secret
+500 PTS
 </div>
 <span class="status-badge open">ACTIVE</span>
 </div>
+
 </div>
 </div>
 </div>
