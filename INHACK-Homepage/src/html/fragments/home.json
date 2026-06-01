@@ -21,7 +21,11 @@
     ]
   },
   {
-    "type": "links",
+    "type": "spacer",
+    "height": "1.75rem"
+  },
+  {
+    "type": "features",
     "items": [
       {
         "tag": "UNIVERSITY //",

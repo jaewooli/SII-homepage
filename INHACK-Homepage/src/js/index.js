@@ -406,7 +406,10 @@ function clientCompileJsonToHtml(sectionId, data) {
     if (sectionId === 'home') {
       if (data.banner) legacyBlocks.push({ type: 'banner', ...data.banner });
       if (data.features) legacyBlocks.push({ type: 'features', items: data.features });
-      if (data.links) legacyBlocks.push({ type: 'links', items: data.links });
+      if (data.links) {
+        legacyBlocks.push({ type: 'spacer', height: '1.75rem' });
+        legacyBlocks.push({ type: 'features', items: data.links });
+      }
     } else if (sectionId === 'curriculum') {
       if (data.header) legacyBlocks.push({ type: 'header', ...data.header });
       if (data.phases) legacyBlocks.push({ type: 'phases', items: data.phases });
@@ -459,6 +462,10 @@ function clientCompileJsonToHtml(sectionId, data) {
 <p class="section-desc">${desc}</p>
 </div>\n`;
       } 
+      else if (block.type === 'spacer') {
+        const height = block.height || '1.5rem';
+        htmlResult += `<div style="height: ${height};"></div>\n`;
+      }
       else if (block.type === 'features') {
         let featuresHtml = '';
         (block.items || []).forEach(f => {
@@ -484,32 +491,6 @@ function clientCompileJsonToHtml(sectionId, data) {
         });
         htmlResult += `<div class="features-grid">
 ${featuresHtml}</div>\n`;
-      } 
-      else if (block.type === 'links') {
-        let linksHtml = '';
-        (block.items || []).forEach(l => {
-          if (l.url) {
-            linksHtml += `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
-<div class="feat-card" style="height: 100%; border: 1px solid rgba(59, 130, 246, 0.15);">
-<div class="feat-card-header">
-<span class="feat-card-id">${l.tag}</span>
-<h4 style="color: var(--color-cyan);">${l.title}</h4>
-</div>
-<p>${renderInline(l.desc)}</p>
-</div>
-</a>\n`;
-          } else {
-            linksHtml += `<div class="feat-card">
-<div class="feat-card-header">
-<span class="feat-card-id">${l.tag}</span>
-<h4>${l.title}</h4>
-</div>
-<p>${renderInline(l.desc)}</p>
-</div>\n`;
-          }
-        });
-        htmlResult += `<div class="features-grid" style="margin-top: 1.75rem;">
-${linksHtml}</div>\n`;
       } 
       else if (block.type === 'phases') {
         let phasesHtml = '';
@@ -657,16 +638,9 @@ async function initializeAdminPanel() {
             }
           ]
         },
-        links: {
-          type: "links",
-          items: [
-            {
-              tag: "LINK //",
-              title: "Link Description ↗",
-              url: "https://example.com",
-              desc: "Details about where this external link points."
-            }
-          ]
+        spacer: {
+          type: "spacer",
+          height: "1.75rem"
         },
         phases: {
           type: "phases",
@@ -845,7 +819,7 @@ async function initializeAdminPanel() {
       if (block.type === 'banner') { icon = '📢'; titlePreview = block.title || ''; }
       else if (block.type === 'header') { icon = '🏷️'; titlePreview = block.title || ''; }
       else if (block.type === 'features') { icon = '🎴'; titlePreview = `카드 ${block.items?.length || 0}개`; }
-      else if (block.type === 'links') { icon = '🔗'; titlePreview = `링크 ${block.items?.length || 0}개`; }
+      else if (block.type === 'spacer') { icon = '↕️'; titlePreview = block.height || '1.5rem'; }
       else if (block.type === 'phases') { icon = '🗺️'; titlePreview = `단계 ${block.items?.length || 0}개`; }
       else if (block.type === 'timeline') { icon = '📅'; titlePreview = `아이템 ${block.items?.length || 0}개`; }
       else if (block.type === 'ctf_dashboard') { icon = '🏆'; titlePreview = '대시보드'; }

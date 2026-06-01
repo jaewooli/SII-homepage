@@ -14,7 +14,10 @@ function compileJsonToHtml(sectionId, blocks) {
     if (sectionId === 'home') {
       if (data.banner) legacyBlocks.push({ type: 'banner', ...data.banner });
       if (data.features) legacyBlocks.push({ type: 'features', items: data.features });
-      if (data.links) legacyBlocks.push({ type: 'links', items: data.links });
+      if (data.links) {
+        legacyBlocks.push({ type: 'spacer', height: '1.75rem' });
+        legacyBlocks.push({ type: 'features', items: data.links });
+      }
     } else if (sectionId === 'curriculum') {
       if (data.header) legacyBlocks.push({ type: 'header', ...data.header });
       if (data.phases) legacyBlocks.push({ type: 'phases', items: data.phases });
@@ -68,6 +71,10 @@ function compileJsonToHtml(sectionId, blocks) {
 <p class="section-desc">${desc}</p>
 </div>\n`;
       } 
+      else if (block.type === 'spacer') {
+        const height = block.height || '1.5rem';
+        htmlResult += `<div style="height: ${height};"></div>\n`;
+      }
       else if (block.type === 'features') {
         let featuresHtml = '';
         (block.items || []).forEach(f => {
@@ -93,32 +100,6 @@ function compileJsonToHtml(sectionId, blocks) {
         });
         htmlResult += `<div class="features-grid">
 ${featuresHtml}</div>\n`;
-      } 
-      else if (block.type === 'links') {
-        let linksHtml = '';
-        (block.items || []).forEach(l => {
-          if (l.url) {
-            linksHtml += `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
-<div class="feat-card" style="height: 100%; border: 1px solid rgba(59, 130, 246, 0.15);">
-<div class="feat-card-header">
-<span class="feat-card-id">${l.tag}</span>
-<h4 style="color: var(--color-cyan);">${l.title}</h4>
-</div>
-<p>${renderMarkdownInline(l.desc)}</p>
-</div>
-</a>\n`;
-          } else {
-            linksHtml += `<div class="feat-card">
-<div class="feat-card-header">
-<span class="feat-card-id">${l.tag}</span>
-<h4>${l.title}</h4>
-</div>
-<p>${renderMarkdownInline(l.desc)}</p>
-</div>\n`;
-          }
-        });
-        htmlResult += `<div class="features-grid" style="margin-top: 1.75rem;">
-${linksHtml}</div>\n`;
       } 
       else if (block.type === 'phases') {
         let phasesHtml = '';
