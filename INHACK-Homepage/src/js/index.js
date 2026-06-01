@@ -745,6 +745,69 @@ async function initializeAdminPanel() {
     let activeBlockIndex = null;
     let draggedIndex = null;
 
+    // Dynamic loading of section options based on navigation configuration
+    async function updateEditSectionOptions() {
+      let menuItems = null;
+      try {
+        const res = await fetch(`/admin/content/navigation?_t=${Date.now()}`);
+        if (res.ok) {
+          const payload = await res.json();
+          if (payload.ok && payload.data && payload.data.content) {
+            menuItems = JSON.parse(payload.data.content);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load navigation for admin select:', err);
+      }
+      
+      if (!menuItems) {
+        try {
+          const fallback = await fetch('/frags/navigation.json');
+          if (fallback.ok) menuItems = await fallback.json();
+        } catch(e) {}
+      }
+
+      if (!menuItems || !Array.isArray(menuItems)) return;
+
+      const defaultOptions = [
+        { value: 'home', text: '동아리 소개 (Home)' },
+        { value: 'curriculum', text: 'Curriculum' },
+        { value: 'seminar', text: 'Seminar' },
+        { value: 'ctf', text: 'CTF Challenge' },
+        { value: 'navigation', text: '🧭 Navigation (메뉴)' }
+      ];
+
+      const prevValue = selectSection.value;
+      selectSection.innerHTML = '';
+
+      defaultOptions.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.text;
+        selectSection.appendChild(option);
+      });
+
+      menuItems.forEach(item => {
+        if (item.submenus && Array.isArray(item.submenus)) {
+          item.submenus.forEach(sub => {
+            if (sub.url && sub.url.startsWith('#') && !sub.external) {
+              const val = sub.url.substring(1); // remove '#'
+              if (!defaultOptions.some(opt => opt.value === val)) {
+                const option = document.createElement('option');
+                option.value = val;
+                option.textContent = `  └ [서브메뉴] ${item.title} > ${sub.title}`;
+                selectSection.appendChild(option);
+              }
+            }
+          });
+        }
+      });
+
+      if (Array.from(selectSection.options).some(opt => opt.value === prevValue)) {
+        selectSection.value = prevValue;
+      }
+    }
+
     // Tab switching logic
     const tabButtons = document.querySelectorAll('.admin-tab-btn');
     tabButtons.forEach(btn => {
@@ -772,7 +835,9 @@ async function initializeAdminPanel() {
     const editorOverlay = document.getElementById('admin-editor-overlay');
 
     if (openEditorBtn && editorOverlay) {
-      openEditorBtn.addEventListener('click', () => {
+      openEditorBtn.addEventListener('click', async () => {
+        // Load dynamic options right before opening
+        await updateEditSectionOptions();
         editorOverlay.classList.add('active');
         document.body.style.overflow = 'hidden';
       });
@@ -786,6 +851,9 @@ async function initializeAdminPanel() {
         }
       });
     }
+
+    // Load dynamic edit sections options first
+    await updateEditSectionOptions();
 
     // Load default section on load
     await loadSectionMarkdown(selectSection.value);
@@ -1594,6 +1662,30 @@ async function initializeAdminPanel() {
 
       // Submenu text field input listener
       formContainer.querySelectorAll('.submenu-field:not(.submenu-external-check)').forEach(input => {
+        // Change handler triggers when focus is lost, ensuring proper formatting of local hash
+        input.addEventListener('change', (e) => {
+          const card = e.target.closest('.submenu-item');
+          const idx = parseInt(card.getAttribute('data-item-index'));
+          const field = e.target.getAttribute('data-field');
+          if (block.submenus && block.submenus[idx] !== undefined) {
+            let val = e.target.value.trim();
+            if (field === 'url' && val) {
+              const parentUrl = block.url || '#';
+              // Check if URL is not external, does not start with #, and doesn't already contain parent fragment
+              if (!val.startsWith('#') && !val.startsWith('http://') && !val.startsWith('https://')) {
+                // Determine clean parent URL with '#' prefix
+                const cleanParent = parentUrl.startsWith('#') ? parentUrl : '#' + parentUrl;
+                val = `${cleanParent}/${val}`;
+                e.target.value = val;
+              }
+            }
+            block.submenus[idx][field] = val;
+            renderPreview();
+            if (field === 'title') renderBlockList();
+          }
+        });
+
+        // Key/input listener for real-time text updates
         input.addEventListener('input', (e) => {
           const card = e.target.closest('.submenu-item');
           const idx = parseInt(card.getAttribute('data-item-index'));
@@ -1747,9 +1839,10 @@ async function initializeAdminPanel() {
             const data = await res.json();
             if (res.ok && data.ok) {
               showToast('컨텐츠가 안전하게 업데이트되었습니다!', 'success');
-              // If navigation was saved, refresh sidebar immediately
+              // If navigation was saved, refresh sidebar immediately and reload options
               if (sectionId === 'navigation') {
                 renderSidebarNav(currentBlocks.filter(b => b.type === 'menu_item'));
+                await updateEditSectionOptions();
               }
             } else {
               showToast(data.message || '저장 실패', 'error');

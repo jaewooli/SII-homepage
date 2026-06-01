@@ -118,14 +118,31 @@ router.post('/delete-user', (req, res) => {
   }
 });
 
+// Helper to check if section ID is valid and safe
+function isValidSectionId(sectionId) {
+  if (!sectionId || typeof sectionId !== 'string') return false;
+  // Allow letters, numbers, dash, underscore and slash
+  const sectionRegex = /^[a-zA-Z0-9_\-\/]+$/;
+  if (!sectionRegex.test(sectionId)) return false;
+  // Prevent directory traversal
+  if (sectionId.includes('..') || sectionId.startsWith('/') || sectionId.endsWith('/')) return false;
+  return true;
+}
+
 // Admin Route: Get raw content (Markdown/HTML) for a section
-router.get('/content/:sectionId', (req, res) => {
+router.get('/content/:sectionId*', (req, res) => {
   if (!req.session.user || !req.session.user.isAdmin) {
     return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
   }
-  const { sectionId } = req.params;
-  const validSections = ['home', 'curriculum', 'seminar', 'ctf', 'navigation'];
-  if (!validSections.includes(sectionId)) {
+  
+  // Express routing gets wildcard parameters from req.params[0]
+  // Join the parameter values to capture full path like curriculum/week1
+  let sectionId = req.params.sectionId;
+  if (req.params[0]) {
+    sectionId += req.params[0];
+  }
+
+  if (!isValidSectionId(sectionId)) {
     return sendJson(res, { status: 400, ok: false, message: '유효하지 않은 섹션 ID입니다.', code: 'BAD_REQUEST' });
   }
 
@@ -151,11 +168,10 @@ router.post('/update-content', (req, res) => {
     return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
   }
   const { sectionId, content_md } = req.body; // content_md holds the JSON string
-  const validSections = ['home', 'curriculum', 'seminar', 'ctf', 'navigation'];
   if (!sectionId || content_md === undefined) {
     return sendJson(res, { status: 400, ok: false, message: '필수 필드가 누락되었습니다.', code: 'BAD_REQUEST' });
   }
-  if (!validSections.includes(sectionId)) {
+  if (!isValidSectionId(sectionId)) {
     return sendJson(res, { status: 400, ok: false, message: '유효하지 않은 섹션 ID입니다.', code: 'BAD_REQUEST' });
   }
 
@@ -171,6 +187,16 @@ router.post('/update-content', (req, res) => {
     const jsonPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.json`);
     const backupPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.json.bak`);
     const htmlPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.html`);
+
+    // Ensure parent directories exist (crucial for nested paths like curriculum/week1)
+    const jsonDir = path.dirname(jsonPath);
+    const htmlDir = path.dirname(htmlPath);
+    if (!fs.existsSync(jsonDir)) {
+      fs.mkdirSync(jsonDir, { recursive: true });
+    }
+    if (!fs.existsSync(htmlDir)) {
+      fs.mkdirSync(htmlDir, { recursive: true });
+    }
 
     // 1. Save previous .json file as backup if it exists
     if (fs.existsSync(jsonPath)) {
