@@ -1988,9 +1988,13 @@ async function initializeAdminPanel() {
 
               const isExternal = block.external || /^https?:\/\//i.test(url);
               const isLocked = block.deleteLocked === true;
-              if (!isExternal && !isLocked) {
-                if (!url.startsWith('#')) {
-                  showToast(`메뉴 #${i + 1}의 URL은 반드시 '#'으로 시작해야 합니다. (예: #page)`, 'error');
+              if (!isExternal) {
+                if (!url.startsWith('#') && !url.startsWith('/')) {
+                  showToast(`메뉴 #${i + 1}의 URL은 '/' 또는 '#'으로 시작해야 합니다.`, 'error');
+                  return;
+                }
+                if (!isLocked && !url.startsWith('#')) {
+                  showToast(`메뉴 #${i + 1}의 URL은 '#'으로 시작해야 합니다. ('메뉴 삭제 방지 보호'를 체크하면 '/'로 시작하는 경로도 입력할 수 있습니다.)`, 'error');
                   return;
                 }
               }
