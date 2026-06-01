@@ -811,7 +811,7 @@ async function initializeAdminPanel() {
       blockListContainer.innerHTML = '';
       currentBlocks.forEach((block, index) => {
         const blockCard = document.createElement('div');
-        blockCard.className = `block-hierarchy-card${index === activeBlockIndex ? ' active' : ''}`;
+        blockCard.className = `block-hierarchy-card block-type-${block.type}${index === activeBlockIndex ? ' active' : ''}`;
         blockCard.style.cursor = 'grab';
         blockCard.setAttribute('draggable', 'true');
         
@@ -830,9 +830,11 @@ async function initializeAdminPanel() {
         }
 
         blockCard.innerHTML = `
-          <div class="block-select-zone" style="display: flex; flex-direction: column; flex: 1; min-width: 0; text-align: left;">
-            <span style="font-size: 0.65rem; color: #64748b; font-family: monospace;">#${index + 1} ${block.type.toUpperCase()}</span>
-            <span style="font-size: 0.75rem; color: #e2e8f0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${icon} ${titlePreview || block.type}</span>
+          <div class="block-select-zone" style="display: flex; flex-direction: column; flex: 1; min-width: 0; text-align: left; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="block-badge block-badge-${block.type}">#${index + 1} ${block.type.toUpperCase()}</span>
+            </div>
+            <span style="font-size: 0.78rem; color: #f1f5f9; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${icon} ${titlePreview || block.type}</span>
           </div>
           <div style="display: flex; gap: 4px; flex-shrink: 0; align-items: center;">
             <button type="button" class="hierarchy-btn move-up" data-index="${index}" title="위로 이동">↑</button>

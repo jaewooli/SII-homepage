@@ -1148,22 +1148,52 @@ footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 12px;
-    background: rgba(15, 23, 42, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 12px 14px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 6px;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     gap: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 .page-admin .block-hierarchy-card:hover {
-    background: rgba(59, 130, 246, 0.05);
-    border-color: rgba(59, 130, 246, 0.3);
+    background: rgba(15, 23, 42, 0.95);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 .page-admin .block-hierarchy-card.active {
-    background: rgba(0, 240, 255, 0.08) !important;
+    background: rgba(0, 240, 255, 0.05) !important;
     border-color: #00f0ff !important;
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
 }
+
+/* Color-coded left border based on block type */
+.page-admin .block-hierarchy-card.block-type-banner { border-left: 3px solid #00f0ff; }
+.page-admin .block-hierarchy-card.block-type-header { border-left: 3px solid #a855f7; }
+.page-admin .block-hierarchy-card.block-type-features { border-left: 3px solid #3b82f6; }
+.page-admin .block-hierarchy-card.block-type-spacer { border-left: 3px solid #64748b; }
+.page-admin .block-hierarchy-card.block-type-phases { border-left: 3px solid #f59e0b; }
+.page-admin .block-hierarchy-card.block-type-timeline { border-left: 3px solid #10b981; }
+.page-admin .block-hierarchy-card.block-type-ctf_dashboard { border-left: 3px solid #eab308; }
+
+/* Custom badges for block type tag */
+.page-admin .block-badge {
+    font-size: 0.6rem;
+    font-weight: 800;
+    font-family: var(--font-mono), monospace;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.page-admin .block-badge-banner { background: rgba(0, 240, 255, 0.1); color: #00f0ff; border: 1px solid rgba(0, 240, 255, 0.2); }
+.page-admin .block-badge-header { background: rgba(168, 85, 247, 0.1); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.2); }
+.page-admin .block-badge-features { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); }
+.page-admin .block-badge-spacer { background: rgba(100, 116, 139, 0.1); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.2); }
+.page-admin .block-badge-phases { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+.page-admin .block-badge-timeline { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+.page-admin .block-badge-ctf_dashboard { background: rgba(234, 179, 8, 0.1); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.2); }
 
 /* Hierarchy small utility buttons (up/down arrows) */
 .page-admin .block-hierarchy-card .hierarchy-btn {
