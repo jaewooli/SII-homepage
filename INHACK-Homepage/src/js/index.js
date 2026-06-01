@@ -601,6 +601,7 @@ async function initializeAdminPanel() {
   if (selectSection && formContainer && previewArea) {
     let currentBlocks = [];
     let activeBlockIndex = null;
+    let draggedIndex = null;
 
     // Load default section on load
     await loadSectionMarkdown(selectSection.value);
@@ -769,7 +770,8 @@ async function initializeAdminPanel() {
       currentBlocks.forEach((block, index) => {
         const blockCard = document.createElement('div');
         blockCard.className = `block-hierarchy-card${index === activeBlockIndex ? ' active' : ''}`;
-        blockCard.style.cursor = 'pointer';
+        blockCard.style.cursor = 'grab';
+        blockCard.setAttribute('draggable', 'true');
         
         let titlePreview = '';
         let icon = '📦';
@@ -814,6 +816,54 @@ async function initializeAdminPanel() {
         blockCard.querySelector('.delete-block').addEventListener('click', (e) => {
           e.stopPropagation();
           deleteBlock(index);
+        });
+
+        // Drag & Drop event listeners
+        blockCard.addEventListener('dragstart', (e) => {
+          draggedIndex = index;
+          e.dataTransfer.effectAllowed = 'move';
+          blockCard.classList.add('dragging');
+        });
+
+        blockCard.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+
+        blockCard.addEventListener('dragenter', (e) => {
+          e.preventDefault();
+          if (index !== draggedIndex) {
+            blockCard.classList.add('drag-over');
+          }
+        });
+
+        blockCard.addEventListener('dragleave', () => {
+          blockCard.classList.remove('drag-over');
+        });
+
+        blockCard.addEventListener('drop', (e) => {
+          e.preventDefault();
+          blockCard.classList.remove('drag-over');
+          
+          if (draggedIndex !== null && draggedIndex !== index) {
+            const draggedBlock = currentBlocks[draggedIndex];
+            currentBlocks.splice(draggedIndex, 1);
+            currentBlocks.splice(index, 0, draggedBlock);
+            activeBlockIndex = index;
+
+            renderBlockList();
+            renderActiveBlockForm();
+            renderPreview();
+            showToast('블록 위치가 드래그로 변경되었습니다.', 'success');
+          }
+          draggedIndex = null;
+        });
+
+        blockCard.addEventListener('dragend', () => {
+          blockCard.classList.remove('dragging');
+          blockListContainer.querySelectorAll('.block-hierarchy-card').forEach(card => {
+            card.classList.remove('drag-over');
+          });
         });
 
         blockListContainer.appendChild(blockCard);

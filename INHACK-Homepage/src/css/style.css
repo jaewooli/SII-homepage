@@ -1241,3 +1241,18 @@ footer {
     color: #fff !important;
     box-shadow: 0 0 8px rgba(239, 68, 68, 0.25);
 }
+
+/* Drag and Drop visual feedback for block editor cards */
+.page-admin .block-hierarchy-card.dragging {
+    opacity: 0.45;
+    border-style: dashed !important;
+    border-color: #00f0ff !important;
+    background: rgba(10, 15, 26, 0.5) !important;
+}
+
+.page-admin .block-hierarchy-card.drag-over {
+    border-color: #00f0ff !important;
+    background: rgba(0, 240, 255, 0.12) !important;
+    transform: scale(1.02);
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+}
