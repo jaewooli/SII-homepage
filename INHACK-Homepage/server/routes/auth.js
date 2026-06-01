@@ -47,10 +47,20 @@ router.post('/login', validateLogin, (req, res) => {
                 isAdmin, 
                 passwordChanged: row.password_changed || 0 
             };
-            sendJson(res, {
-                status: 200, ok: true, action: 'auth', resource: 'users',
-                message: 'Login Success!.',
-                code: 'LOGIN_SUCCESS'
+            req.session.save((saveErr) => {
+                if (saveErr) {
+                    console.error('[Session Save Error] Failed to save session:', saveErr.message);
+                    return sendJson(res, {
+                        status: 500, ok: false, action: 'auth', resource: 'users',
+                        message: 'Session creation failed',
+                        code: 'SESSION_SAVE_ERROR'
+                    });
+                }
+                sendJson(res, {
+                    status: 200, ok: true, action: 'auth', resource: 'users',
+                    message: 'Login Success!.',
+                    code: 'LOGIN_SUCCESS'
+                });
             });
         } catch (e) {
             sendJson(res, {
@@ -117,7 +127,13 @@ router.post('/change-password', (req, res) => {
         }
 
         req.session.user.passwordChanged = 1;
-        sendJson(res, { status: 200, ok: true, message: '비밀번호가 성공적으로 변경되었습니다. 이제 포털 서비스를 이용하실 수 있습니다.', code: 'SUCCESS' });
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('[Session Save Error] Failed to save session after password change:', saveErr.message);
+            return sendJson(res, { status: 500, ok: false, message: '세션 업데이트 실패', code: 'SESSION_SAVE_ERROR' });
+          }
+          sendJson(res, { status: 200, ok: true, message: '비밀번호가 성공적으로 변경되었습니다. 이제 포털 서비스를 이용하실 수 있습니다.', code: 'SUCCESS' });
+        });
       });
     } catch (e) {
       sendJson(res, { status: 500, ok: false, message: '비밀번호 검증 오류', code: 'HASH_ERROR' });
