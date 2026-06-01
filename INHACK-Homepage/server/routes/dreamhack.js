@@ -5,7 +5,6 @@ const path = require('path');
 const db = require('../config/db');
 const env = require('../config/env');
 const dreamhackState = require('../services/dreamhackState');
-const { loginDreamhackWithPuppeteer } = require('../services/puppeteer');
 const { sendJson } = require('../helpers/response');
 
 // Get encrypted credentials for E2E decryption in chrome extension
@@ -97,79 +96,7 @@ router.post('/encrypted-credentials', (req, res) => {
   });
 });
 
-router.post('/regenerate', async (req, res) => {
-  const adminUser = env.ADMIN_USERNAME;
-  if (!req.session.user || (req.session.user.username !== adminUser && !req.session.user.isAdmin)) {
-    return sendJson(res, {
-      status: 403, ok: false, action: 'create', resource: 'dreamhack_regenerate',
-      message: 'Only the administrator can regenerate shared sessions', code: 'FORBIDDEN'
-    });
-  }
 
-  console.log('[Dreamhack Connect] Starting server-side headless chrome regeneration for 3 sessions...');
-  const sessions = [];
-
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
-  const timestamp = new Date().toISOString();
-
-  // Generate 3 unique sessions sequentially
-  for (let i = 0; i < 3; i++) {
-    console.log(`[Dreamhack Connect] Executing headless login ${i + 1}/3...`);
-    const sessionData = await loginDreamhackWithPuppeteer();
-    if (sessionData && sessionData.sessionid) {
-      sessions.push(sessionData);
-      console.log(`[Dreamhack Connect] Session ${i + 1} generated successfully.`);
-    } else {
-      console.warn(`[Dreamhack Connect] Failed to generate session ${i + 1}.`);
-    }
-    // Add small delay to prevent rate limiting
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-
-  if (sessions.length === 0) {
-    return sendJson(res, {
-      status: 500, ok: false, action: 'create', resource: 'dreamhack_regenerate',
-      message: 'Headless Chrome failed to generate any active sessions. Check credentials/network.',
-      code: 'REGENERATION_FAILED'
-    });
-  }
-
-  // Update DB (clear first, then insert the new sessions)
-  db.serialize(() => {
-    db.run(`DELETE FROM shared_session`, [], (err) => {
-      if (err) {
-        console.error('[Database Error] Failed to clear shared sessions during regeneration:', err.message);
-      }
-    });
-    const stmt = db.prepare(`INSERT INTO shared_session (id, sessionid, csrftoken, updated_at) VALUES (?, ?, ?, ?)`);
-    sessions.forEach((s, idx) => {
-      stmt.run(idx + 1, s.sessionid, s.csrftoken || '', timestamp);
-    });
-    stmt.finalize();
-  });
-
-  // Log action
-  const logMessage = `[${timestamp}] Headless Chrome session regeneration by admin from IP: ${ip} (Generated: ${sessions.length}/3)\n`;
-  const logFilePath = path.join(__dirname, '../../log/login_attempts.log');
-  fs.appendFileSync(logFilePath, logMessage);
-
-  // Sync server-side global variables (using first session as primary)
-  const primarySession = sessions[0];
-  dreamhackState.sessionid = primarySession.sessionid;
-  process.env.DREAMHACK_SESSIONID = primarySession.sessionid;
-  if (primarySession.csrftoken) {
-    process.env.DREAMHACK_CSRF = primarySession.csrftoken;
-  }
-
-  console.log(`[Dreamhack Connect] Session pool regenerated successfully. Count: ${sessions.length}`);
-
-  sendJson(res, {
-    status: 200, ok: true, action: 'create', resource: 'dreamhack_regenerate',
-    message: `공용 세션 ${sessions.length}개가 성공적으로 재발급 및 갱신되었습니다.`,
-    data: { valid_count: sessions.length },
-    code: 'SUCCESS'
-  });
-});
 
 router.get('/logs', async (req, res) => {
   if (!req.session.user) {
