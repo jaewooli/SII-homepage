@@ -43,7 +43,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const initialFragment = window.location.hash.substring(1);
   loadContent(initialFragment);
   updateActiveNavLink(initialFragment);
-  loadSidebarNavigation();
 });
 
 async function loadSidebarNavigation() {
@@ -114,6 +113,13 @@ function renderSidebarNav(menuItems) {
     }
     navList.appendChild(li);
   });
+
+  // Re-append admin link if the current user is admin (it gets wiped by innerHTML = '')
+  if (window.__currentUser && window.__currentUser.isAdmin && !document.getElementById('nav-admin-link')) {
+    const adminLi = document.createElement('li');
+    adminLi.innerHTML = `<a href="#admin" id="nav-admin-link" class="nav-item-link" style="color: #ff4b4b; border-left: 2px solid #ff4b4b; font-weight: 700;">Admin Panel</a>`;
+    navList.appendChild(adminLi);
+  }
 }
 
 window.addEventListener('hashchange', () => {
@@ -195,6 +201,7 @@ function renderUserUI(user){
   let logoutbtn = document.getElementById('logout-btn');
 
   if (user) {
+    window.__currentUser = user;   // Make available to renderSidebarNav
     if (loginbtn && supportbtn){
     loginbtn.hidden = true;
     supportbtn.hidden = true;
@@ -262,7 +269,10 @@ function renderUserUI(user){
 
 document.addEventListener('DOMContentLoaded', async() => {
   const me = await fetchMe();
+  window.__currentUser = me;   // Store globally so renderSidebarNav can access it
   renderUserUI(me);
+  // Load dynamic sidebar AFTER user is known (so admin link is re-added correctly)
+  await loadSidebarNavigation();
 
   // Force first-time users to change their password immediately
   if (me && !me.isAdmin && me.passwordChanged === 0) {
