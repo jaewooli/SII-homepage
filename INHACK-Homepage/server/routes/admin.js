@@ -388,4 +388,50 @@ router.post('/update-content', (req, res) => {
   }
 });
 
+// Admin Route: Upload an image (base64 encoded)
+router.post('/upload-image', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+
+  const { filename, fileData } = req.body;
+  if (!filename || !fileData) {
+    return sendJson(res, { status: 400, ok: false, message: '파일명과 파일 데이터가 필요합니다.', code: 'BAD_REQUEST' });
+  }
+
+  // Basic security check on filename to prevent path traversal
+  const cleanFilename = path.basename(filename).replace(/[^a-zA-Z0-9.\-_]/g, '');
+  if (!cleanFilename) {
+    return sendJson(res, { status: 400, ok: false, message: '유효하지 않은 파일명입니다.', code: 'BAD_REQUEST' });
+  }
+
+  // Remove the base64 prefix if present (e.g. data:image/png;base64,)
+  const base64Data = fileData.replace(/^data:image\/\w+;base64,/, "");
+  const buffer = Buffer.from(base64Data, 'base64');
+
+  const uploadDir = path.join(__dirname, '../../images');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  const targetPath = path.join(uploadDir, cleanFilename);
+
+  fs.writeFile(targetPath, buffer, (err) => {
+    if (err) {
+      console.error('[Upload Error] Failed to save image:', err.message);
+      return sendJson(res, { status: 500, ok: false, message: '이미지 저장 실패', code: 'SERVER_ERROR' });
+    }
+
+    return sendJson(res, {
+      status: 200,
+      ok: true,
+      message: '이미지가 성공적으로 업로드되었습니다.',
+      data: {
+        url: `/images/${cleanFilename}`
+      },
+      code: 'SUCCESS'
+    });
+  });
+});
+
 module.exports = router;

@@ -1,6 +1,16 @@
 import { showToast } from '/assets/js/toast.js';
 import { fetchMe } from '/assets/js/auth.js';
 
+// Disable bold and italic markdown rendering on the client side
+if (window.marked && window.marked.use) {
+  window.marked.use({
+    renderer: {
+      strong(text) { return `**${text}**`; },
+      em(text) { return `*${text}*`; }
+    }
+  });
+}
+
 const contentArea = document.getElementById('view');
 
 async function loadContent(fragmentID){
@@ -529,7 +539,7 @@ function clientCompileJsonToHtml(sectionId, data) {
     if (window.marked && window.marked.parseInline) {
       return window.marked.parseInline(text);
     }
-    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    return text;
   }
 
   // Handle legacy fallback
@@ -1527,6 +1537,7 @@ async function initializeAdminPanel() {
       }
 
       formContainer.appendChild(wrapper);
+      attachFormattingToolbars(formContainer);
 
       // Attach dynamic listeners for block-level basic fields
       formContainer.querySelectorAll('.block-field').forEach(input => {
@@ -2189,6 +2200,138 @@ async function initializeAdminPanel() {
       };
       
       reader.readAsText(file, 'utf-8');
+    });
+  }
+
+  // Insert formatting tag/text at current textarea cursor position
+  function insertTextAtCursor(textarea, openTag, closeTag, placeholder = '') {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selected = text.substring(start, end);
+    const replacement = openTag + (selected || placeholder) + closeTag;
+    
+    textarea.value = text.substring(0, start) + replacement + text.substring(end);
+    
+    textarea.selectionStart = start + openTag.length;
+    textarea.selectionEnd = start + openTag.length + (selected || placeholder).length;
+    textarea.focus();
+    
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // Formatting toolbar creation and mounting helper
+  function attachFormattingToolbars(container) {
+    if (!container) return;
+    const textareas = container.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+      if (textarea.previousElementSibling && textarea.previousElementSibling.classList.contains('textarea-toolbar')) {
+        return;
+      }
+
+      const toolbar = document.createElement('div');
+      toolbar.className = 'textarea-toolbar';
+      toolbar.style.cssText = "display: flex; gap: 6px; margin-bottom: 6px; padding: 6px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 4px; align-items: center; flex-wrap: wrap;";
+
+      function createBtn(text, title, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = text;
+        btn.title = title;
+        btn.style.cssText = "padding: 3px 8px; font-size: 0.72rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 3px; color: #e2e8f0; cursor: pointer; transition: all 0.2s;";
+        btn.addEventListener('mouseenter', () => {
+          btn.style.background = 'rgba(255, 255, 255, 0.1)';
+          btn.style.borderColor = 'var(--color-cyan, #00f0ff)';
+        });
+        btn.addEventListener('mouseleave', () => {
+          btn.style.background = 'rgba(255, 255, 255, 0.05)';
+          btn.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+        });
+        btn.addEventListener('click', onClick);
+        return btn;
+      }
+
+      const boldBtn = createBtn('B', '굵게 (Bold)', () => {
+        insertTextAtCursor(textarea, '<b>', '</b>', '굵은 텍스트');
+      });
+      boldBtn.style.fontWeight = 'bold';
+
+      const italicBtn = createBtn('I', '기울임 (Italic)', () => {
+        insertTextAtCursor(textarea, '<i>', '</i>', '기울인 텍스트');
+      });
+      italicBtn.style.fontStyle = 'italic';
+
+      const sizeBtn = createBtn('📏 크기', '글씨 크기 (Font Size)', () => {
+        const size = prompt('글씨 크기를 입력하세요 (예: 18px, 1.2rem, 120%):', '18px');
+        if (size) {
+          insertTextAtCursor(textarea, `<span style="font-size: ${size};">`, '</span>', '크기 변경된 텍스트');
+        }
+      });
+
+      const linkBtn = createBtn('🔗 링크', '하이퍼링크 (Link)', () => {
+        const url = prompt('링크 URL을 입력하세요:', 'https://');
+        if (url) {
+          insertTextAtCursor(textarea, `<a href="${url}" target="_blank" style="color: var(--color-cyan, #00f0ff); text-decoration: underline;">`, '</a>', '링크 텍스트');
+        }
+      });
+
+      const imgUrlBtn = createBtn('🖼️ 이미지 URL', '이미지 링크 삽입 (Image URL)', () => {
+        const url = prompt('이미지 URL을 입력하세요:', 'https://');
+        if (url) {
+          insertTextAtCursor(textarea, `<img src="${url}" style="max-width: 100%; border-radius: 4px; display: block; margin: 10px 0;">`, '');
+        }
+      });
+
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.style.display = 'none';
+      
+      fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        showToast('이미지 업로드 중...', 'info', 0);
+        
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          try {
+            const res = await fetch('/admin/upload-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                filename: file.name,
+                fileData: event.target.result
+              })
+            });
+            const data = await res.json();
+            if (res.ok && data.ok && data.data && data.data.url) {
+              showToast('이미지 업로드 성공!', 'success');
+              insertTextAtCursor(textarea, `<img src="${data.data.url}" style="max-width: 100%; border-radius: 4px; display: block; margin: 10px 0;">`, '');
+            } else {
+              showToast(data.message || '이미지 업로드 실패', 'error');
+            }
+          } catch (err) {
+            console.error(err);
+            showToast('서버 통신 오류', 'error');
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+
+      const imgUploadBtn = createBtn('📤 이미지 업로드', '이미지 파일 업로드 (Upload Image)', () => {
+        fileInput.click();
+      });
+
+      toolbar.appendChild(boldBtn);
+      toolbar.appendChild(italicBtn);
+      toolbar.appendChild(sizeBtn);
+      toolbar.appendChild(linkBtn);
+      toolbar.appendChild(imgUrlBtn);
+      toolbar.appendChild(imgUploadBtn);
+      toolbar.appendChild(fileInput);
+
+      textarea.parentNode.insertBefore(toolbar, textarea);
     });
   }
 

@@ -1,6 +1,18 @@
 const { marked } = require('marked');
 
-// Helper to render inline markdown (like **bold**) safely inside JSON fields
+// Disable bold and italic markdown parsing by overriding strong and em renderers to return the original markup text
+marked.use({
+  renderer: {
+    strong(text) {
+      return `**${text}**`;
+    },
+    em(text) {
+      return `*${text}*`;
+    }
+  }
+});
+
+// Helper to render inline markdown safely inside JSON fields
 function renderMarkdownInline(text) {
   if (!text) return '';
   return marked.parseInline(text);
