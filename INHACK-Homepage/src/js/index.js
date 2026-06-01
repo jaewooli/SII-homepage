@@ -2408,45 +2408,93 @@ async function initializeAdminPanel() {
       });
       italicBtn.style.fontStyle = 'italic';
 
-      const sizeBtn = createBtn('📏 크기', '글씨 크기 (Font Size)', (e) => {
-        e.preventDefault();
-        const selectedText = savedRange ? savedRange.toString() : '';
-        const modeHintHtml = selectedText.trim()
-          ? `<div style="font-size: 0.65rem; color: var(--color-cyan, #00f0ff); margin-top: 4px; width: 100%;">선택한 텍스트 (${selectedText.length > 8 ? selectedText.substring(0, 8) + '...' : selectedText})의 크기를 변경합니다.</div>`
-          : `<div style="font-size: 0.65rem; color: #94a3b8; margin-top: 4px; width: 100%;">현재 커서 위치부터 새로 작성할 글자의 크기를 지정합니다.</div>`;
-        showInputPanel(`
-          <div style="display: flex; gap: 6px; align-items: center; width: 100%;">
-            <span style="font-size: 0.72rem; color: #94a3b8;">글씨 크기:</span>
-            <input type="number" class="panel-input" value="18" min="8" max="72" style="width: 60px; padding: 2px 6px; font-size: 0.72rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 2px;">
+      // Create Font Size Dropdown
+      const sizeSelect = document.createElement('select');
+      sizeSelect.className = 'toolbar-size-select';
+      sizeSelect.title = '글씨 크기 (Font Size)';
+      sizeSelect.style.cssText = "padding: 3px 6px; font-size: 0.72rem; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 3px; color: #e2e8f0; cursor: pointer; height: 23px; box-sizing: border-box;";
+      
+      const sizes = [12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64];
+      sizes.forEach(sz => {
+        const opt = document.createElement('option');
+        opt.value = sz;
+        opt.textContent = `${sz}px`;
+        if (sz === 18) opt.selected = true;
+        sizeSelect.appendChild(opt);
+      });
+
+      const customOpt = document.createElement('option');
+      customOpt.value = 'custom';
+      customOpt.textContent = '직접 입력...';
+      sizeSelect.appendChild(customOpt);
+
+      function applyFontSize(val) {
+        editor.focus();
+        if (savedRange) {
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(savedRange);
+        }
+        
+        const span = document.createElement('span');
+        span.style.fontSize = `${val}px`;
+        
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          if (!range.collapsed) {
+            const fragment = range.cloneContents();
+            span.appendChild(fragment);
+            insertNodeAtSelection(editor, span, range);
+          } else {
+            span.innerHTML = '&#8203;'; // zero-width space
+            insertNodeAtSelection(editor, span, range);
+            
+            // Place cursor inside the empty span
+            const newRange = document.createRange();
+            newRange.selectNodeContents(span);
+            newRange.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+          }
+        } else {
+          editor.appendChild(span);
+        }
+        saveSelection();
+      }
+
+      sizeSelect.addEventListener('mousedown', () => {
+        saveSelection();
+      });
+
+      sizeSelect.addEventListener('change', () => {
+        const val = sizeSelect.value;
+        if (val === 'custom') {
+          showInputPanel(`
+            <span style="font-size: 0.72rem; color: #94a3b8;">글씨 크기 (px):</span>
+            <input type="number" class="panel-input" value="18" min="8" max="120" style="width: 60px; padding: 2px 6px; font-size: 0.72rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 2px;">
             <span style="font-size: 0.72rem; color: #94a3b8;">px</span>
             <button type="button" class="panel-apply-btn" style="padding: 2px 8px; font-size: 0.7rem; background: var(--color-cyan); color: #000; border: none; border-radius: 2px; cursor: pointer; font-weight: bold; margin-left: 6px;">적용</button>
             <button type="button" class="panel-cancel-btn" style="padding: 2px 8px; font-size: 0.7rem; background: #475569; color: #fff; border: none; border-radius: 2px; cursor: pointer;">취소</button>
-          </div>
-          ${modeHintHtml}
-        `, () => {
-          const val = parseInt(inputPanel.querySelector('.panel-input').value.trim(), 10);
-          if (val && !isNaN(val)) {
-            const span = document.createElement('span');
-            span.style.fontSize = `${val}px`;
-            
-            if (savedRange && !savedRange.collapsed) {
-              const fragment = savedRange.cloneContents();
-              span.appendChild(fragment);
-              insertNodeAtSelection(editor, span, savedRange);
-            } else {
-              span.innerHTML = '&#8203;'; // zero-width space
-              insertNodeAtSelection(editor, span, savedRange);
+          `, () => {
+            const customVal = parseInt(inputPanel.querySelector('.panel-input').value.trim(), 10);
+            if (customVal && !isNaN(customVal)) {
+              applyFontSize(customVal);
               
-              // Place cursor inside the empty span
-              const sel = window.getSelection();
-              const range = document.createRange();
-              range.selectNodeContents(span);
-              range.collapse(false);
-              sel.removeAllRanges();
-              sel.addRange(range);
+              // Dynamically insert custom value into dropdown options
+              let opt = sizeSelect.querySelector(`option[value="${customVal}"]`);
+              if (!opt) {
+                opt = document.createElement('option');
+                opt.value = customVal;
+                opt.textContent = `${customVal}px`;
+                sizeSelect.insertBefore(opt, customOpt);
+              }
+              sizeSelect.value = customVal;
             }
-          }
-        });
+          });
+        } else {
+          applyFontSize(parseInt(val, 10));
+        }
       });
 
       const linkBtn = createBtn('🔗 링크', '하이퍼링크 (Link)', (e) => {
@@ -2556,13 +2604,99 @@ async function initializeAdminPanel() {
 
       btnRow.appendChild(boldBtn);
       btnRow.appendChild(italicBtn);
-      btnRow.appendChild(sizeBtn);
+      btnRow.appendChild(sizeSelect);
       btnRow.appendChild(linkBtn);
       btnRow.appendChild(imgUrlBtn);
       btnRow.appendChild(imgUploadBtn);
       btnRow.appendChild(fileInput);
 
       editor.parentNode.insertBefore(toolbar, editor);
+
+      // Event listener to dynamically update the select menu font size on selection change/cursor movement
+      function updateSelectFromCursor() {
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          let node = range.commonAncestorContainer;
+          if (node.nodeType === 3) node = node.parentNode;
+          
+          let currentSize = 16; // default fallback
+          let found = false;
+          let tempNode = node;
+          while (tempNode && tempNode !== editor) {
+            if (tempNode.nodeType === 1 && tempNode.style.fontSize) {
+              const sz = parseInt(tempNode.style.fontSize, 10);
+              if (sz) {
+                currentSize = sz;
+                found = true;
+                break;
+              }
+            }
+            tempNode = tempNode.parentNode;
+          }
+          
+          if (!found && node && node.nodeType === 1) {
+            const computedStyle = window.getComputedStyle(node);
+            const sz = parseInt(computedStyle.fontSize, 10);
+            if (sz) {
+              currentSize = sz;
+            }
+          }
+          
+          let opt = sizeSelect.querySelector(`option[value="${currentSize}"]`);
+          if (!opt) {
+            opt = document.createElement('option');
+            opt.value = currentSize;
+            opt.textContent = `${currentSize}px`;
+            sizeSelect.insertBefore(opt, customOpt);
+          }
+          sizeSelect.value = currentSize;
+        }
+      }
+      
+      editor.addEventListener('keyup', updateSelectFromCursor);
+      editor.addEventListener('mouseup', updateSelectFromCursor);
+      editor.addEventListener('focus', updateSelectFromCursor);
+      editor.addEventListener('input', updateSelectFromCursor);
+
+      // Handle image selecting outline and backspace/delete deletion support
+      let selectedImg = null;
+      editor.addEventListener('click', (e) => {
+        if (e.target && e.target.tagName === 'IMG') {
+          // Deselect others
+          editor.querySelectorAll('img').forEach(i => {
+            i.style.outline = '';
+            i.removeAttribute('data-selected');
+          });
+          selectedImg = e.target;
+          selectedImg.style.outline = '2px solid var(--color-cyan)';
+          selectedImg.setAttribute('data-selected', 'true');
+          e.stopPropagation();
+        } else {
+          if (selectedImg) {
+            selectedImg.style.outline = '';
+            selectedImg.removeAttribute('data-selected');
+            selectedImg = null;
+          }
+        }
+      });
+
+      editor.addEventListener('keydown', (e) => {
+        if (selectedImg && (e.key === 'Backspace' || e.key === 'Delete')) {
+          e.preventDefault();
+          selectedImg.remove();
+          selectedImg = null;
+          editor.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!editor.contains(e.target) && selectedImg) {
+          selectedImg.style.outline = '';
+          selectedImg.removeAttribute('data-selected');
+          selectedImg = null;
+        }
+      });
 
       // Capture error events on images in the content editor to style broken images
       editor.addEventListener('error', (e) => {
