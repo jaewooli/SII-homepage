@@ -23,31 +23,165 @@ router.get('/homepage/main', (req, res) => {
   res.redirect('/');
 });
 
-// Block unauthorized access to admin fragment
-router.get('/frags/admin.html', (req, res, next) => {
-  if (!req.session.user || !req.session.user.isAdmin) {
-    return res.status(403).send('Forbidden');
-  }
-  next();
+const fs = require('fs');
+
+// Helper to resolve current user's role
+function getUserRole(req) {
+  if (!req.session.user) return 'guest';
+  return req.session.user.isAdmin ? 'admin' : 'member';
+}
+
+// Helper to filter menu items based on current role
+function filterMenuItems(menuItems, role) {
+  if (!Array.isArray(menuItems)) return [];
+  return menuItems
+    .filter(item => {
+      const allowed = item.allowedRoles || ['guest', 'member', 'admin'];
+      return allowed.includes(role);
+    })
+    .map(item => {
+      const newItem = { ...item };
+      if (newItem.submenus && Array.isArray(newItem.submenus)) {
+        newItem.submenus = newItem.submenus.filter(sub => {
+          const allowed = sub.allowedRoles || ['guest', 'member', 'admin'];
+          return allowed.includes(role);
+        });
+      }
+      return newItem;
+    });
+}
+
+// Public Route: Fetch filtered navigation menu based on user session role
+router.get('/navigation', (req, res) => {
+  const role = getUserRole(req);
+  
+  db.get(`SELECT content_md FROM site_contents WHERE section_id = 'navigation'`, [], (err, row) => {
+    if (err || !row) {
+      const fallbackPath = path.join(__dirname, '../../src/html/fragments/navigation.json');
+      fs.readFile(fallbackPath, 'utf8', (fsErr, data) => {
+        if (fsErr) {
+          return sendJson(res, { status: 500, ok: false, message: 'Failed to load navigation', code: 'SERVER_ERROR' });
+        }
+        try {
+          const menuItems = JSON.parse(data);
+          const filtered = filterMenuItems(menuItems, role);
+          return sendJson(res, { status: 200, ok: true, data: filtered, code: 'SUCCESS' });
+        } catch (e) {
+          return sendJson(res, { status: 500, ok: false, message: 'JSON parse error', code: 'JSON_ERROR' });
+        }
+      });
+      return;
+    }
+    
+    try {
+      const menuItems = JSON.parse(row.content_md);
+      const filtered = filterMenuItems(menuItems, role);
+      return sendJson(res, { status: 200, ok: true, data: filtered, code: 'SUCCESS' });
+    } catch (e) {
+      return sendJson(res, { status: 500, ok: false, message: 'JSON parse error', code: 'JSON_ERROR' });
+    }
+  });
 });
 
-// Serve fragments dynamically from database
-router.get('/frags/:id.html', (req, res, next) => {
-  const fragmentID = req.params.id;
-  const validSections = ['home', 'curriculum', 'seminar', 'ctf', 'navigation'];
+// Dynamic Fragment Guard & Server Loader Middleware
+router.get('/frags/:id*', (req, res, next) => {
+  const originalUrl = req.params.id + (req.params[0] || ''); // e.g. 'admin.html', 'curriculum/week1.html'
+  if (!originalUrl) return next();
   
-  if (validSections.includes(fragmentID)) {
-    db.get(`SELECT content_html FROM site_contents WHERE section_id = ?`, [fragmentID], (err, row) => {
-      if (err || !row) {
-        // Fallback to static file if DB has error or is missing
-        return next();
-      }
-      res.set('Content-Type', 'text/html');
-      return res.send(row.content_html);
-    });
-  } else {
-    next();
+  let fragmentID = originalUrl;
+  if (fragmentID.endsWith('.html')) {
+    fragmentID = fragmentID.substring(0, fragmentID.length - 5);
   }
+  
+  // Admin fragment is always protected
+  if (fragmentID === 'admin' || fragmentID.startsWith('admin/')) {
+    if (!req.session.user || !req.session.user.isAdmin) {
+      return res.status(403).send('Forbidden');
+    }
+    // Serve from DB if it exists, otherwise fall through
+    db.get(`SELECT content_html FROM site_contents WHERE section_id = 'admin'`, [], (err, row) => {
+      if (!err && row && row.content_html) {
+        res.set('Content-Type', 'text/html');
+        return res.send(row.content_html);
+      }
+      return next();
+    });
+    return;
+  }
+  
+  const role = getUserRole(req);
+  
+  db.get(`SELECT content_md FROM site_contents WHERE section_id = 'navigation'`, [], (err, row) => {
+    let menuItems = [];
+    if (!err && row && row.content_md) {
+      try {
+        menuItems = JSON.parse(row.content_md);
+      } catch (e) {}
+    }
+    
+    if (menuItems.length === 0) {
+      try {
+        const fallbackPath = path.join(__dirname, '../../src/html/fragments/navigation.json');
+        const fallbackData = fs.readFileSync(fallbackPath, 'utf8');
+        menuItems = JSON.parse(fallbackData);
+      } catch (e) {}
+    }
+    
+    let matchedItem = null;
+    let requiredRoles = ['guest', 'member', 'admin'];
+    const targetUrl = fragmentID.toLowerCase();
+    
+    for (const item of menuItems) {
+      const itemUrl = (item.url || '').replace(/^#/, '').replace(/^\//, '').toLowerCase();
+      if (itemUrl === targetUrl) {
+        matchedItem = item;
+        break;
+      }
+      
+      if (item.submenus && Array.isArray(item.submenus)) {
+        for (const sub of item.submenus) {
+          const subUrl = (sub.url || '').replace(/^#/, '').replace(/^\//, '').toLowerCase();
+          if (subUrl === targetUrl) {
+            matchedItem = sub;
+            break;
+          }
+        }
+      }
+      if (matchedItem) break;
+    }
+    
+    if (!matchedItem && targetUrl.includes('/')) {
+      const parentSegment = targetUrl.split('/')[0];
+      for (const item of menuItems) {
+        const itemUrl = (item.url || '').replace(/^#/, '').replace(/^\//, '').toLowerCase();
+        if (itemUrl === parentSegment) {
+          matchedItem = item;
+          break;
+        }
+      }
+    }
+    
+    if (matchedItem && matchedItem.allowedRoles) {
+      requiredRoles = matchedItem.allowedRoles;
+    }
+    
+    if (!requiredRoles.includes(role)) {
+      return res.status(403).send('Forbidden');
+    }
+    
+    const validSections = ['home', 'curriculum', 'seminar', 'ctf', 'navigation'];
+    if (validSections.includes(fragmentID)) {
+      db.get(`SELECT content_html FROM site_contents WHERE section_id = ?`, [fragmentID], (dbErr, contentRow) => {
+        if (dbErr || !contentRow) {
+          return next();
+        }
+        res.set('Content-Type', 'text/html');
+        return res.send(contentRow.content_html);
+      });
+    } else {
+      next();
+    }
+  });
 });
 
 // /homepage/:url redirects to /:url (e.g. /homepage/login -> /login)

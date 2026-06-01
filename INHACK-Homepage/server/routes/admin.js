@@ -351,6 +351,10 @@ router.post('/update-content', (req, res) => {
             return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 URL이 누락되었거나 기본값('#')입니다.`, code: 'VALIDATION_ERROR' });
           }
 
+          if (item.allowedRoles && !Array.isArray(item.allowedRoles)) {
+            return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 권한 설정 형식이 올바르지 않습니다.`, code: 'VALIDATION_ERROR' });
+          }
+
           const isExternal = item.external || /^https?:\/\//i.test(url);
           const isLocked = item.deleteLocked === true;
           if (!isExternal) {
@@ -373,6 +377,10 @@ router.post('/update-content', (req, res) => {
               }
               if (!subUrl || subUrl === '#' || subUrl.endsWith('/')) {
                 return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 서브메뉴 #${j + 1} URL이 올바르지 않습니다.`, code: 'VALIDATION_ERROR' });
+              }
+
+              if (sub.allowedRoles && !Array.isArray(sub.allowedRoles)) {
+                return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 서브메뉴 #${j + 1} 권한 설정 형식이 올바르지 않습니다.`, code: 'VALIDATION_ERROR' });
               }
 
               const subIsExternal = sub.external || /^https?:\/\//i.test(subUrl);

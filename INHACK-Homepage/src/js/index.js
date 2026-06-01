@@ -19,7 +19,76 @@ if (window.marked && window.marked.use) {
 
 const contentArea = document.getElementById('view');
 
+// Helper to check if a specific fragment url exists in menu data
+function checkIfMenuExists(menuItems, fragmentID) {
+  if (!Array.isArray(menuItems)) return false;
+  const target = fragmentID.toLowerCase();
+  for (const item of menuItems) {
+    const itemUrl = (item.url || '').replace(/^#/, '').replace(/^\//, '').toLowerCase();
+    if (itemUrl === target) return true;
+    if (item.submenus) {
+      for (const sub of item.submenus) {
+        const subUrl = (sub.url || '').replace(/^#/, '').replace(/^\//, '').toLowerCase();
+        if (subUrl === target) return true;
+      }
+    }
+  }
+  return false;
+}
+
 async function loadContent(fragmentID){
+  // 1. Resolve user role
+  const user = await fetchMe();
+  const role = !user ? 'guest' : (user.isAdmin ? 'admin' : 'member');
+  const topFragment = fragmentID ? fragmentID.split('/')[0] : '';
+
+  // 2. Explicit admin panel block check
+  if (topFragment === 'admin') {
+    if (role !== 'admin') {
+      showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
+      window.location.hash = '#home';
+      return;
+    }
+  }
+
+  // 3. Dynamic route roles validation guard
+  if (fragmentID) {
+    let allowed = true;
+    try {
+      const res = await fetch('/navigation');
+      if (res.ok) {
+        const payload = await res.json();
+        if (payload.ok && payload.data) {
+          const allowedMenus = payload.data;
+          
+          // Check if this path exists in the filtered (allowed) menus
+          const isAllowedInNav = checkIfMenuExists(allowedMenus, fragmentID);
+          
+          if (!isAllowedInNav) {
+            // If it's not in the filtered menus, check if it actually exists in the global menu
+            const fallback = await fetch('/frags/navigation.json');
+            if (fallback.ok) {
+              const allMenus = await fallback.json();
+              const isActuallyAMenuItem = checkIfMenuExists(allMenus, fragmentID);
+              if (isActuallyAMenuItem) {
+                // It is a registered menu, but filtered out (meaning current role does not have access)
+                allowed = false;
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[Guard] Route authorization check bypassed due to network error:', err);
+    }
+
+    if (!allowed) {
+      showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
+      window.location.hash = '#home';
+      return;
+    }
+  }
+
   // fragmentID can be a nested path like 'curriculum/week1'
   let url = '';
   if (fragmentID){
@@ -34,8 +103,7 @@ async function loadContent(fragmentID){
     }
     const htmlContent = await response.text();
     contentArea.innerHTML = htmlContent;
-    // Extract top-level fragment (e.g. 'curriculum' from 'curriculum/week1')
-    const topFragment = fragmentID ? fragmentID.split('/')[0] : '';
+    
     if (topFragment === 'admin') {
       initializeAdminPanel();
     }
@@ -145,21 +213,35 @@ window.addEventListener('DOMContentLoaded', () => {
 
 async function loadSidebarNavigation() {
   try {
-    const res = await fetch(`/admin/content/navigation`);
-    let menuItems = null;
+    const res = await fetch(`/navigation`);
     if (res.ok) {
       const payload = await res.json();
-      if (payload.ok && payload.data && payload.data.content) {
-        menuItems = JSON.parse(payload.data.content);
+      if (payload.ok && payload.data) {
+        renderSidebarNav(payload.data);
+        return;
       }
     }
-    // Fallback: fetch raw JSON from static file
-    if (!menuItems) {
-      const fallback = await fetch('/frags/navigation.json');
-      if (fallback.ok) menuItems = await fallback.json();
+    // Fallback: fetch raw JSON from static file and filter manually if API fails
+    const fallback = await fetch('/frags/navigation.json');
+    if (fallback.ok) {
+      const menuItems = await fallback.json();
+      const user = await fetchMe();
+      const role = !user ? 'guest' : (user.isAdmin ? 'admin' : 'member');
+      const filtered = menuItems.filter(item => {
+        const allowed = item.allowedRoles || ['guest', 'member', 'admin'];
+        return allowed.includes(role);
+      }).map(item => {
+        const newItem = { ...item };
+        if (newItem.submenus && Array.isArray(newItem.submenus)) {
+          newItem.submenus = newItem.submenus.filter(sub => {
+            const allowed = sub.allowedRoles || ['guest', 'member', 'admin'];
+            return allowed.includes(role);
+          });
+        }
+        return newItem;
+      });
+      renderSidebarNav(filtered);
     }
-    if (!menuItems || !Array.isArray(menuItems)) return;
-    renderSidebarNav(menuItems);
   } catch (err) {
     console.warn('[Nav] Failed to load dynamic navigation:', err.message);
   }
@@ -1580,6 +1662,23 @@ async function initializeAdminPanel() {
                 <span>외부 링크 (새 탭으로 열기)</span>
               </label>
             </div>
+            <div class="block-form-group" style="margin-top: 6px;">
+              <label style="color: #64748b; font-size: 0.72rem; font-weight: 600;">접근 권한 (Access Roles)</label>
+              <div style="display: flex; gap: 10px; margin-top: 3px; font-size: 0.72rem;">
+                <label style="display:flex; align-items:center; gap: 3px; cursor:pointer; color: #cbd5e1;">
+                  <input type="checkbox" class="sub-role-check" data-role="guest" ${(!sub.allowedRoles || sub.allowedRoles.includes('guest')) ? 'checked' : ''}>
+                  <span>일반인</span>
+                </label>
+                <label style="display:flex; align-items:center; gap: 3px; cursor:pointer; color: #cbd5e1;">
+                  <input type="checkbox" class="sub-role-check" data-role="member" ${(!sub.allowedRoles || sub.allowedRoles.includes('member')) ? 'checked' : ''}>
+                  <span>회원</span>
+                </label>
+                <label style="display:flex; align-items:center; gap: 3px; cursor:pointer; color: #cbd5e1;">
+                  <input type="checkbox" class="sub-role-check" data-role="admin" ${(!sub.allowedRoles || sub.allowedRoles.includes('admin')) ? 'checked' : ''}>
+                  <span>관리자</span>
+                </label>
+              </div>
+            </div>
           </div>
         `).join('');
 
@@ -1603,6 +1702,23 @@ async function initializeAdminPanel() {
               <input type="checkbox" class="block-delete-lock-check" ${block.deleteLocked ? 'checked' : ''}>
               <span>⚠️ 메뉴 삭제 방지 보호 </span>
             </label>
+          </div>
+          <div class="block-form-group" style="margin-top: 10px;">
+            <label style="color: #64748b; font-size: 0.75rem; font-weight: 600;">접근 권한 (Access Control)</label>
+            <div style="display: flex; gap: 15px; margin-top: 5px; font-size: 0.8rem;">
+              <label style="display:flex; align-items:center; gap: 4px; cursor:pointer; color: #e2e8f0;">
+                <input type="checkbox" class="role-check" data-role="guest" ${(!block.allowedRoles || block.allowedRoles.includes('guest')) ? 'checked' : ''}>
+                <span>일반인 (Guest)</span>
+              </label>
+              <label style="display:flex; align-items:center; gap: 4px; cursor:pointer; color: #e2e8f0;">
+                <input type="checkbox" class="role-check" data-role="member" ${(!block.allowedRoles || block.allowedRoles.includes('member')) ? 'checked' : ''}>
+                <span>회원 (Member)</span>
+              </label>
+              <label style="display:flex; align-items:center; gap: 4px; cursor:pointer; color: #e2e8f0;">
+                <input type="checkbox" class="role-check" data-role="admin" ${(!block.allowedRoles || block.allowedRoles.includes('admin')) ? 'checked' : ''}>
+                <span>관리자 (Admin)</span>
+              </label>
+            </div>
           </div>
           <h4 style="color: var(--color-cyan); margin: 16px 0 8px 0; font-size: 0.82rem; border-bottom: 1px solid rgba(59,130,246,0.2); padding-bottom: 6px;">📂 세부 메뉴 (Submenus)</h4>
           <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -1800,6 +1916,34 @@ async function initializeAdminPanel() {
       }
 
       // -- menu_item listeners --
+      // Main menu role checkbox listeners
+      formContainer.querySelectorAll('.role-check').forEach(check => {
+        check.addEventListener('change', () => {
+          const checkedRoles = [];
+          formContainer.querySelectorAll('.role-check:checked').forEach(c => {
+            checkedRoles.push(c.getAttribute('data-role'));
+          });
+          block.allowedRoles = checkedRoles;
+          renderPreview();
+        });
+      });
+
+      // Submenu role checkbox listeners
+      formContainer.querySelectorAll('.sub-role-check').forEach(check => {
+        check.addEventListener('change', (e) => {
+          const card = e.target.closest('.submenu-item');
+          const idx = parseInt(card.getAttribute('data-item-index'));
+          if (block.submenus && block.submenus[idx] !== undefined) {
+            const checkedSubRoles = [];
+            card.querySelectorAll('.sub-role-check:checked').forEach(c => {
+              checkedSubRoles.push(c.getAttribute('data-role'));
+            });
+            block.submenus[idx].allowedRoles = checkedSubRoles;
+            renderPreview();
+          }
+        });
+      });
+
       const externalCheck = formContainer.querySelector('.block-external-check');
       if (externalCheck) {
         externalCheck.addEventListener('change', () => {
