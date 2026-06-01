@@ -336,6 +336,25 @@ router.post('/update-content', (req, res) => {
     return sendJson(res, { status: 400, ok: false, message: '올바르지 않은 JSON 형식입니다. 문법을 다시 확인해 주세요.', code: 'INVALID_JSON' });
   }
 
+  // Server-side validation: Navigation menu items must have title and URL
+  if (sectionId === 'navigation') {
+    if (Array.isArray(jsonData)) {
+      for (let i = 0; i < jsonData.length; i++) {
+        const item = jsonData[i];
+        if (item.type === 'menu_item') {
+          const title = (item.title || '').trim();
+          const url = (item.url || '').trim();
+          if (!title) {
+            return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 제목(이름)이 누락되었습니다.`, code: 'VALIDATION_ERROR' });
+          }
+          if (!url) {
+            return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 URL이 누락되었습니다.`, code: 'VALIDATION_ERROR' });
+          }
+        }
+      }
+    }
+  }
+
   try {
     const jsonPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.json`);
     const backupPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.json.bak`);

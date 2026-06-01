@@ -1970,6 +1970,25 @@ async function initializeAdminPanel() {
       saveBtn.addEventListener('click', () => {
         const sectionId = selectSection.value;
         
+        // Validation: Menu items must have a title and URL when editing navigation
+        if (sectionId === 'navigation') {
+          for (let i = 0; i < currentBlocks.length; i++) {
+            const block = currentBlocks[i];
+            if (block.type === 'menu_item') {
+              const title = (block.title || '').trim();
+              const url = (block.url || '').trim();
+              if (!title) {
+                showToast(`메뉴 #${i + 1}의 제목(이름)을 입력해 주세요.`, 'error');
+                return;
+              }
+              if (!url) {
+                showToast(`메뉴 #${i + 1}의 URL을 입력해 주세요. (페이지가 없으면 # 입력)`, 'error');
+                return;
+              }
+            }
+          }
+        }
+        
         // Deep copy currentBlocks and clean any img-broken classes or titles in HTML fields
         const cleanedBlocks = JSON.parse(JSON.stringify(currentBlocks));
         const cleanHtml = (html) => {
