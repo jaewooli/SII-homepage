@@ -406,7 +406,7 @@ router.post('/upload-image', (req, res) => {
   }
 
   // Remove the base64 prefix if present (e.g. data:image/png;base64,)
-  const base64Data = fileData.replace(/^data:image\/\w+;base64,/, "");
+  const base64Data = fileData.replace(/^data:image\/[^;]+;base64,/, "");
   const buffer = Buffer.from(base64Data, 'base64');
 
   const uploadDir = path.join(__dirname, '../../images');

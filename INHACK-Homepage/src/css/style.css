@@ -322,8 +322,16 @@ aside ul li.has-submenu.open > ul.submenu {
     max-height: 400px;
 }
 
+aside ul li.has-submenu > a {
+    padding-left: 1.1rem;
+}
+
+aside ul li.has-submenu > a:hover, aside ul li.has-submenu > a.active {
+    padding-left: calc(1.1rem - 3px);
+}
+
 aside ul li ul.submenu li a {
-    padding: 0.65rem 1.5rem 0.65rem 2.25rem;
+    padding: 0.65rem 1.5rem 0.65rem 3.25rem;
     font-size: 0.78rem;
     letter-spacing: 0.5px;
     color: #64748b;
@@ -335,7 +343,7 @@ aside ul li ul.submenu li a:hover {
     color: #e2e8f0;
     background-color: rgba(255, 255, 255, 0.02);
     border-left: 2px solid rgba(0, 240, 255, 0.4);
-    padding-left: calc(2.25rem - 2px);
+    padding-left: calc(3.25rem - 2px);
 }
 
 aside ul li a {
@@ -1214,6 +1222,20 @@ footer {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
+}
+
+/* Contenteditable Rich Text Editor styling */
+.page-admin .content-editor {
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow-y: auto;
+    min-height: 60px;
+}
+.page-admin .content-editor img {
+    max-width: 100%;
+    border-radius: 4px;
+    margin: 10px 0;
+    display: block;
 }
 
 /* Custom textarea style, scrollbars and grab handle resize style */

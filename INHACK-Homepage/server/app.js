@@ -29,7 +29,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "http://127.0.0.1:8080", "http://localhost:8080", "https://dreamhack.io"],
+      imgSrc: ["'self'", "data:", "http:", "https:"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
       connectSrc: ["'self'", "http://127.0.0.1:8080", "http://localhost:8080", "https://dreamhack.io"]
     }
@@ -37,8 +37,8 @@ app.use(helmet({
 }));
 
 // Request Body Parsers
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.json({ limit: '10mb' }));
 
 // Session Middleware
 const sessionStore = new SQLiteStore({

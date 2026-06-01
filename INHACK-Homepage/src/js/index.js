@@ -1289,7 +1289,7 @@ async function initializeAdminPanel() {
           </div>
           <div class="block-form-group">
             <label>설명 (Description)</label>
-            <textarea class="block-form-input block-field" data-field="desc" style="min-height: 100px;">${block.desc || ''}</textarea>
+            <div class="block-form-input block-field content-editor" data-field="desc" contenteditable="true" style="min-height: 100px;">${block.desc || ''}</div>
           </div>
         `;
       } 
@@ -1301,7 +1301,7 @@ async function initializeAdminPanel() {
           </div>
           <div class="block-form-group">
             <label>설명 (Description)</label>
-            <textarea class="block-form-input block-field" data-field="desc" style="min-height: 100px;">${block.desc || ''}</textarea>
+            <div class="block-form-input block-field content-editor" data-field="desc" contenteditable="true" style="min-height: 100px;">${block.desc || ''}</div>
           </div>
         `;
       } 
@@ -1337,7 +1337,7 @@ async function initializeAdminPanel() {
             </div>
             <div class="block-form-group" style="margin-bottom: 0;">
               <label>설명 (Description)</label>
-              <textarea class="block-form-input item-field" data-field="desc" style="min-height: 60px;">${item.desc || ''}</textarea>
+              <div class="block-form-input item-field content-editor" data-field="desc" contenteditable="true" style="min-height: 60px;">${item.desc || ''}</div>
             </div>
           </div>
         `).join('');
@@ -1369,7 +1369,7 @@ async function initializeAdminPanel() {
             </div>
             <div class="block-form-group">
               <label>설명 (Description)</label>
-              <textarea class="block-form-input item-field" data-field="desc" style="min-height: 60px;">${item.desc || ''}</textarea>
+              <div class="block-form-input item-field content-editor" data-field="desc" contenteditable="true" style="min-height: 60px;">${item.desc || ''}</div>
             </div>
             <div class="block-form-group" style="margin-bottom: 0;">
               <label>상세 주제 목록 (Topics - 한 줄에 하나씩 입력)</label>
@@ -1409,7 +1409,7 @@ async function initializeAdminPanel() {
             </div>
             <div class="block-form-group" style="margin-bottom: 0;">
               <label>설명 (Description)</label>
-              <textarea class="block-form-input item-field" data-field="desc" style="min-height: 60px;">${item.desc || ''}</textarea>
+              <div class="block-form-input item-field content-editor" data-field="desc" contenteditable="true" style="min-height: 60px;">${item.desc || ''}</div>
             </div>
           </div>
         `).join('');
@@ -1562,9 +1562,10 @@ async function initializeAdminPanel() {
 
       // Attach dynamic listeners for block-level basic fields
       formContainer.querySelectorAll('.block-field').forEach(input => {
+        const isEditable = input.getAttribute('contenteditable') === 'true';
         input.addEventListener('input', (e) => {
           const field = e.target.getAttribute('data-field');
-          block[field] = e.target.value;
+          block[field] = isEditable ? e.target.innerHTML : e.target.value;
           renderPreview();
           if (field === 'title' || field === 'height') {
             renderBlockList();
@@ -1574,12 +1575,13 @@ async function initializeAdminPanel() {
 
       // Attach dynamic listeners for card items
       formContainer.querySelectorAll('.item-field').forEach(input => {
+        const isEditable = input.getAttribute('contenteditable') === 'true';
         input.addEventListener('input', (e) => {
           const cardItem = e.target.closest('.block-card-item');
           const itemIndex = parseInt(cardItem.getAttribute('data-item-index'));
           const field = e.target.getAttribute('data-field');
           if (block.items && block.items[itemIndex]) {
-            block.items[itemIndex][field] = e.target.value;
+            block.items[itemIndex][field] = isEditable ? e.target.innerHTML : e.target.value;
             renderPreview();
           }
         });
@@ -2224,35 +2226,111 @@ async function initializeAdminPanel() {
     });
   }
 
-  // Insert formatting tag/text at current textarea cursor position
-  function insertTextAtCursor(textarea, openTag, closeTag, placeholder = '') {
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selected = text.substring(start, end);
-    const replacement = openTag + (selected || placeholder) + closeTag;
+  // Helper to insert a DOM node at the current cursor selection inside contenteditable editor
+  function insertNodeAtSelection(editor, node, savedRange) {
+    if (savedRange) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+    }
     
-    textarea.value = text.substring(0, start) + replacement + text.substring(end);
+    const sel = window.getSelection();
+    if (sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      
+      let containerNode = range.commonAncestorContainer;
+      if (containerNode.nodeType === 3) containerNode = containerNode.parentNode;
+      
+      if (editor.contains(containerNode)) {
+        range.deleteContents();
+        range.insertNode(node);
+        
+        range.setStartAfter(node);
+        range.setEndAfter(node);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        editor.appendChild(node);
+      }
+    } else {
+      editor.appendChild(node);
+    }
     
-    textarea.selectionStart = start + openTag.length;
-    textarea.selectionEnd = start + openTag.length + (selected || placeholder).length;
-    textarea.focus();
-    
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  // Formatting toolbar creation and mounting helper
+  // Formatting toolbar creation and mounting helper for contenteditable editors
   function attachFormattingToolbars(container) {
     if (!container) return;
-    const textareas = container.querySelectorAll('textarea');
-    textareas.forEach(textarea => {
-      if (textarea.previousElementSibling && textarea.previousElementSibling.classList.contains('textarea-toolbar')) {
+    const editors = container.querySelectorAll('.content-editor');
+    
+    editors.forEach(editor => {
+      if (editor.previousElementSibling && editor.previousElementSibling.classList.contains('textarea-toolbar')) {
         return;
       }
 
       const toolbar = document.createElement('div');
       toolbar.className = 'textarea-toolbar';
-      toolbar.style.cssText = "display: flex; gap: 6px; margin-bottom: 6px; padding: 6px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 4px; align-items: center; flex-wrap: wrap;";
+      toolbar.style.cssText = "display: flex; gap: 6px; margin-bottom: 6px; padding: 6px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 4px; align-items: center; flex-wrap: wrap; position: relative; width: 100%; box-sizing: border-box;";
+
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = "display: flex; gap: 6px; align-items: center; flex-wrap: wrap;";
+      toolbar.appendChild(btnRow);
+
+      const inputPanel = document.createElement('div');
+      inputPanel.className = 'toolbar-input-panel';
+      inputPanel.style.cssText = "display: none; width: 100%; margin-top: 6px; padding: 6px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 3px; gap: 8px; align-items: center; flex-wrap: wrap; box-sizing: border-box;";
+      toolbar.appendChild(inputPanel);
+
+      let savedRange = null;
+      function saveSelection() {
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          let containerNode = range.commonAncestorContainer;
+          if (containerNode.nodeType === 3) containerNode = containerNode.parentNode;
+          
+          if (editor.contains(containerNode)) {
+            savedRange = range.cloneRange();
+            return;
+          }
+        }
+        savedRange = null;
+      }
+
+      function showInputPanel(htmlContent, onApply) {
+        inputPanel.innerHTML = htmlContent;
+        inputPanel.style.display = 'flex';
+        
+        const cancelBtn = inputPanel.querySelector('.panel-cancel-btn');
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', () => {
+            inputPanel.style.display = 'none';
+            inputPanel.innerHTML = '';
+            editor.focus();
+          });
+        }
+        
+        const applyBtn = inputPanel.querySelector('.panel-apply-btn');
+        if (applyBtn) {
+          applyBtn.addEventListener('click', () => {
+            onApply();
+            inputPanel.style.display = 'none';
+            inputPanel.innerHTML = '';
+          });
+        }
+
+        const firstInput = inputPanel.querySelector('input');
+        if (firstInput) {
+          firstInput.focus();
+          firstInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              if (applyBtn) applyBtn.click();
+            }
+          });
+        }
+      }
 
       function createBtn(text, title, onClick) {
         const btn = document.createElement('button');
@@ -2268,39 +2346,98 @@ async function initializeAdminPanel() {
           btn.style.background = 'rgba(255, 255, 255, 0.05)';
           btn.style.borderColor = 'rgba(255, 255, 255, 0.15)';
         });
+        btn.addEventListener('mousedown', (e) => {
+          saveSelection();
+        });
         btn.addEventListener('click', onClick);
         return btn;
       }
 
-      const boldBtn = createBtn('B', '굵게 (Bold)', () => {
-        insertTextAtCursor(textarea, '<b>', '</b>', '굵은 텍스트');
+      const boldBtn = createBtn('B', '굵게 (Bold)', (e) => {
+        e.preventDefault();
+        editor.focus();
+        if (savedRange) {
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(savedRange);
+        }
+        document.execCommand('bold', false, null);
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
       });
       boldBtn.style.fontWeight = 'bold';
 
-      const italicBtn = createBtn('I', '기울임 (Italic)', () => {
-        insertTextAtCursor(textarea, '<i>', '</i>', '기울인 텍스트');
+      const italicBtn = createBtn('I', '기울임 (Italic)', (e) => {
+        e.preventDefault();
+        editor.focus();
+        if (savedRange) {
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(savedRange);
+        }
+        document.execCommand('italic', false, null);
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
       });
       italicBtn.style.fontStyle = 'italic';
 
-      const sizeBtn = createBtn('📏 크기', '글씨 크기 (Font Size)', () => {
-        const size = prompt('글씨 크기를 입력하세요 (예: 18px, 1.2rem, 120%):', '18px');
-        if (size) {
-          insertTextAtCursor(textarea, `<span style="font-size: ${size};">`, '</span>', '크기 변경된 텍스트');
-        }
+      const sizeBtn = createBtn('📏 크기', '글씨 크기 (Font Size)', (e) => {
+        e.preventDefault();
+        const selectedText = savedRange ? savedRange.toString() : '';
+        showInputPanel(`
+          <span style="font-size: 0.72rem; color: #94a3b8;">글씨 크기:</span>
+          <input type="text" class="panel-input" value="18px" style="width: 80px; padding: 2px 6px; font-size: 0.72rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 2px;">
+          <button type="button" class="panel-apply-btn" style="padding: 2px 8px; font-size: 0.7rem; background: var(--color-cyan); color: #000; border: none; border-radius: 2px; cursor: pointer; font-weight: bold;">적용</button>
+          <button type="button" class="panel-cancel-btn" style="padding: 2px 8px; font-size: 0.7rem; background: #475569; color: #fff; border: none; border-radius: 2px; cursor: pointer;">취소</button>
+        `, () => {
+          const val = inputPanel.querySelector('.panel-input').value.trim();
+          if (val) {
+            const span = document.createElement('span');
+            span.style.fontSize = val;
+            span.textContent = selectedText || '크기 변경된 텍스트';
+            insertNodeAtSelection(editor, span, savedRange);
+          }
+        });
       });
 
-      const linkBtn = createBtn('🔗 링크', '하이퍼링크 (Link)', () => {
-        const url = prompt('링크 URL을 입력하세요:', 'https://');
-        if (url) {
-          insertTextAtCursor(textarea, `<a href="${url}" target="_blank" style="color: var(--color-cyan, #00f0ff); text-decoration: underline;">`, '</a>', '링크 텍스트');
-        }
+      const linkBtn = createBtn('🔗 링크', '하이퍼링크 (Link)', (e) => {
+        e.preventDefault();
+        const selectedText = savedRange ? savedRange.toString() : '';
+        showInputPanel(`
+          <span style="font-size: 0.72rem; color: #94a3b8;">URL:</span>
+          <input type="text" class="panel-url-input" value="https://" style="width: 150px; padding: 2px 6px; font-size: 0.72rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 2px;">
+          <span style="font-size: 0.72rem; color: #94a3b8;">텍스트:</span>
+          <input type="text" class="panel-text-input" value="${selectedText}" placeholder="링크 텍스트" style="width: 100px; padding: 2px 6px; font-size: 0.72rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 2px;">
+          <button type="button" class="panel-apply-btn" style="padding: 2px 8px; font-size: 0.7rem; background: var(--color-cyan); color: #000; border: none; border-radius: 2px; cursor: pointer; font-weight: bold;">적용</button>
+          <button type="button" class="panel-cancel-btn" style="padding: 2px 8px; font-size: 0.7rem; background: #475569; color: #fff; border: none; border-radius: 2px; cursor: pointer;">취소</button>
+        `, () => {
+          const url = inputPanel.querySelector('.panel-url-input').value.trim();
+          const textVal = inputPanel.querySelector('.panel-text-input').value.trim();
+          if (url) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.style.cssText = "color: var(--color-cyan, #00f0ff); text-decoration: underline;";
+            a.textContent = textVal || url;
+            insertNodeAtSelection(editor, a, savedRange);
+          }
+        });
       });
 
-      const imgUrlBtn = createBtn('🖼️ 이미지 URL', '이미지 링크 삽입 (Image URL)', () => {
-        const url = prompt('이미지 URL을 입력하세요:', 'https://');
-        if (url) {
-          insertTextAtCursor(textarea, `<img src="${url}" style="max-width: 100%; border-radius: 4px; display: block; margin: 10px 0;">`, '');
-        }
+      const imgUrlBtn = createBtn('🖼️ 이미지 URL', '이미지 링크 삽입 (Image URL)', (e) => {
+        e.preventDefault();
+        showInputPanel(`
+          <span style="font-size: 0.72rem; color: #94a3b8;">이미지 URL:</span>
+          <input type="text" class="panel-input" value="https://" style="width: 200px; padding: 2px 6px; font-size: 0.72rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 2px;">
+          <button type="button" class="panel-apply-btn" style="padding: 2px 8px; font-size: 0.7rem; background: var(--color-cyan); color: #000; border: none; border-radius: 2px; cursor: pointer; font-weight: bold;">적용</button>
+          <button type="button" class="panel-cancel-btn" style="padding: 2px 8px; font-size: 0.7rem; background: #475569; color: #fff; border: none; border-radius: 2px; cursor: pointer;">취소</button>
+        `, () => {
+          const val = inputPanel.querySelector('.panel-input').value.trim();
+          if (val) {
+            const img = document.createElement('img');
+            img.src = val;
+            img.style.cssText = "max-width: 100%; border-radius: 4px; display: block; margin: 10px 0;";
+            insertNodeAtSelection(editor, img, savedRange);
+          }
+        });
       });
 
       const fileInput = document.createElement('input');
@@ -2328,7 +2465,10 @@ async function initializeAdminPanel() {
             const data = await res.json();
             if (res.ok && data.ok && data.data && data.data.url) {
               showToast('이미지 업로드 성공!', 'success');
-              insertTextAtCursor(textarea, `<img src="${data.data.url}" style="max-width: 100%; border-radius: 4px; display: block; margin: 10px 0;">`, '');
+              const img = document.createElement('img');
+              img.src = data.data.url;
+              img.style.cssText = "max-width: 100%; border-radius: 4px; display: block; margin: 10px 0;";
+              insertNodeAtSelection(editor, img, savedRange);
             } else {
               showToast(data.message || '이미지 업로드 실패', 'error');
             }
@@ -2340,19 +2480,21 @@ async function initializeAdminPanel() {
         reader.readAsDataURL(file);
       });
 
-      const imgUploadBtn = createBtn('📤 이미지 업로드', '이미지 파일 업로드 (Upload Image)', () => {
+      const imgUploadBtn = createBtn('📤 이미지 업로드', '이미지 파일 업로드 (Upload Image)', (e) => {
+        e.preventDefault();
+        saveSelection();
         fileInput.click();
       });
 
-      toolbar.appendChild(boldBtn);
-      toolbar.appendChild(italicBtn);
-      toolbar.appendChild(sizeBtn);
-      toolbar.appendChild(linkBtn);
-      toolbar.appendChild(imgUrlBtn);
-      toolbar.appendChild(imgUploadBtn);
-      toolbar.appendChild(fileInput);
+      btnRow.appendChild(boldBtn);
+      btnRow.appendChild(italicBtn);
+      btnRow.appendChild(sizeBtn);
+      btnRow.appendChild(linkBtn);
+      btnRow.appendChild(imgUrlBtn);
+      btnRow.appendChild(imgUploadBtn);
+      btnRow.appendChild(fileInput);
 
-      textarea.parentNode.insertBefore(toolbar, textarea);
+      editor.parentNode.insertBefore(toolbar, editor);
     });
   }
 
