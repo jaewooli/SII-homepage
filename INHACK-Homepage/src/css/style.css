@@ -1257,52 +1257,236 @@ footer {
     box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
 }
 
-/* Admin Tab Styling */
-.page-admin .admin-tab-nav {
-    background: rgba(15, 23, 42, 0.4);
-    border: 1px solid rgba(59, 130, 246, 0.15);
-    border-radius: 6px;
-    padding: 6px;
-    display: flex;
-    gap: 10px;
-    margin-bottom: 2rem;
+/* Fullscreen overlay editor wrapper */
+.page-admin .admin-fullscreen-overlay {
+    display: none; /* hidden by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(4, 6, 10, 0.98);
+    backdrop-filter: blur(16px);
+    z-index: 2000;
+    flex-direction: column;
+    box-sizing: border-box;
+    animation: adminFadeIn 0.25s ease-out;
 }
 
-.page-admin .admin-tab-btn {
-    all: unset !important;
+.page-admin .admin-fullscreen-overlay.active {
+    display: flex;
+}
+
+@keyframes adminFadeIn {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Header */
+.page-admin .overlay-header {
+    height: 75px;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    background: rgba(10, 15, 26, 0.85);
     box-sizing: border-box;
-    padding: 10px 20px !important;
-    font-family: 'Space Grotesk', var(--font-body), sans-serif;
-    font-size: 0.82rem;
+}
+
+.page-admin .overlay-title-sec {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.page-admin .overlay-title-sec .title-text {
+    font-family: var(--font-heading), sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-cyan);
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+}
+
+/* Pulsing dot indicator for cybernetic theme */
+.page-admin .pulse-dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--color-cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--color-cyan);
+    animation: adminPulse 1.5s infinite;
+}
+
+@keyframes adminPulse {
+    0% { transform: scale(0.9); opacity: 0.6; }
+    50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 15px var(--color-cyan); }
+    100% { transform: scale(0.9); opacity: 0.6; }
+}
+
+.page-admin .overlay-controls {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.page-admin .control-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-admin .control-group label {
+    font-family: var(--font-mono), monospace;
+    font-size: 0.65rem;
+    color: #475569;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.page-admin .control-group select {
+    width: 180px;
+    padding: 8px 12px;
+    font-size: 0.75rem;
+}
+
+.page-admin .filename-text {
+    font-family: var(--font-mono), monospace;
+    font-size: 0.7rem;
+    color: #64748b;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.page-admin .overlay-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Overriding overlay button sizes to make them sleek */
+.page-admin .overlay-header button.action-btn {
+    width: auto;
+    padding: 8px 16px;
+    font-size: 0.75rem;
+}
+
+.page-admin .overlay-header button.save-btn {
+    border-color: #00f0ff;
+    color: #00f0ff;
+    background: rgba(0, 240, 255, 0.05);
+}
+.page-admin .overlay-header button.save-btn:hover {
+    background: #00f0ff !important;
+    color: #000 !important;
+}
+
+.page-admin .overlay-header button.close-btn {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+.page-admin .overlay-header button.close-btn:hover {
+    background: #ef4444 !important;
+    color: #fff !important;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+}
+
+.page-admin .overlay-header button.upload-btn {
+    border-color: #10b981;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.05);
+    padding: 6px 12px;
+    font-size: 0.72rem;
+}
+
+/* Workspace Grid (Independent column scrolling!) */
+.page-admin .overlay-workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 260px 1.2fr 1fr;
+    box-sizing: border-box;
+    overflow: hidden; /* layout itself doesn't scroll */
+}
+
+@media (max-width: 1024px) {
+    .page-admin .overlay-workspace {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+    }
+    .page-admin .workspace-pane {
+        height: auto !important;
+        max-height: none !important;
+    }
+}
+
+.page-admin .workspace-pane {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 75px);
+    box-sizing: border-box;
+}
+
+.page-admin .block-list-pane {
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.page-admin .form-editor-pane {
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.page-admin .workspace-pane .pane-header {
+    height: 40px;
+    background: rgba(15, 23, 42, 0.8);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    padding: 0 1.25rem;
+    font-family: var(--font-mono), monospace;
+    font-size: 0.7rem;
     font-weight: 700;
     color: #64748b;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
+    letter-spacing: 1px;
+    box-sizing: border-box;
+}
+
+.page-admin .workspace-pane .pane-content {
+    flex: 1;
+    overflow-y: auto; /* Independent Pane Scrolling */
+    padding: 1.5rem;
+    box-sizing: border-box;
+}
+
+.page-admin .block-list-pane .pane-content {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    background: rgba(5, 7, 12, 0.4);
 }
 
-.page-admin .admin-tab-btn:hover {
-    color: #cbd5e1;
-    background: rgba(255, 255, 255, 0.03);
+.page-admin .form-editor-pane .pane-content {
+    background: rgba(8, 11, 18, 0.6);
 }
 
-.page-admin .admin-tab-btn.active {
-    background: rgba(0, 240, 255, 0.08) !important;
-    border: 1px solid #00f0ff !important;
-    color: #00f0ff !important;
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+.page-admin .preview-pane .pane-content {
+    background: rgba(15, 23, 42, 0.3);
 }
 
-/* Tab panes toggling */
-.page-admin .admin-tab-pane {
-    display: none;
+/* Custom styled scrollbars inside overlay editor for sleek UI */
+.page-admin .pane-content::-webkit-scrollbar {
+    width: 6px;
 }
-
-.page-admin .admin-tab-pane.active {
-    display: block;
+.page-admin .pane-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+.page-admin .pane-content::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.2);
+    border-radius: 3px;
+}
+.page-admin .pane-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 240, 255, 0.4);
 }

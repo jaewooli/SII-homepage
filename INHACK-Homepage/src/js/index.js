@@ -603,26 +603,26 @@ async function initializeAdminPanel() {
     let activeBlockIndex = null;
     let draggedIndex = null;
 
-    // Tab switching logic
-    const tabButtons = document.querySelectorAll('.admin-tab-btn');
-    tabButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetTab = btn.getAttribute('data-tab');
-        
-        // Update active class on buttons
-        tabButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        
-        // Update active class on panes
-        document.querySelectorAll('.admin-tab-pane').forEach(pane => {
-          pane.classList.remove('active');
-        });
-        const targetPane = document.getElementById(`admin-pane-${targetTab}`);
-        if (targetPane) {
-          targetPane.classList.add('active');
+    // Overlay launch and close listeners
+    const openEditorBtn = document.getElementById('admin-open-editor-btn');
+    const closeEditorBtn = document.getElementById('admin-close-editor-btn');
+    const editorOverlay = document.getElementById('admin-editor-overlay');
+
+    if (openEditorBtn && editorOverlay) {
+      openEditorBtn.addEventListener('click', () => {
+        editorOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      });
+    }
+
+    if (closeEditorBtn && editorOverlay) {
+      closeEditorBtn.addEventListener('click', () => {
+        if (confirm('수정 중인 내용이 저장되지 않았을 수 있습니다. 정말로 에디터를 닫으시겠습니까?')) {
+          editorOverlay.classList.remove('active');
+          document.body.style.overflow = '';
         }
       });
-    });
+    }
 
     // Load default section on load
     await loadSectionMarkdown(selectSection.value);
