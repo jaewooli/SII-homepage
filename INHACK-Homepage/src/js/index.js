@@ -2568,7 +2568,7 @@ async function initializeAdminPanel() {
             // Register error handler to style immediately
             img.onerror = () => {
               img.classList.add('img-broken');
-              img.title = "이미지를 불러올 수 없습니다 (클릭 선택 후 Delete로 삭제)";
+              img.title = "이미지를 불러올 수 없습니다";
             };
           }
         });
@@ -2606,7 +2606,7 @@ async function initializeAdminPanel() {
               
               img.onerror = () => {
                 img.classList.add('img-broken');
-                img.title = "이미지를 불러올 수 없습니다 (클릭 선택 후 Delete로 삭제)";
+                img.title = "이미지를 불러올 수 없습니다";
               };
             } else {
               showToast(data.message || '이미지 업로드 실패', 'error');
@@ -2725,7 +2725,7 @@ async function initializeAdminPanel() {
       editor.addEventListener('error', (e) => {
         if (e.target && e.target.tagName === 'IMG') {
           e.target.classList.add('img-broken');
-          e.target.title = "이미지를 불러올 수 없습니다 (클릭 선택 후 Delete로 삭제)";
+          e.target.title = "이미지를 불러올 수 없습니다";
         }
       }, true); // Capture phase is required since 'error' does not bubble
 
@@ -2736,12 +2736,12 @@ async function initializeAdminPanel() {
           if (img.complete) {
             if (img.naturalWidth === 0) {
               img.classList.add('img-broken');
-              img.title = "이미지를 불러올 수 없습니다 (클릭 선택 후 Delete로 삭제)";
+              img.title = "이미지를 불러올 수 없습니다";
             }
           } else {
             img.onerror = () => {
               img.classList.add('img-broken');
-              img.title = "이미지를 불러올 수 없습니다 (클릭 선택 후 Delete로 삭제)";
+              img.title = "이미지를 불러올 수 없습니다";
             };
           }
         });

@@ -1251,7 +1251,7 @@ footer {
     display: block !important;
 }
 .page-admin .content-editor img.img-broken::before {
-    content: "⚠️ 이미지를 불러올 수 없습니다\A(클릭 선택 후 Delete로 삭제)";
+    content: "⚠️ 이미지를 불러올 수 없습니다";
     white-space: pre-wrap;
     display: flex;
     align-items: center;
