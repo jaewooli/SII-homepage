@@ -179,6 +179,7 @@ function renderSidebarNav(menuItems) {
     const hasSubmenu = item.submenus && item.submenus.length > 0;
     if (hasSubmenu) li.classList.add('has-submenu');
 
+    const a = document.createElement('a');
     const isHomepage = window.location.pathname === '/' || window.location.pathname === '/homepage' || window.location.pathname === '/homepage/main';
     let resolvedUrl = item.url || '#';
     if (resolvedUrl.startsWith('#') && resolvedUrl !== '#') {
