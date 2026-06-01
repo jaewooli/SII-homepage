@@ -3,7 +3,11 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
-const { marked } = require('marked');
+const { marked, Lexer } = require('marked');
+if (Lexer && Lexer.rules && Lexer.rules.block) {
+    if (Lexer.rules.block.normal) Lexer.rules.block.normal.code = /$^/;
+    if (Lexer.rules.block.gfm) Lexer.rules.block.gfm.code = /$^/;
+}
 const db = require('../config/db');
 const { sendJson } = require('../helpers/response');
 

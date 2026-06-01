@@ -1,75 +1,68 @@
 <section id="ctf" class="ctf-view animate-fade-in">
-    <div class="section-header">
-        <h2>CTF Dashboard</h2>
-        <p class="section-desc">INHACK 자체 Capture The Flag 보안 경쟁 플랫폼의 실시간 스코어보드 및 활성 챌린지 리스트입니다.</p>
-    </div><pre><code>&lt;div class=&quot;ctf-container&quot;&gt;
-    &lt;!-- Scoreboard Panel --&gt;
-    &lt;div class=&quot;scoreboard-section&quot;&gt;
-        &lt;h3 class=&quot;panel-title&quot;&gt;Leaderboard&lt;/h3&gt;
-        &lt;table class=&quot;ctf-table&quot;&gt;
-            &lt;thead&gt;
-                &lt;tr&gt;
-                    &lt;th&gt;RANK&lt;/th&gt;
-                    &lt;th&gt;USER&lt;/th&gt;
-                    &lt;th&gt;SCORE&lt;/th&gt;
-                    &lt;th&gt;STATUS&lt;/th&gt;
-                &lt;/tr&gt;
-            &lt;/thead&gt;
-            &lt;tbody&gt;
-                &lt;tr class=&quot;rank-1&quot;&gt;
-                    &lt;td&gt;1st 🥇&lt;/td&gt;
-                    &lt;td class=&quot;user-cell&quot;&gt;alice_sec&lt;/td&gt;
-                    &lt;td class=&quot;pts-cell&quot;&gt;1200 PTS&lt;/td&gt;
-                    &lt;td class=&quot;status-cell&quot;&gt;5 / 5 SOLVED&lt;/td&gt;
-                &lt;/tr&gt;
-                &lt;tr class=&quot;rank-2&quot;&gt;
-                    &lt;td&gt;2nd 🥈&lt;/td&gt;
-                    &lt;td class=&quot;user-cell&quot;&gt;bob_overflow&lt;/td&gt;
-                    &lt;td class=&quot;pts-cell&quot;&gt;950 PTS&lt;/td&gt;
-                    &lt;td class=&quot;status-cell&quot;&gt;4 / 5 SOLVED&lt;/td&gt;
-                &lt;/tr&gt;
-                &lt;tr class=&quot;rank-3&quot;&gt;
-                    &lt;td&gt;3rd 🥉&lt;/td&gt;
-                    &lt;td class=&quot;user-cell&quot;&gt;cyber_pwn&lt;/td&gt;
-                    &lt;td class=&quot;pts-cell&quot;&gt;700 PTS&lt;/td&gt;
-                    &lt;td class=&quot;status-cell&quot;&gt;3 / 5 SOLVED&lt;/td&gt;
-                &lt;/tr&gt;
-            &lt;/tbody&gt;
-        &lt;/table&gt;
-    &lt;/div&gt;
-
-    &lt;!-- Challenges Panel --&gt;
-    &lt;div class=&quot;challenges-section&quot;&gt;
-        &lt;h3 class=&quot;panel-title&quot;&gt;Active Challenges&lt;/h3&gt;
-        &lt;div class=&quot;challenge-list&quot;&gt;
-            &lt;div class=&quot;challenge-card solved&quot;&gt;
-                &lt;span class=&quot;chal-category web&quot;&gt;WEB&lt;/span&gt;
-                &lt;div class=&quot;chal-details&quot;&gt;
-                    &lt;h4&gt;Super Simple SQL&lt;/h4&gt;
-                    &lt;p class=&quot;chal-pts&quot;&gt;100 PTS&lt;/p&gt;
-                &lt;/div&gt;
-                &lt;span class=&quot;status-badge solved&quot;&gt;COMPLETED&lt;/span&gt;
-            &lt;/div&gt;
-            
-            &lt;div class=&quot;challenge-card&quot;&gt;
-                &lt;span class=&quot;chal-category pwn&quot;&gt;PWN&lt;/span&gt;
-                &lt;div class=&quot;chal-details&quot;&gt;
-                    &lt;h4&gt;Stack Over Flowing&lt;/h4&gt;
-                    &lt;p class=&quot;chal-pts&quot;&gt;300 PTS&lt;/p&gt;
-                &lt;/div&gt;
-                &lt;span class=&quot;status-badge open&quot;&gt;ACTIVE&lt;/span&gt;
-            &lt;/div&gt;
-
-            &lt;div class=&quot;challenge-card&quot;&gt;
-                &lt;span class=&quot;chal-category rev&quot;&gt;REV&lt;/span&gt;
-                &lt;div class=&quot;chal-details&quot;&gt;
-                    &lt;h4&gt;Ghidra&#39;s Secret&lt;/h4&gt;
-                    &lt;p class=&quot;chal-pts&quot;&gt;500 PTS&lt;/p&gt;
-                &lt;/div&gt;
-                &lt;span class=&quot;status-badge open&quot;&gt;ACTIVE&lt;/span&gt;
-            &lt;/div&gt;
-        &lt;/div&gt;
-    &lt;/div&gt;
-&lt;/div&gt;
-</code></pre>
+<div class="section-header">
+<h2>CTF Dashboard</h2>
+<p class="section-desc">INHACK 자체 Capture The Flag 보안 경쟁 플랫폼의 실시간 스코어보드 및 활성 챌린지 리스트입니다.</p>
+</div><div class="ctf-container">
+<!-- Scoreboard Panel -->
+<div class="scoreboard-section">
+<h3 class="panel-title">Leaderboard</h3>
+<table class="ctf-table">
+<thead>
+<tr>
+<th>RANK</th>
+<th>USER</th>
+<th>SCORE</th>
+<th>STATUS</th>
+</tr>
+</thead>
+<tbody>
+<tr class="rank-1">
+<td>1st 🥇</td>
+<td class="user-cell">alice_sec</td>
+<td class="pts-cell">1200 PTS</td>
+<td class="status-cell">5 / 5 SOLVED</td>
+</tr>
+<tr class="rank-2">
+<td>2nd 🥈</td>
+<td class="user-cell">bob_overflow</td>
+<td class="pts-cell">950 PTS</td>
+<td class="status-cell">4 / 5 SOLVED</td>
+</tr>
+<tr class="rank-3">
+<td>3rd 🥉</td>
+<td class="user-cell">cyber_pwn</td>
+<td class="pts-cell">700 PTS</td>
+<td class="status-cell">3 / 5 SOLVED</td>
+</tr>
+</tbody>
+</table>
+</div><!-- Challenges Panel -->
+<div class="challenges-section">
+<h3 class="panel-title">Active Challenges</h3>
+<div class="challenge-list">
+<div class="challenge-card solved">
+<span class="chal-category web">WEB</span>
+<div class="chal-details">
+<h4>Super Simple SQL</h4>
+<p class="chal-pts">100 PTS</p>
+</div>
+<span class="status-badge solved">COMPLETED</span>
+</div><div class="challenge-card">
+<span class="chal-category pwn">PWN</span>
+<div class="chal-details">
+<h4>Stack Over Flowing</h4>
+<p class="chal-pts">300 PTS</p>
+</div>
+<span class="status-badge open">ACTIVE</span>
+</div><div class="challenge-card">
+<span class="chal-category rev">REV</span>
+<div class="chal-details">
+<h4>Ghidra's Secret</h4>
+<p class="chal-pts">500 PTS</p>
+</div>
+<span class="status-badge open">ACTIVE</span>
+</div>
+</div>
+</div>
+</div>
 </section>

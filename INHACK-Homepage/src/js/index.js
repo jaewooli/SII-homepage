@@ -416,6 +416,14 @@ async function initializeAdminPanel() {
     let htmlResult = '';
     
     if (window.marked && window.marked.parse) {
+      try {
+        if (window.marked.Lexer && window.marked.Lexer.rules && window.marked.Lexer.rules.block) {
+          if (window.marked.Lexer.rules.block.normal) window.marked.Lexer.rules.block.normal.code = /$^/;
+          if (window.marked.Lexer.rules.block.gfm) window.marked.Lexer.rules.block.gfm.code = /$^/;
+        }
+      } catch (e) {
+        console.error('Failed to configure marked Lexer rules:', e);
+      }
       htmlResult = window.marked.parse(markdownText);
     } else {
       // Simple regex markdown-to-html fallback if marked CDN fails to load

@@ -2,7 +2,11 @@ const path = require('path');
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
-const { marked } = require('marked');
+const { marked, Lexer } = require('marked');
+if (Lexer && Lexer.rules && Lexer.rules.block) {
+    if (Lexer.rules.block.normal) Lexer.rules.block.normal.code = /$^/;
+    if (Lexer.rules.block.gfm) Lexer.rules.block.gfm.code = /$^/;
+}
 const env = require('./env');
 
 const dbPath = path.join(__dirname, '../../users.db');
@@ -117,7 +121,8 @@ db.serialize(() => {
             if (!fs.existsSync(mdPath)) {
                 if (fs.existsSync(htmlPath)) {
                     const contentHtml = fs.readFileSync(htmlPath, 'utf8');
-                    contentMd = contentHtml; // initial MD source fallback
+                    // Trim indentation from each line to prevent marked from parsing it as indented code blocks
+                    contentMd = contentHtml.split('\n').map(line => line.trim()).join('\n');
                     fs.writeFileSync(mdPath, contentMd, 'utf8');
                 } else {
                     contentMd = `# ${sec.toUpperCase()} Section\n\nDefault content for ${sec}.`;
