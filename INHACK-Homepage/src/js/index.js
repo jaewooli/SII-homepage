@@ -69,9 +69,17 @@ function updateActiveNavLink(fragmentID) {
     if (!mainLink) return;
     const hash = mainLink.getAttribute('href');
 
-    // Check exact match (top-level fragment)
-    const hashFragment = hash && hash.startsWith('#') ? hash.substring(1) : null;
-    const isExactMatch = hash === `#${fragmentID}` || (!fragmentID && (hash === '#' || hash === ''));
+    // Extract the fragment ID from the hash (supports both "#fragment" and "/homepage#fragment")
+    let hashFragment = null;
+    if (hash) {
+      if (hash.startsWith('#')) {
+        hashFragment = hash.substring(1);
+      } else if (hash.startsWith('/homepage#')) {
+        hashFragment = hash.substring(10);
+      }
+    }
+
+    const isExactMatch = hashFragment === fragmentID || (!fragmentID && (hash === '#' || hash === '' || hash === '/homepage'));
     const isParentMatch = hashFragment && hashFragment === topFragment && fragmentID !== topFragment;
 
     if (isExactMatch) {
@@ -87,7 +95,15 @@ function updateActiveNavLink(fragmentID) {
       const subLinks = li.querySelectorAll('.submenu a');
       subLinks.forEach(subA => {
         const subHash = subA.getAttribute('href');
-        if (subHash === `#${fragmentID}`) {
+        let subHashFragment = null;
+        if (subHash) {
+          if (subHash.startsWith('#')) {
+            subHashFragment = subHash.substring(1);
+          } else if (subHash.startsWith('/homepage#')) {
+            subHashFragment = subHash.substring(10);
+          }
+        }
+        if (subHashFragment === fragmentID) {
           subA.classList.add('active');
         }
       });
@@ -96,7 +112,15 @@ function updateActiveNavLink(fragmentID) {
       const subLinks = li.querySelectorAll('.submenu a');
       subLinks.forEach(subA => {
         const subHash = subA.getAttribute('href');
-        if (subHash === `#${fragmentID}`) {
+        let subHashFragment = null;
+        if (subHash) {
+          if (subHash.startsWith('#')) {
+            subHashFragment = subHash.substring(1);
+          } else if (subHash.startsWith('/homepage#')) {
+            subHashFragment = subHash.substring(10);
+          }
+        }
+        if (subHashFragment === fragmentID) {
           subA.classList.add('active');
           mainLink.classList.add('active');
           li.classList.add('open');
@@ -150,7 +174,11 @@ function renderSidebarNav(menuItems) {
     if (hasSubmenu) li.classList.add('has-submenu');
 
     const a = document.createElement('a');
-    a.href = item.url || '#';
+    let resolvedUrl = item.url || '#';
+    if (resolvedUrl.startsWith('#') && resolvedUrl !== '#') {
+      resolvedUrl = `/homepage${resolvedUrl}`;
+    }
+    a.href = resolvedUrl;
     a.className = 'nav-item-link';
     a.textContent = item.title;
     if (isExternal) {
@@ -177,7 +205,11 @@ function renderSidebarNav(menuItems) {
       item.submenus.forEach(sub => {
         const subLi = document.createElement('li');
         const subA = document.createElement('a');
-        subA.href = sub.url || '#';
+        let resolvedSubUrl = sub.url || '#';
+        if (resolvedSubUrl.startsWith('#') && resolvedSubUrl !== '#') {
+          resolvedSubUrl = `/homepage${resolvedSubUrl}`;
+        }
+        subA.href = resolvedSubUrl;
         subA.className = 'nav-item-link';
         subA.textContent = sub.title;
         if (sub.external) { subA.target = '_blank'; subA.rel = 'noopener noreferrer'; }
