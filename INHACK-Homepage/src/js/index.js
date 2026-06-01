@@ -462,13 +462,25 @@ function clientCompileJsonToHtml(sectionId, data) {
       else if (block.type === 'features') {
         let featuresHtml = '';
         (block.items || []).forEach(f => {
-          featuresHtml += `<div class="feat-card">
+          if (f.url) {
+            featuresHtml += `<a href="${f.url}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+<div class="feat-card" style="height: 100%; border: 1px solid rgba(59, 130, 246, 0.15);">
+<div class="feat-card-header">
+<span class="feat-card-id">${f.tag}</span>
+<h4 style="color: var(--color-cyan);">${f.title}</h4>
+</div>
+<p>${renderInline(f.desc)}</p>
+</div>
+</a>\n`;
+          } else {
+            featuresHtml += `<div class="feat-card">
 <div class="feat-card-header">
 <span class="feat-card-id">${f.tag}</span>
 <h4>${f.title}</h4>
 </div>
 <p>${renderInline(f.desc)}</p>
 </div>\n`;
+          }
         });
         htmlResult += `<div class="features-grid">
 ${featuresHtml}</div>\n`;
@@ -476,7 +488,8 @@ ${featuresHtml}</div>\n`;
       else if (block.type === 'links') {
         let linksHtml = '';
         (block.items || []).forEach(l => {
-          linksHtml += `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+          if (l.url) {
+            linksHtml += `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
 <div class="feat-card" style="height: 100%; border: 1px solid rgba(59, 130, 246, 0.15);">
 <div class="feat-card-header">
 <span class="feat-card-id">${l.tag}</span>
@@ -485,6 +498,15 @@ ${featuresHtml}</div>\n`;
 <p>${renderInline(l.desc)}</p>
 </div>
 </a>\n`;
+          } else {
+            linksHtml += `<div class="feat-card">
+<div class="feat-card-header">
+<span class="feat-card-id">${l.tag}</span>
+<h4>${l.title}</h4>
+</div>
+<p>${renderInline(l.desc)}</p>
+</div>\n`;
+          }
         });
         htmlResult += `<div class="features-grid" style="margin-top: 1.75rem;">
 ${linksHtml}</div>\n`;
