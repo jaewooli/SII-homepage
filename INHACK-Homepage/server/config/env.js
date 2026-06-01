@@ -12,6 +12,7 @@ module.exports = {
   DREAMHACKEMAIL: process.env.DREAMHACKEMAIL,
   DREAMHACKPASSWORD: process.env.DREAMHACKPASSWORD,
   SESSION_SECRET: process.env.SESSION_SECRET,
+  SESSION_NAME: process.env.SESSION_NAME || 'sid',
   ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'developer',
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
   PORT: process.env.PORT || 8080,

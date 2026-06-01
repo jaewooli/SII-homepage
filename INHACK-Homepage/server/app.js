@@ -41,12 +41,17 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // Session Middleware
+const sessionStore = new SQLiteStore({
+  db: 'sessions.sqlite',
+  dir: path.join(__dirname, '..')
+});
+sessionStore.on('error', (err) => {
+  console.error('[Session Store Error] Failed to interact with SQLite session database:', err.message);
+});
+
 app.use(session({
-    name: process.env.SESSION_NAME || 'sid',
-    store: new SQLiteStore({
-      db: 'sessions.sqlite',
-      dir: path.join(__dirname, '..')
-    }),
+    name: env.SESSION_NAME,
+    store: sessionStore,
     secret: env.SESSION_SECRET || 'default',
     resave: false,
     saveUninitialized: false,
