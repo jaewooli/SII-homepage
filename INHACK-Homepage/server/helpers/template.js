@@ -188,6 +188,15 @@ ${chalsHtml}</div>
 </div>
 </div>\n`;
       }
+      else if (block.type === 'menu_item') {
+        const submenus = block.submenus || [];
+        let submenusHtml = submenus.map(sub => `<li>${sub.title} (${sub.url})</li>`).join('');
+        htmlResult += `<div class="menu-item-preview"><strong>${block.title}</strong> (${block.url || 'No URL'})`;
+        if (submenus.length > 0) {
+          htmlResult += `<ul>${submenusHtml}</ul>`;
+        }
+        htmlResult += `</div>\n`;
+      }
     } catch (e) {
       console.error('[Block Render Error] Failed rendering block:', e);
     }

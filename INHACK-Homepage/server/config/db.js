@@ -110,7 +110,7 @@ db.serialize(() => {
 
     // Seed and compile site contents from JSON files on server startup
     const { compileJsonToHtml } = require('../helpers/template');
-    const sections = ['home', 'curriculum', 'seminar', 'ctf'];
+    const sections = ['home', 'curriculum', 'seminar', 'ctf', 'navigation'];
     
     sections.forEach(sec => {
         try {

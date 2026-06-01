@@ -31,7 +31,7 @@ router.get('/frags/admin.html', (req, res, next) => {
 // Serve fragments dynamically from database
 router.get('/frags/:id.html', (req, res, next) => {
   const fragmentID = req.params.id;
-  const validSections = ['home', 'curriculum', 'seminar', 'ctf'];
+  const validSections = ['home', 'curriculum', 'seminar', 'ctf', 'navigation'];
   
   if (validSections.includes(fragmentID)) {
     db.get(`SELECT content_html FROM site_contents WHERE section_id = ?`, [fragmentID], (err, row) => {

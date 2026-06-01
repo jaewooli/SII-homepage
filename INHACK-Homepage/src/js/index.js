@@ -43,7 +43,78 @@ window.addEventListener('DOMContentLoaded', () => {
   const initialFragment = window.location.hash.substring(1);
   loadContent(initialFragment);
   updateActiveNavLink(initialFragment);
+  loadSidebarNavigation();
 });
+
+async function loadSidebarNavigation() {
+  try {
+    const res = await fetch(`/admin/content/navigation`);
+    let menuItems = null;
+    if (res.ok) {
+      const payload = await res.json();
+      if (payload.ok && payload.data && payload.data.content) {
+        menuItems = JSON.parse(payload.data.content);
+      }
+    }
+    // Fallback: fetch raw JSON from static file
+    if (!menuItems) {
+      const fallback = await fetch('/frags/navigation.json');
+      if (fallback.ok) menuItems = await fallback.json();
+    }
+    if (!menuItems || !Array.isArray(menuItems)) return;
+    renderSidebarNav(menuItems);
+  } catch (err) {
+    console.warn('[Nav] Failed to load dynamic navigation:', err.message);
+  }
+}
+
+function renderSidebarNav(menuItems) {
+  const navList = document.getElementById('sidebar-nav-list');
+  if (!navList) return;
+
+  navList.innerHTML = '';
+  menuItems.forEach(item => {
+    if (item.type !== 'menu_item') return;
+    const li = document.createElement('li');
+    const isExternal = item.external;
+    const hasSubmenu = item.submenus && item.submenus.length > 0;
+    if (hasSubmenu) li.classList.add('has-submenu');
+
+    const a = document.createElement('a');
+    a.href = item.url || '#';
+    a.className = 'nav-item-link';
+    a.textContent = item.title;
+    if (isExternal) {
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+    }
+    li.appendChild(a);
+
+    if (hasSubmenu) {
+      const subUl = document.createElement('ul');
+      subUl.className = 'submenu';
+      item.submenus.forEach(sub => {
+        const subLi = document.createElement('li');
+        const subA = document.createElement('a');
+        subA.href = sub.url || '#';
+        subA.className = 'nav-item-link';
+        subA.textContent = sub.title;
+        if (sub.external) { subA.target = '_blank'; subA.rel = 'noopener noreferrer'; }
+        subLi.appendChild(subA);
+        subUl.appendChild(subLi);
+      });
+      li.appendChild(subUl);
+
+      a.addEventListener('click', (e) => {
+        if (hasSubmenu) {
+          e.preventDefault();
+          li.classList.toggle('open');
+        }
+      });
+    }
+    navList.appendChild(li);
+  });
+}
 
 window.addEventListener('hashchange', () => {
   const fragmentID = window.location.hash.substring(1);
@@ -579,6 +650,16 @@ ${chalsHtml}</div>
 </div>
 </div>\n`;
       }
+      else if (block.type === 'menu_item') {
+        const submenusHtml = (block.submenus || []).map(s =>
+          `<li style="padding: 4px 0 4px 16px; color: #94a3b8; font-size: 0.8rem;">└ <a href="${s.url || '#'}" style="color: #94a3b8;">${s.title}${s.external ? ' ↗' : ''}</a></li>`
+        ).join('\n');
+        const externalBadge = block.external ? ' <span style="font-size:0.65rem; color:#fbbf24; vertical-align: middle;">↗ EXT</span>' : '';
+        htmlResult += `<div style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+  <a href="${block.url || '#'}" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; color: #e2e8f0; text-decoration: none;">${block.title || '(제목 없음)'}${externalBadge}</a>
+  ${submenusHtml ? `<ul style="list-style:none; padding: 0; margin: 4px 0 0 0;">${submenusHtml}</ul>` : ''}
+</div>\n`;
+      }
     });
 
     htmlResult += '</section>';
@@ -757,6 +838,13 @@ async function initializeAdminPanel() {
             status: "open"
           }
         ]
+      },
+      menu_item: {
+        type: "menu_item",
+        title: "새 메뉴",
+        url: "#",
+        external: false,
+        submenus: []
       }
     };
 
@@ -824,6 +912,7 @@ async function initializeAdminPanel() {
         else if (block.type === 'phases') { icon = '🗺️'; titlePreview = `단계 ${block.items?.length || 0}개`; }
         else if (block.type === 'timeline') { icon = '📅'; titlePreview = `아이템 ${block.items?.length || 0}개`; }
         else if (block.type === 'ctf_dashboard') { icon = '🏆'; titlePreview = '대시보드'; }
+        else if (block.type === 'menu_item') { icon = '🧭'; titlePreview = block.title || '새 메뉴'; }
 
         if (titlePreview && titlePreview.length > 15) {
           titlePreview = titlePreview.substring(0, 15) + '...';
@@ -1198,6 +1287,55 @@ async function initializeAdminPanel() {
           </div>
         `;
       }
+      else if (block.type === 'menu_item') {
+        const submenus = block.submenus || [];
+        let submenusHtml = submenus.map((sub, idx) => `
+          <div class="block-card-item submenu-item" data-item-index="${idx}">
+            <div class="block-card-header">
+              <span class="block-card-title-label">SUBMENU #${idx + 1}</span>
+              <button type="button" class="hierarchy-btn delete-submenu-item" data-item-index="${idx}">삭제</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="block-form-group">
+                <label>서브메뉴 제목 (Title)</label>
+                <input type="text" class="block-form-input submenu-field" data-field="title" value="${sub.title || ''}">
+              </div>
+              <div class="block-form-group">
+                <label>URL / Hash</label>
+                <input type="text" class="block-form-input submenu-field" data-field="url" value="${sub.url || ''}">
+              </div>
+            </div>
+            <div class="block-form-group" style="margin-top: 6px;">
+              <label style="display:flex; align-items:center; gap: 8px; cursor:pointer;">
+                <input type="checkbox" class="submenu-field submenu-external-check" data-field="external" ${sub.external ? 'checked' : ''}>
+                <span>외부 링크 (새 탭으로 열기)</span>
+              </label>
+            </div>
+          </div>
+        `).join('');
+
+        wrapper.innerHTML += `
+          <div class="block-form-group">
+            <label>메뉴 제목 (Title)</label>
+            <input type="text" class="block-form-input block-field" data-field="title" value="${block.title || ''}">
+          </div>
+          <div class="block-form-group">
+            <label>메뉴 URL (없으면 # 또는 비워두기)</label>
+            <input type="text" class="block-form-input block-field" data-field="url" value="${block.url || ''}">
+          </div>
+          <div class="block-form-group">
+            <label style="display:flex; align-items:center; gap: 8px; cursor:pointer;">
+              <input type="checkbox" class="block-external-check" ${block.external ? 'checked' : ''}>
+              <span>외부 링크 (새 탭으로 열기)</span>
+            </label>
+          </div>
+          <h4 style="color: var(--color-cyan); margin: 16px 0 8px 0; font-size: 0.82rem; border-bottom: 1px solid rgba(59,130,246,0.2); padding-bottom: 6px;">📂 세부 메뉴 (Submenus)</h4>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${submenusHtml}
+            <button type="button" class="action-btn add-submenu-item">+ 세부 메뉴 추가</button>
+          </div>
+        `;
+      }
 
       formContainer.appendChild(wrapper);
 
@@ -1382,6 +1520,65 @@ async function initializeAdminPanel() {
           renderPreview();
         });
       }
+
+      // -- menu_item listeners --
+      const externalCheck = formContainer.querySelector('.block-external-check');
+      if (externalCheck) {
+        externalCheck.addEventListener('change', () => {
+          block.external = externalCheck.checked;
+          renderPreview();
+          renderBlockList();
+        });
+      }
+
+      // Submenu text field input listener
+      formContainer.querySelectorAll('.submenu-field:not(.submenu-external-check)').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const card = e.target.closest('.submenu-item');
+          const idx = parseInt(card.getAttribute('data-item-index'));
+          const field = e.target.getAttribute('data-field');
+          if (block.submenus && block.submenus[idx] !== undefined) {
+            block.submenus[idx][field] = e.target.value;
+            renderPreview();
+            if (field === 'title') renderBlockList();
+          }
+        });
+      });
+
+      // Submenu external checkbox
+      formContainer.querySelectorAll('.submenu-external-check').forEach(check => {
+        check.addEventListener('change', (e) => {
+          const card = e.target.closest('.submenu-item');
+          const idx = parseInt(card.getAttribute('data-item-index'));
+          if (block.submenus && block.submenus[idx] !== undefined) {
+            block.submenus[idx].external = e.target.checked;
+            renderPreview();
+          }
+        });
+      });
+
+      // Delete submenu
+      formContainer.querySelectorAll('.delete-submenu-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.target.getAttribute('data-item-index'));
+          if (block.submenus) {
+            block.submenus.splice(idx, 1);
+            renderActiveBlockForm();
+            renderPreview();
+          }
+        });
+      });
+
+      // Add submenu
+      const addSubmenuBtn = formContainer.querySelector('.add-submenu-item');
+      if (addSubmenuBtn) {
+        addSubmenuBtn.addEventListener('click', () => {
+          if (!block.submenus) block.submenus = [];
+          block.submenus.push({ title: '새 서브메뉴', url: '#', external: false });
+          renderActiveBlockForm();
+          renderPreview();
+        });
+      }
     }
 
     async function loadSectionMarkdown(sectionId) {
@@ -1489,6 +1686,10 @@ async function initializeAdminPanel() {
             const data = await res.json();
             if (res.ok && data.ok) {
               showToast('컨텐츠가 안전하게 업데이트되었습니다!', 'success');
+              // If navigation was saved, refresh sidebar immediately
+              if (sectionId === 'navigation') {
+                renderSidebarNav(currentBlocks.filter(b => b.type === 'menu_item'));
+              }
             } else {
               showToast(data.message || '저장 실패', 'error');
             }

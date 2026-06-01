@@ -283,6 +283,49 @@ aside ul li {
     border-bottom: 1px solid rgba(255, 255, 255, 0.02);
 }
 
+/* Submenu (nested nav items) */
+aside ul li ul.submenu {
+    list-style: none;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease;
+}
+
+aside ul li.has-submenu > a::after {
+    content: '›';
+    margin-left: auto;
+    font-size: 1rem;
+    color: #475569;
+    transition: transform 0.2s ease;
+}
+
+aside ul li.has-submenu.open > a::after {
+    transform: rotate(90deg);
+    color: var(--color-cyan);
+}
+
+aside ul li.has-submenu.open > ul.submenu {
+    max-height: 400px;
+}
+
+aside ul li ul.submenu li a {
+    padding: 0.65rem 1.5rem 0.65rem 2.25rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    font-weight: 500;
+    border-left: none;
+}
+
+aside ul li ul.submenu li a:hover {
+    color: #e2e8f0;
+    background-color: rgba(255, 255, 255, 0.02);
+    border-left: 2px solid rgba(0, 240, 255, 0.4);
+    padding-left: calc(2.25rem - 2px);
+}
+
 aside ul li a {
     display: flex;
     align-items: center;
@@ -1165,6 +1208,9 @@ footer {
 .page-admin textarea {
     resize: vertical; /* only vertical resize allowed */
     min-height: 100px;
+    word-break: break-word;      /* wrap long English words */
+    overflow-wrap: break-word;   /* fallback for older browsers */
+    white-space: pre-wrap;       /* respect newlines + wrap */
 }
 
 .page-admin textarea::-webkit-scrollbar {
@@ -1238,6 +1284,7 @@ footer {
 .page-admin .block-badge-phases { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
 .page-admin .block-badge-timeline { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
 .page-admin .block-badge-ctf_dashboard { background: rgba(234, 179, 8, 0.1); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.2); }
+.page-admin .block-badge-menu_item { background: rgba(251, 191, 36, 0.08); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.25); }
 
 /* Hierarchy small utility buttons (up/down arrows) */
 .page-admin .block-hierarchy-card .hierarchy-btn {

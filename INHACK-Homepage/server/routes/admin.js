@@ -124,7 +124,7 @@ router.get('/content/:sectionId', (req, res) => {
     return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
   }
   const { sectionId } = req.params;
-  const validSections = ['home', 'curriculum', 'seminar', 'ctf'];
+  const validSections = ['home', 'curriculum', 'seminar', 'ctf', 'navigation'];
   if (!validSections.includes(sectionId)) {
     return sendJson(res, { status: 400, ok: false, message: '유효하지 않은 섹션 ID입니다.', code: 'BAD_REQUEST' });
   }
@@ -151,7 +151,7 @@ router.post('/update-content', (req, res) => {
     return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
   }
   const { sectionId, content_md } = req.body; // content_md holds the JSON string
-  const validSections = ['home', 'curriculum', 'seminar', 'ctf'];
+  const validSections = ['home', 'curriculum', 'seminar', 'ctf', 'navigation'];
   if (!sectionId || content_md === undefined) {
     return sendJson(res, { status: 400, ok: false, message: '필수 필드가 누락되었습니다.', code: 'BAD_REQUEST' });
   }

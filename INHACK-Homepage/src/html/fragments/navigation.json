@@ -1,0 +1,44 @@
+[
+  {
+    "type": "menu_item",
+    "title": "Curriculum",
+    "url": "#curriculum",
+    "external": false,
+    "submenus": []
+  },
+  {
+    "type": "menu_item",
+    "title": "Seminar",
+    "url": "#seminar",
+    "external": false,
+    "submenus": []
+  },
+  {
+    "type": "menu_item",
+    "title": "CTF Challenge",
+    "url": "#ctf",
+    "external": false,
+    "submenus": []
+  },
+  {
+    "type": "menu_item",
+    "title": "Dreamhack",
+    "url": "/dreamhack",
+    "external": false,
+    "submenus": []
+  },
+  {
+    "type": "menu_item",
+    "title": "INHACK 소개 ↗",
+    "url": "https://cse.inha.ac.kr/cse/885/subview.do",
+    "external": true,
+    "submenus": []
+  },
+  {
+    "type": "menu_item",
+    "title": "INHACK 블로그 ↗",
+    "url": "https://medium.com/inhack",
+    "external": true,
+    "submenus": []
+  }
+]
