@@ -294,14 +294,26 @@ aside ul li ul.submenu {
 }
 
 aside ul li.has-submenu > a::after {
-    content: '›';
-    margin-left: auto;
-    font-size: 1rem;
-    color: #475569;
-    transition: transform 0.2s ease;
+    display: none;
 }
 
-aside ul li.has-submenu.open > a::after {
+aside ul li .submenu-toggle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 5;
+    color: #475569;
+    font-size: 1.1rem;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+aside ul li.has-submenu.open > .submenu-toggle {
     transform: rotate(90deg);
     color: var(--color-cyan);
 }

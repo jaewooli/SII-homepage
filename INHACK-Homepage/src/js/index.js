@@ -70,6 +70,9 @@ function updateActiveNavLink(fragmentID) {
 
     if (isExactMatch) {
       mainLink.classList.add('active');
+      if (li.classList.contains('has-submenu')) {
+        li.classList.add('open');
+      }
     } else if (isParentMatch) {
       // Parent menu: highlight and open submenu
       mainLink.classList.add('active');
@@ -134,6 +137,8 @@ function renderSidebarNav(menuItems) {
   menuItems.forEach(item => {
     if (item.type !== 'menu_item') return;
     const li = document.createElement('li');
+    li.style.position = 'relative'; // Ensure relative position for absolute toggle arrow
+    
     const isExternal = item.external;
     const hasSubmenu = item.submenus && item.submenus.length > 0;
     if (hasSubmenu) li.classList.add('has-submenu');
@@ -149,6 +154,18 @@ function renderSidebarNav(menuItems) {
     li.appendChild(a);
 
     if (hasSubmenu) {
+      // Create separate submenu toggle arrow
+      const toggle = document.createElement('span');
+      toggle.className = 'submenu-toggle';
+      toggle.textContent = '›';
+      
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        li.classList.toggle('open');
+      });
+      li.appendChild(toggle);
+
       const subUl = document.createElement('ul');
       subUl.className = 'submenu';
       item.submenus.forEach(sub => {
@@ -163,10 +180,14 @@ function renderSidebarNav(menuItems) {
       });
       li.appendChild(subUl);
 
+      const isPureCategory = !item.url || item.url === '#';
       a.addEventListener('click', (e) => {
-        if (hasSubmenu) {
+        if (isPureCategory) {
           e.preventDefault();
           li.classList.toggle('open');
+        } else {
+          // Navigates naturally, and expand submenu
+          li.classList.add('open');
         }
       });
     }
