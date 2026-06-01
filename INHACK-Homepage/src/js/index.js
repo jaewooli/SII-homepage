@@ -744,6 +744,8 @@ async function initializeAdminPanel() {
     let currentBlocks = [];
     let activeBlockIndex = null;
     let draggedIndex = null;
+    let isDirty = false;
+    let lastSelectedSection = selectSection.value;
 
     // Dynamic loading of section options based on navigation configuration
     async function updateEditSectionOptions() {
@@ -876,7 +878,12 @@ async function initializeAdminPanel() {
 
     if (closeEditorBtn && editorOverlay) {
       closeEditorBtn.addEventListener('click', () => {
-        if (confirm('수정 중인 내용이 저장되지 않았을 수 있습니다. 정말로 에디터를 닫으시겠습니까?')) {
+        if (isDirty) {
+          if (confirm('수정 중인 내용이 저장되지 않았을 수 있습니다. 정말로 에디터를 닫으시겠습니까?')) {
+            editorOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+          }
+        } else {
           editorOverlay.classList.remove('active');
           document.body.style.overflow = '';
         }
@@ -1027,12 +1034,23 @@ async function initializeAdminPanel() {
     }
 
     selectSection.addEventListener('change', async () => {
+      if (isDirty) {
+        if (!confirm('저장하지 않은 변경 사항이 있습니다. 다른 섹션으로 이동하시겠습니까?')) {
+          selectSection.value = lastSelectedSection;
+          return;
+        }
+      }
+      lastSelectedSection = selectSection.value;
       await loadSectionMarkdown(selectSection.value);
     });
 
-    function renderPreview() {
+    function renderPreview(skipDirty = false) {
       if (!previewArea) return;
       const sectionId = selectSection.value;
+      
+      if (!skipDirty) {
+        isDirty = true;
+      }
       
       try {
         const htmlResult = clientCompileJsonToHtml(sectionId, currentBlocks);
@@ -1805,7 +1823,8 @@ async function initializeAdminPanel() {
             activeBlockIndex = currentBlocks.length > 0 ? 0 : null;
             renderBlockList();
             renderActiveBlockForm();
-            renderPreview();
+            renderPreview(true);
+            isDirty = false;
           }
         }
       } catch (e) {
@@ -1891,6 +1910,7 @@ async function initializeAdminPanel() {
             const data = await res.json();
             if (res.ok && data.ok) {
               showToast('컨텐츠가 안전하게 업데이트되었습니다!', 'success');
+              isDirty = false;
               // If navigation was saved, refresh sidebar immediately and reload options
               if (sectionId === 'navigation') {
                 renderSidebarNav(currentBlocks.filter(b => b.type === 'menu_item'));
