@@ -179,10 +179,10 @@ function renderSidebarNav(menuItems) {
     const hasSubmenu = item.submenus && item.submenus.length > 0;
     if (hasSubmenu) li.classList.add('has-submenu');
 
-    const a = document.createElement('a');
+    const isHomepage = window.location.pathname === '/' || window.location.pathname === '/homepage' || window.location.pathname === '/homepage/main';
     let resolvedUrl = item.url || '#';
     if (resolvedUrl.startsWith('#') && resolvedUrl !== '#') {
-      resolvedUrl = `/${resolvedUrl}`;
+      resolvedUrl = isHomepage ? resolvedUrl : `/homepage${resolvedUrl}`;
     }
     a.href = resolvedUrl;
     a.className = 'nav-item-link';
@@ -211,9 +211,10 @@ function renderSidebarNav(menuItems) {
       item.submenus.forEach(sub => {
         const subLi = document.createElement('li');
         const subA = document.createElement('a');
+        const isHomepage = window.location.pathname === '/' || window.location.pathname === '/homepage' || window.location.pathname === '/homepage/main';
         let resolvedSubUrl = sub.url || '#';
         if (resolvedSubUrl.startsWith('#') && resolvedSubUrl !== '#') {
-          resolvedSubUrl = `/${resolvedSubUrl}`;
+          resolvedSubUrl = isHomepage ? resolvedSubUrl : `/homepage${resolvedSubUrl}`;
         }
         subA.href = resolvedSubUrl;
         subA.className = 'nav-item-link';
