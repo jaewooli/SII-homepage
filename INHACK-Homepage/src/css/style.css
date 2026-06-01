@@ -1077,21 +1077,39 @@ footer {
     box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
 }
 
+/* Block creation toolbar container */
+.page-admin .block-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 1.5rem;
+    background: rgba(10, 15, 26, 0.6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    box-sizing: border-box;
+    align-items: center;
+}
+
 /* Tool Buttons inside toolbar */
 .page-admin .block-toolbar .tool-btn {
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(59, 130, 246, 0.25);
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     color: #cbd5e1;
-    padding: 8px 14px;
+    padding: 6px 12px;
     font-size: 0.72rem;
-    letter-spacing: 0.5px;
+    font-family: var(--font-mono), monospace;
+    font-weight: 700;
     text-transform: none;
+    letter-spacing: 0.5px;
 }
 .page-admin .block-toolbar .tool-btn:hover {
-    background: rgba(59, 130, 246, 0.15) !important;
+    background: rgba(0, 240, 255, 0.06) !important;
     border-color: #00f0ff !important;
     color: #00f0ff !important;
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+    transform: translateY(-1px);
+}
+.page-admin .block-toolbar .tool-btn:active {
+    transform: translateY(0);
 }
 
 /* All inputs, textareas, and select elements on admin page */
@@ -1141,6 +1159,32 @@ footer {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
+}
+
+/* Custom textarea style, scrollbars and grab handle resize style */
+.page-admin textarea {
+    resize: vertical; /* only vertical resize allowed */
+    min-height: 100px;
+}
+
+.page-admin textarea::-webkit-scrollbar {
+    width: 6px;
+}
+.page-admin textarea::-webkit-scrollbar-track {
+    background: transparent;
+}
+.page-admin textarea::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.2);
+    border-radius: 3px;
+}
+.page-admin textarea::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 240, 255, 0.4);
+}
+
+.page-admin textarea::-webkit-resizer {
+    background-image: linear-gradient(135deg, transparent 60%, rgba(0, 240, 255, 0.6) 60%);
+    width: 12px;
+    height: 12px;
 }
 
 /* Left Sidebar Block Cards */
