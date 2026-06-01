@@ -767,41 +767,72 @@ async function initializeAdminPanel() {
         } catch(e) {}
       }
 
-      if (!menuItems || !Array.isArray(menuItems)) return;
-
-      const defaultOptions = [
-        { value: 'home', text: '동아리 소개 (Home)' },
-        { value: 'curriculum', text: 'Curriculum' },
-        { value: 'seminar', text: 'Seminar' },
-        { value: 'ctf', text: 'CTF Challenge' },
-        { value: 'navigation', text: '🧭 Navigation (메뉴)' }
-      ];
+      const selectSection = document.getElementById('admin-edit-section');
+      if (!selectSection) return;
 
       const prevValue = selectSection.value;
       selectSection.innerHTML = '';
 
-      defaultOptions.forEach(opt => {
-        const option = document.createElement('option');
-        option.value = opt.value;
-        option.textContent = opt.text;
-        selectSection.appendChild(option);
-      });
+      // Default page title mapping
+      const defaultPages = {
+        'home': '동아리 소개 (Home)',
+        'curriculum': 'Curriculum',
+        'seminar': 'Seminar',
+        'ctf': 'CTF Challenge'
+      };
 
-      menuItems.forEach(item => {
-        if (item.submenus && Array.isArray(item.submenus)) {
-          item.submenus.forEach(sub => {
-            if (sub.url && sub.url.startsWith('#') && !sub.external) {
-              const val = sub.url.substring(1); // remove '#'
-              if (!defaultOptions.some(opt => opt.value === val)) {
-                const option = document.createElement('option');
-                option.value = val;
-                option.textContent = `  └ [서브메뉴] ${item.title} > ${sub.title}`;
-                selectSection.appendChild(option);
-              }
+      // Set to track compiled sections and avoid duplicate rendering
+      const renderedSections = new Set();
+
+      if (menuItems && Array.isArray(menuItems)) {
+        menuItems.forEach(item => {
+          if (!item.url || item.external) return;
+          if (item.url.startsWith('#')) {
+            const mainVal = item.url.substring(1);
+            if (!mainVal) return;
+
+            // Render parent menu option
+            const option = document.createElement('option');
+            option.value = mainVal;
+            option.textContent = defaultPages[mainVal] || item.title;
+            selectSection.appendChild(option);
+            renderedSections.add(mainVal);
+
+            // Render corresponding submenus directly underneath this parent
+            if (item.submenus && Array.isArray(item.submenus)) {
+              item.submenus.forEach(sub => {
+                if (sub.url && sub.url.startsWith('#') && !sub.external) {
+                  const subVal = sub.url.substring(1);
+                  if (!renderedSections.has(subVal)) {
+                    const subOption = document.createElement('option');
+                    subOption.value = subVal;
+                    subOption.textContent = `  └ [서브메뉴] ${sub.title}`;
+                    selectSection.appendChild(subOption);
+                    renderedSections.add(subVal);
+                  }
+                }
+              });
             }
-          });
+          }
+        });
+      }
+
+      // Add default pages if they are missing in the navigation list (safety fallback)
+      Object.keys(defaultPages).forEach(val => {
+        if (!renderedSections.has(val)) {
+          const option = document.createElement('option');
+          option.value = val;
+          option.textContent = defaultPages[val];
+          selectSection.appendChild(option);
+          renderedSections.add(val);
         }
       });
+
+      // Always append navigation page editor option at the bottom
+      const navOption = document.createElement('option');
+      navOption.value = 'navigation';
+      navOption.textContent = '🧭 Navigation (메뉴)';
+      selectSection.appendChild(navOption);
 
       if (Array.from(selectSection.options).some(opt => opt.value === prevValue)) {
         selectSection.value = prevValue;
@@ -1431,7 +1462,7 @@ async function initializeAdminPanel() {
               </div>
               <div class="block-form-group">
                 <label>URL / Hash</label>
-                <input type="text" class="block-form-input submenu-field" data-field="url" value="${sub.url || ''}">
+                <input type="text" class="block-form-input submenu-field" data-field="url" value="${sub.url || ''}" placeholder="${block.url ? (block.url.startsWith('#') ? block.url : '#' + block.url) + '/' : '#'}">
               </div>
             </div>
             <div class="block-form-group" style="margin-top: 6px;">
