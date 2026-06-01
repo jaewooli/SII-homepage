@@ -603,6 +603,27 @@ async function initializeAdminPanel() {
     let activeBlockIndex = null;
     let draggedIndex = null;
 
+    // Tab switching logic
+    const tabButtons = document.querySelectorAll('.admin-tab-btn');
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetTab = btn.getAttribute('data-tab');
+        
+        // Update active class on buttons
+        tabButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Update active class on panes
+        document.querySelectorAll('.admin-tab-pane').forEach(pane => {
+          pane.classList.remove('active');
+        });
+        const targetPane = document.getElementById(`admin-pane-${targetTab}`);
+        if (targetPane) {
+          targetPane.classList.add('active');
+        }
+      });
+    });
+
     // Load default section on load
     await loadSectionMarkdown(selectSection.value);
 

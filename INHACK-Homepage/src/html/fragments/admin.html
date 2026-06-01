@@ -1,32 +1,18 @@
 <section class="page-admin animate-fade-in" style="width: 100%; max-width: 1200px; margin: 0 auto;">
-    <div class="terminal-banner" style="margin-bottom: 2rem;">
+    <div class="terminal-banner" style="margin-bottom: 1.5rem;">
         <h2 class="hero-title" style="color: #ff4b4b;">ADMIN CONTROL PANEL</h2>
         <p class="lead-text">인핵 포탈의 사용자 계정 관리 및 사이트 주요 섹션 컨텐츠를 실시간으로 제어합니다.</p>
     </div>
 
-    <div class="logs-grid">
-        <!-- Card 1: User Registration -->
-        <div class="log-card" style="padding: 2rem; background-color: var(--bg-surface); border: 1px solid rgba(255, 75, 75, 0.15); display: flex; flex-direction: column;">
-            <div class="log-card-title" style="color: #ff4b4b; font-size: 0.95rem; margin-bottom: 1.5rem;">신규 사용자 계정 등록</div>
-            <form id="admin-register-form" style="display: flex; flex-direction: column; gap: 1rem;">
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <label for="admin-reg-username" style="font-size: 0.75rem; color: #64748b;">아이디 (Username)</label>
-                    <input type="text" id="admin-reg-username" placeholder="사용자 ID 입력" required>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <label for="admin-reg-name" style="font-size: 0.75rem; color: #64748b;">성명/닉네임 (Name)</label>
-                    <input type="text" id="admin-reg-name" placeholder="홍길동" required>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <label for="admin-reg-password" style="font-size: 0.75rem; color: #64748b;">비밀번호 (Password)</label>
-                    <input type="password" id="admin-reg-password" placeholder="비밀번호 입력" required>
-                </div>
-                <button type="submit" class="action-btn">계정 생성</button>
-            </form>
-        </div>
+    <!-- Tab Navigation Bar -->
+    <div class="admin-tab-nav">
+        <button type="button" class="admin-tab-btn active" data-tab="content">🖥️ 섹션 컨텐츠 관리</button>
+        <button type="button" class="admin-tab-btn" data-tab="users">👥 사용자 계정 관리</button>
+    </div>
 
-        <!-- Card 2: Content Modification -->
-        <div class="log-card" style="padding: 2rem; background-color: var(--bg-surface); border: 1px solid rgba(59, 130, 246, 0.15); display: flex; flex-direction: column; grid-column: 1 / -1;">
+    <!-- Tab 1 Pane: Content Modification -->
+    <div id="admin-pane-content" class="admin-tab-pane active">
+        <div class="log-card" style="padding: 2rem; background-color: var(--bg-surface); border: 1px solid rgba(59, 130, 246, 0.15); display: flex; flex-direction: column;">
             <div class="log-card-title" style="color: var(--color-cyan); font-size: 0.95rem; margin-bottom: 1.5rem;">섹션 컨텐츠 관리 (JSON 데이터)</div>
             
             <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 1rem;">
@@ -80,19 +66,43 @@
 
             <button type="button" id="admin-save-content-btn" class="action-btn">변경 사항 저장</button>
         </div>
+    </div>
 
-        <!-- Card 3: User List and Deletion -->
-        <div class="log-card" style="padding: 2rem; background-color: var(--bg-surface); border: 1px solid rgba(168, 85, 247, 0.15); display: flex; flex-direction: column;">
-            <div class="log-card-title" style="color: #a855f7; font-size: 0.95rem; margin-bottom: 1.5rem;">등록된 사용자 목록 및 삭제</div>
-            <div style="flex: 1; display: flex; flex-direction: column;">
-                <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; font-size: 0.75rem; color: #64748b; font-weight: 600;">
-                    <div style="flex: 1;">아이디 (Username)</div>
-                    <div style="flex: 1;">이름 (Name)</div>
-                    <div style="width: 60px; text-align: center;">작업</div>
-                </div>
-                <div id="admin-user-list-container" style="max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
-                    <!-- Dynamically populated via JS -->
-                    <div style="text-align: center; color: #64748b; padding: 20px; font-size: 0.8rem;">사용자 목록 불러오는 중...</div>
+    <!-- Tab 2 Pane: User Account Management -->
+    <div id="admin-pane-users" class="admin-tab-pane">
+        <div class="logs-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; grid-auto-rows: min-content;">
+            <!-- Card 1: User Registration -->
+            <div class="log-card" style="padding: 2rem; background-color: var(--bg-surface); border: 1px solid rgba(255, 75, 75, 0.15); display: flex; flex-direction: column;">
+                <div class="log-card-title" style="color: #ff4b4b; font-size: 0.95rem; margin-bottom: 1.5rem;">신규 사용자 계정 등록</div>
+                <form id="admin-register-form" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label for="admin-reg-username" style="font-size: 0.75rem; color: #64748b;">아이디 (Username)</label>
+                        <input type="text" id="admin-reg-username" placeholder="사용자 ID 입력" required>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label for="admin-reg-name" style="font-size: 0.75rem; color: #64748b;">성명/닉네임 (Name)</label>
+                        <input type="text" id="admin-reg-name" placeholder="홍길동" required>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label for="admin-reg-password" style="font-size: 0.75rem; color: #64748b;">비밀번호 (Password)</label>
+                        <input type="password" id="admin-reg-password" placeholder="비밀번호 입력" required>
+                    </div>
+                    <button type="submit" class="action-btn">계정 생성</button>
+                </form>
+            </div>
+
+            <!-- Card 3: User List and Deletion -->
+            <div class="log-card" style="padding: 2rem; background-color: var(--bg-surface); border: 1px solid rgba(168, 85, 247, 0.15); display: flex; flex-direction: column;">
+                <div class="log-card-title" style="color: #a855f7; font-size: 0.95rem; margin-bottom: 1.5rem;">등록된 사용자 목록 및 삭제</div>
+                <div style="flex: 1; display: flex; flex-direction: column;">
+                    <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; font-size: 0.75rem; color: #64748b; font-weight: 600;">
+                        <div style="flex: 1;">아이디 (Username)</div>
+                        <div style="flex: 1;">이름 (Name)</div>
+                        <div style="width: 60px; text-align: center;">작업</div>
+                    </div>
+                    <div id="admin-user-list-container" style="max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                        <div style="text-align: center; color: #64748b; padding: 20px; font-size: 0.8rem;">사용자 목록 불러오는 중...</div>
+                    </div>
                 </div>
             </div>
         </div>

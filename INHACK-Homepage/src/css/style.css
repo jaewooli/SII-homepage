@@ -1256,3 +1256,53 @@ footer {
     transform: scale(1.02);
     box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
 }
+
+/* Admin Tab Styling */
+.page-admin .admin-tab-nav {
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    border-radius: 6px;
+    padding: 6px;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 2rem;
+}
+
+.page-admin .admin-tab-btn {
+    all: unset !important;
+    box-sizing: border-box;
+    padding: 10px 20px !important;
+    font-family: 'Space Grotesk', var(--font-body), sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.page-admin .admin-tab-btn:hover {
+    color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.page-admin .admin-tab-btn.active {
+    background: rgba(0, 240, 255, 0.08) !important;
+    border: 1px solid #00f0ff !important;
+    color: #00f0ff !important;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+}
+
+/* Tab panes toggling */
+.page-admin .admin-tab-pane {
+    display: none;
+}
+
+.page-admin .admin-tab-pane.active {
+    display: block;
+}
