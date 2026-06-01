@@ -3,10 +3,12 @@ const { marked } = require('marked');
 // Disable bold and italic markdown parsing by overriding strong and em renderers to return the original markup text
 marked.use({
   renderer: {
-    strong(text) {
+    strong(arg) {
+      const text = (arg && typeof arg === 'object') ? arg.text : arg;
       return `**${text}**`;
     },
-    em(text) {
+    em(arg) {
+      const text = (arg && typeof arg === 'object') ? arg.text : arg;
       return `*${text}*`;
     }
   }

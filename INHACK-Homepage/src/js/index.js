@@ -5,8 +5,14 @@ import { fetchMe } from '/assets/js/auth.js';
 if (window.marked && window.marked.use) {
   window.marked.use({
     renderer: {
-      strong(text) { return `**${text}**`; },
-      em(text) { return `*${text}*`; }
+      strong(arg) {
+        const text = (arg && typeof arg === 'object') ? arg.text : arg;
+        return `**${text}**`;
+      },
+      em(arg) {
+        const text = (arg && typeof arg === 'object') ? arg.text : arg;
+        return `*${text}*`;
+      }
     }
   });
 }
@@ -819,24 +825,33 @@ async function initializeAdminPanel() {
 
       if (menuItems && Array.isArray(menuItems)) {
         menuItems.forEach(item => {
-          if (!item.url || item.external) return;
-          if (item.url.startsWith('#')) {
-            const mainVal = item.url.substring(1);
-            if (!mainVal) return;
+          if (item.external) return;
 
-            // Render parent menu option
-            const option = document.createElement('option');
-            option.value = mainVal;
-            option.textContent = defaultPages[mainVal] || item.title;
-            selectSection.appendChild(option);
-            renderedSections.add(mainVal);
+          const hasSubmenus = item.submenus && Array.isArray(item.submenus) && item.submenus.length > 0;
 
-            // Render corresponding submenus directly underneath this parent
-            if (item.submenus && Array.isArray(item.submenus)) {
-              item.submenus.forEach(sub => {
-                if (sub.url && sub.url.startsWith('#') && !sub.external) {
-                  const subVal = sub.url.substring(1);
-                  if (!renderedSections.has(subVal)) {
+          // 1. Process parent menu (only if it has a valid local URL that is not empty or just '#')
+          if (item.url && item.url !== '#') {
+            const isLocal = !/^https?:\/\//i.test(item.url);
+            if (isLocal) {
+              const mainVal = item.url.startsWith('#') ? item.url.substring(1) : item.url;
+              if (mainVal && !renderedSections.has(mainVal)) {
+                const option = document.createElement('option');
+                option.value = mainVal;
+                option.textContent = defaultPages[mainVal] || item.title;
+                selectSection.appendChild(option);
+                renderedSections.add(mainVal);
+              }
+            }
+          }
+
+          // 2. Process its submenus (independent of whether parent had a valid URL or was skipped)
+          if (hasSubmenus) {
+            item.submenus.forEach(sub => {
+              if (sub.url && !sub.external) {
+                const isLocalSub = !/^https?:\/\//i.test(sub.url);
+                if (isLocalSub) {
+                  const subVal = sub.url.startsWith('#') ? sub.url.substring(1) : sub.url;
+                  if (subVal && !renderedSections.has(subVal)) {
                     const subOption = document.createElement('option');
                     subOption.value = subVal;
                     subOption.textContent = `  └ [서브메뉴] ${sub.title}`;
@@ -844,8 +859,8 @@ async function initializeAdminPanel() {
                     renderedSections.add(subVal);
                   }
                 }
-              });
-            }
+              }
+            });
           }
         });
       }
@@ -2504,13 +2519,26 @@ async function initializeAdminPanel() {
             if (customVal && !isNaN(customVal)) {
               applyFontSize(customVal);
               
-              // Dynamically insert custom value into dropdown options
+              // Dynamically insert custom value into dropdown options in sorted order
               let opt = sizeSelect.querySelector(`option[value="${customVal}"]`);
               if (!opt) {
                 opt = document.createElement('option');
                 opt.value = customVal;
                 opt.textContent = `${customVal}px`;
-                sizeSelect.insertBefore(opt, customOpt);
+                
+                const options = Array.from(sizeSelect.querySelectorAll('option'));
+                let inserted = false;
+                for (let i = 0; i < options.length; i++) {
+                  const val = parseInt(options[i].value, 10);
+                  if (!isNaN(val) && val > customVal) {
+                    sizeSelect.insertBefore(opt, options[i]);
+                    inserted = true;
+                    break;
+                  }
+                }
+                if (!inserted) {
+                  sizeSelect.insertBefore(opt, customOpt);
+                }
               }
               sizeSelect.value = customVal;
             }
@@ -2671,7 +2699,20 @@ async function initializeAdminPanel() {
             opt = document.createElement('option');
             opt.value = currentSize;
             opt.textContent = `${currentSize}px`;
-            sizeSelect.insertBefore(opt, customOpt);
+            
+            const options = Array.from(sizeSelect.querySelectorAll('option'));
+            let inserted = false;
+            for (let i = 0; i < options.length; i++) {
+              const val = parseInt(options[i].value, 10);
+              if (!isNaN(val) && val > currentSize) {
+                sizeSelect.insertBefore(opt, options[i]);
+                inserted = true;
+                break;
+              }
+            }
+            if (!inserted) {
+              sizeSelect.insertBefore(opt, customOpt);
+            }
           }
           sizeSelect.value = currentSize;
         }

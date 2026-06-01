@@ -1223,6 +1223,10 @@ footer {
     -moz-appearance: none;
     appearance: none;
 }
+.page-admin select option {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+}
 
 /* Contenteditable Rich Text Editor styling */
 .page-admin .content-editor {
