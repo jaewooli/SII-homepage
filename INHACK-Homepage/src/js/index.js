@@ -4,6 +4,7 @@ import { fetchMe } from '/assets/js/auth.js';
 const contentArea = document.getElementById('view');
 
 async function loadContent(fragmentID){
+  // fragmentID can be a nested path like 'curriculum/week1'
   let url = '';
   if (fragmentID){
     url = `/frags/${fragmentID}.html`;
@@ -13,34 +14,82 @@ async function loadContent(fragmentID){
   try{
     const response = await fetch(url);
     if (!response.ok){
-      throw new Error('Network response was not ok');
-  }
-  const htmlContent = await response.text();
-  contentArea.innerHTML = htmlContent;
-  if (fragmentID === 'admin') {
-    initializeAdminPanel();
-  }
+      throw new Error(`Fragment not found: ${url}`);
+    }
+    const htmlContent = await response.text();
+    contentArea.innerHTML = htmlContent;
+    // Extract top-level fragment (e.g. 'curriculum' from 'curriculum/week1')
+    const topFragment = fragmentID ? fragmentID.split('/')[0] : '';
+    if (topFragment === 'admin') {
+      initializeAdminPanel();
+    }
   }catch(err){
     console.error('Failed to load content:', err);
-    contentArea.innerHTML = '<p>Failed to load content. Please try again later.</p>';
+    contentArea.innerHTML = `
+      <div style="padding: 2rem; text-align: center; color: #64748b;">
+        <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">페이지를 찾을 수 없습니다.</p>
+        <p style="font-size: 0.85rem; color: #475569;">${fragmentID ? `'${fragmentID}' 콘텐츠가 아직 준비되지 않았습니다.` : ''}</p>
+      </div>`;
   }
 }
 
 function updateActiveNavLink(fragmentID) {
-  const links = document.querySelectorAll('aside ul li a');
-  links.forEach(link => {
-    const hash = link.getAttribute('href');
-    // If empty fragmentID, defaults to home/first link if it represents it
-    if (hash === `#${fragmentID}` || (!fragmentID && hash === '#')) {
-      link.classList.add('active');
+  // Support nested paths: 'curriculum/week1' → parent is 'curriculum'
+  const topFragment = fragmentID ? fragmentID.split('/')[0] : '';
+
+  const navList = document.getElementById('sidebar-nav-list');
+  if (!navList) return;
+
+  // Reset all active states and close all submenus
+  navList.querySelectorAll('li').forEach(li => {
+    li.classList.remove('open');
+  });
+  navList.querySelectorAll('a').forEach(a => {
+    a.classList.remove('active');
+  });
+
+  navList.querySelectorAll('li').forEach(li => {
+    const mainLink = li.querySelector(':scope > a');
+    if (!mainLink) return;
+    const hash = mainLink.getAttribute('href');
+
+    // Check exact match (top-level fragment)
+    const hashFragment = hash && hash.startsWith('#') ? hash.substring(1) : null;
+    const isExactMatch = hash === `#${fragmentID}` || (!fragmentID && (hash === '#' || hash === ''));
+    const isParentMatch = hashFragment && hashFragment === topFragment && fragmentID !== topFragment;
+
+    if (isExactMatch) {
+      mainLink.classList.add('active');
+    } else if (isParentMatch) {
+      // Parent menu: highlight and open submenu
+      mainLink.classList.add('active');
+      li.classList.add('open');
+      // Also highlight the matching submenu item
+      const subLinks = li.querySelectorAll('.submenu a');
+      subLinks.forEach(subA => {
+        const subHash = subA.getAttribute('href');
+        if (subHash === `#${fragmentID}`) {
+          subA.classList.add('active');
+        }
+      });
     } else {
-      link.classList.remove('active');
+      // Check if this is a direct submenu match (for external navigation)
+      const subLinks = li.querySelectorAll('.submenu a');
+      subLinks.forEach(subA => {
+        const subHash = subA.getAttribute('href');
+        if (subHash === `#${fragmentID}`) {
+          subA.classList.add('active');
+          mainLink.classList.add('active');
+          li.classList.add('open');
+        }
+      });
     }
   });
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  const initialFragment = window.location.hash.substring(1);
+  const rawHash = window.location.hash.substring(1);
+  const initialFragment = decodeURIComponent(rawHash);
   loadContent(initialFragment);
   updateActiveNavLink(initialFragment);
 });
@@ -123,7 +172,9 @@ function renderSidebarNav(menuItems) {
 }
 
 window.addEventListener('hashchange', () => {
-  const fragmentID = window.location.hash.substring(1);
+  // Decode URI component to handle encoded characters in fragment paths
+  const rawHash = window.location.hash.substring(1);
+  const fragmentID = decodeURIComponent(rawHash);
   loadContent(fragmentID);
   updateActiveNavLink(fragmentID);
 });
