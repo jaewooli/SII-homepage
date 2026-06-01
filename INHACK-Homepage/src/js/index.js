@@ -1410,45 +1410,65 @@ async function initializeAdminPanel() {
       }
     }
 
-    // JSON File Upload and Parse
-    const fileInput = document.getElementById('admin-md-file');
-    const fileTrigger = document.getElementById('admin-upload-trigger-btn');
-    const filenameSpan = document.getElementById('admin-md-filename');
+    // Workspace Columns Resizer Logic
+    const workspaceGrid = document.querySelector('.overlay-workspace');
+    const resizer1 = document.getElementById('admin-resizer-1');
+    const resizer2 = document.getElementById('admin-resizer-2');
 
-    if (fileTrigger && fileInput) {
-      fileTrigger.addEventListener('click', () => {
-        fileInput.click();
-      });
+    if (workspaceGrid && resizer1 && resizer2) {
+      // Define initial width variables (default matching style.css)
+      let pane1Width = 260; // px
+      let pane2Width = 550; // px
+      const minPaneWidth = 150; // px
+      const maxPaneWidth = 1000; // px
 
-      fileInput.addEventListener('change', () => {
-        const file = fileInput.files[0];
-        if (!file) {
-          filenameSpan.textContent = '선택된 파일 없음';
-          return;
-        }
-        filenameSpan.textContent = file.name;
+      // Set initial inline grid style so it starts cleanly
+      workspaceGrid.style.gridTemplateColumns = `${pane1Width}px 6px ${pane2Width}px 6px 1fr`;
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          try {
-            const parsed = JSON.parse(e.target.result);
-            if (Array.isArray(parsed)) {
-              currentBlocks = parsed;
-            } else {
-              currentBlocks = legacyFallback(parsed, selectSection.value);
-            }
-            activeBlockIndex = currentBlocks.length > 0 ? 0 : null;
-            renderBlockList();
-            renderActiveBlockForm();
-            renderPreview();
-            showToast('JSON 데이터 파일이 에디터에 로드되었습니다! 미리보기를 확인한 후 저장해 주세요.', 'success');
-          } catch (err) {
-            console.error(err);
-            showToast('파일 파싱 실패: 올바른 JSON 형식이 아닙니다.', 'error');
+      // Helper to handle column dragging
+      function initResizer(resizer, targetPaneIndex) {
+        let startX = 0;
+        let initialWidth = 0;
+
+        const onMouseMove = (e) => {
+          const deltaX = e.clientX - startX;
+          let newWidth = initialWidth + deltaX;
+
+          if (newWidth < minPaneWidth) newWidth = minPaneWidth;
+          if (newWidth > maxPaneWidth) newWidth = maxPaneWidth;
+
+          if (targetPaneIndex === 1) {
+            pane1Width = newWidth;
+          } else {
+            pane2Width = newWidth;
           }
+
+          workspaceGrid.style.gridTemplateColumns = `${pane1Width}px 6px ${pane2Width}px 6px 1fr`;
         };
-        reader.readAsText(file);
-      });
+
+        const onMouseUp = () => {
+          document.body.classList.remove('resizing-active');
+          resizer.classList.remove('active');
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        resizer.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          startX = e.clientX;
+          initialWidth = targetPaneIndex === 1 ? pane1Width : pane2Width;
+
+          document.body.classList.add('resizing-active');
+          resizer.classList.add('active');
+
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        });
+      }
+
+      // Initialize the resizers
+      initResizer(resizer1, 1);
+      initResizer(resizer2, 2);
     }
 
     if (saveBtn) {

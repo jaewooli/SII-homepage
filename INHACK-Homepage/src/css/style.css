@@ -1457,7 +1457,7 @@ footer {
 .page-admin .overlay-workspace {
     flex: 1;
     display: grid;
-    grid-template-columns: 260px 1.2fr 1fr;
+    grid-template-columns: 260px 6px 1.2fr 6px 1fr;
     box-sizing: border-box;
     overflow: hidden; /* layout itself doesn't scroll */
 }
@@ -1481,11 +1481,11 @@ footer {
 }
 
 .page-admin .block-list-pane {
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: none;
 }
 
 .page-admin .form-editor-pane {
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: none;
 }
 
 .page-admin .workspace-pane .pane-header {
@@ -1539,4 +1539,50 @@ footer {
 }
 .page-admin .pane-content::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 240, 255, 0.4);
+}
+
+/* Cybernetic Resizer Bars between panes */
+.page-admin .workspace-resizer {
+    width: 6px;
+    background: rgba(0, 240, 255, 0.08);
+    border-left: 1px solid rgba(0, 240, 255, 0.2);
+    border-right: 1px solid rgba(0, 240, 255, 0.2);
+    cursor: col-resize;
+    position: relative;
+    z-index: 100;
+    transition: all 0.2s ease;
+    user-select: none;
+    height: 100%;
+}
+
+.page-admin .workspace-resizer:hover,
+.page-admin .workspace-resizer.active {
+    background: var(--color-cyan) !important;
+    border-left-color: var(--color-cyan);
+    border-right-color: var(--color-cyan);
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+}
+
+.page-admin .workspace-resizer::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 24px;
+    background: rgba(0, 240, 255, 0.4);
+    border-radius: 1px;
+    transition: background 0.2s;
+}
+
+.page-admin .workspace-resizer:hover::after,
+.page-admin .workspace-resizer.active::after {
+    background: #000;
+}
+
+/* Dragging state body cursor overrides */
+body.resizing-active {
+    cursor: col-resize !important;
+    user-select: none !important;
 }

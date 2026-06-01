@@ -90,15 +90,7 @@
                 </select>
             </div>
 
-            <!-- File Upload -->
-            <div class="control-group">
-                <label>IMPORT JSON</label>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <input type="file" id="admin-md-file" accept=".json" style="display: none;">
-                    <button type="button" id="admin-upload-trigger-btn" class="action-btn upload-btn">Choose File</button>
-                    <span id="admin-md-filename" class="filename-text">No file chosen</span>
-                </div>
-            </div>
+            <!-- JSON Import Removed -->
         </div>
 
         <div class="overlay-actions">
@@ -116,6 +108,9 @@
                 <!-- Block list items generated dynamically -->
             </div>
         </div>
+
+        <!-- Resizer 1 -->
+        <div class="workspace-resizer" id="admin-resizer-1"></div>
 
         <!-- Pane 2: Block Form Editor -->
         <div class="workspace-pane form-editor-pane">
@@ -138,6 +133,9 @@
                 </div>
             </div>
         </div>
+
+        <!-- Resizer 2 -->
+        <div class="workspace-resizer" id="admin-resizer-2"></div>
 
         <!-- Pane 3: Live Preview -->
         <div class="workspace-pane preview-pane">
