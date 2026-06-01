@@ -969,6 +969,56 @@ footer {
     color: #e2e8f0;
 }
 
+/* Tabs Navigation & Buttons styling */
+.page-admin .admin-tabs-nav {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 1rem;
+}
+
+.page-admin .admin-tab-btn {
+    all: unset;
+    box-sizing: border-box;
+    cursor: pointer;
+    padding: 10px 20px;
+    font-family: var(--font-mono), monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #64748b;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.page-admin .admin-tab-btn[data-tab="users"]:hover,
+.page-admin .admin-tab-btn[data-tab="users"].active {
+    border-color: #ff4b4b;
+    color: #ff4b4b;
+    background: rgba(255, 75, 75, 0.08);
+    box-shadow: 0 0 12px rgba(255, 75, 75, 0.2);
+}
+
+.page-admin .admin-tab-btn[data-tab="content"]:hover,
+.page-admin .admin-tab-btn[data-tab="content"].active {
+    border-color: var(--color-cyan);
+    color: var(--color-cyan);
+    background: rgba(0, 240, 255, 0.08);
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+}
+
+.page-admin .admin-tab-pane {
+    display: none;
+}
+
+.page-admin .admin-tab-pane.active {
+    display: block;
+}
+
+
 /* Reset and apply cybernetic style to ALL buttons on the admin page */
 .page-admin button, 
 .page-admin .action-btn, 
