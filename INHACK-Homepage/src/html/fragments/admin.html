@@ -49,6 +49,12 @@
             </div>
 
             <div class="admin-editor-workspace">
+                <div style="display: flex; flex-direction: column; gap: 6px; border-right: 1px solid rgba(255,255,255,0.05); padding-right: 1rem;">
+                    <label style="font-size: 0.75rem; color: #64748b;">블록 계층 구조 (Block List)</label>
+                    <div id="admin-block-list" style="flex: 1; display: flex; flex-direction: column; gap: 8px; max-height: 500px; overflow-y: auto; padding: 6px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px;">
+                        <!-- Block list items will be generated dynamically -->
+                    </div>
+                </div>
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <label for="admin-edit-content" style="font-size: 0.75rem; color: #64748b;">데이터 에디터 (JSON 포맷)</label>
                     <div class="block-toolbar" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding: 10px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 6px;">

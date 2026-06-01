@@ -801,6 +801,8 @@ async function initializeAdminPanel() {
       // Clear error highlights
       textareaMarkdown.style.borderColor = 'rgba(255, 255, 255, 0.08)';
       if (saveBtn) saveBtn.disabled = false;
+
+      updateBlockListUI(data);
     } catch (err) {
       // Draw error message in the preview panel
       previewArea.innerHTML = `<div style="color: #ef4444; padding: 1.5rem; border: 1px dashed rgba(239, 68, 68, 0.3); border-radius: 6px; background: rgba(239, 68, 68, 0.05); font-family: monospace; font-size: 0.85rem;">
@@ -812,6 +814,112 @@ async function initializeAdminPanel() {
       // Highlight editor border as error and block save
       textareaMarkdown.style.borderColor = '#ef4444';
       if (saveBtn) saveBtn.disabled = true;
+
+      updateBlockListUI(null, err.message);
+    }
+  }
+
+  function updateBlockListUI(blocks, errMsg) {
+    const blockListContainer = document.getElementById('admin-block-list');
+    if (!blockListContainer) return;
+    
+    if (errMsg) {
+      blockListContainer.innerHTML = `<div style="color: #ef4444; font-size: 0.75rem; padding: 10px; text-align: center; border: 1px dashed rgba(239,68,68,0.2); border-radius: 4px;">
+        ⚠️ JSON 에러 발생<br><span style="font-size: 0.65rem; color: #94a3b8; word-break: break-all;">${errMsg}</span>
+      </div>`;
+      return;
+    }
+    
+    if (!blocks || !Array.isArray(blocks) || blocks.length === 0) {
+      blockListContainer.innerHTML = '<div style="color: #64748b; font-size: 0.75rem; text-align: center; padding: 20px;">등록된 블록이 없습니다.</div>';
+      return;
+    }
+
+    blockListContainer.innerHTML = '';
+    blocks.forEach((block, index) => {
+      const blockCard = document.createElement('div');
+      blockCard.className = 'block-hierarchy-card';
+      
+      let titlePreview = '';
+      let icon = '📦';
+      if (block.type === 'banner') { icon = '📢'; titlePreview = block.title || ''; }
+      else if (block.type === 'header') { icon = '🏷️'; titlePreview = block.title || ''; }
+      else if (block.type === 'features') { icon = '🎴'; titlePreview = `카드 ${block.items?.length || 0}개`; }
+      else if (block.type === 'links') { icon = '🔗'; titlePreview = `링크 ${block.items?.length || 0}개`; }
+      else if (block.type === 'phases') { icon = '🗺️'; titlePreview = `단계 ${block.items?.length || 0}개`; }
+      else if (block.type === 'timeline') { icon = '📅'; titlePreview = `아이템 ${block.items?.length || 0}개`; }
+      else if (block.type === 'ctf_dashboard') { icon = '🏆'; titlePreview = '대시보드'; }
+
+      if (titlePreview && titlePreview.length > 15) {
+        titlePreview = titlePreview.substring(0, 15) + '...';
+      }
+
+      blockCard.innerHTML = `
+        <div style="display: flex; flex-direction: column; flex: 1; min-width: 0; text-align: left;">
+          <span style="font-size: 0.65rem; color: #64748b; font-family: monospace;">#${index + 1} ${block.type.toUpperCase()}</span>
+          <span style="font-size: 0.75rem; color: #e2e8f0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${icon} ${titlePreview || block.type}</span>
+        </div>
+        <div style="display: flex; gap: 4px; flex-shrink: 0; align-items: center;">
+          <button type="button" class="hierarchy-btn move-up" data-index="${index}" title="위로 이동" style="padding: 4px 6px; font-size: 0.65rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: #fff; cursor: pointer;">↑</button>
+          <button type="button" class="hierarchy-btn move-down" data-index="${index}" title="아래로 이동" style="padding: 4px 6px; font-size: 0.65rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: #fff; cursor: pointer;">↓</button>
+          <button type="button" class="hierarchy-btn delete-block" data-index="${index}" title="삭제" style="padding: 4px 6px; font-size: 0.65rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 3px; color: #ef4444; cursor: pointer;">🗑️</button>
+        </div>
+      `;
+      blockListContainer.appendChild(blockCard);
+    });
+
+    blockListContainer.querySelectorAll('.move-up').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-index'));
+        moveBlock(idx, -1);
+      });
+    });
+    blockListContainer.querySelectorAll('.move-down').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-index'));
+        moveBlock(idx, 1);
+      });
+    });
+    blockListContainer.querySelectorAll('.delete-block').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-index'));
+        deleteBlock(idx);
+      });
+    });
+  }
+
+  function moveBlock(idx, direction) {
+    try {
+      const data = JSON.parse(textareaMarkdown.value);
+      if (!Array.isArray(data)) return;
+      const targetIdx = idx + direction;
+      if (targetIdx < 0 || targetIdx >= data.length) return;
+
+      const temp = data[idx];
+      data[idx] = data[targetIdx];
+      data[targetIdx] = temp;
+
+      textareaMarkdown.value = JSON.stringify(data, null, 2);
+      renderPreview(textareaMarkdown.value);
+      showToast('블록 순서가 변경되었습니다.', 'success');
+    } catch (e) {
+      showToast('순서 변경 실패: JSON이 올바르지 않습니다.', 'error');
+    }
+  }
+
+  function deleteBlock(idx) {
+    try {
+      const data = JSON.parse(textareaMarkdown.value);
+      if (!Array.isArray(data)) return;
+      if (!confirm('정말로 이 블록을 삭제하시겠습니까?')) return;
+
+      data.splice(idx, 1);
+
+      textareaMarkdown.value = JSON.stringify(data, null, 2);
+      renderPreview(textareaMarkdown.value);
+      showToast('블록이 삭제되었습니다.', 'success');
+    } catch (e) {
+      showToast('삭제 실패: JSON이 올바르지 않습니다.', 'error');
     }
   }
 

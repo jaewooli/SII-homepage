@@ -554,24 +554,7 @@ p a:hover {
     margin-top: 2px;
 }
 
-.admin-editor-workspace {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    flex: 1;
-    min-height: 500px;
-}
 
-@media (max-width: 900px) {
-    .admin-editor-workspace {
-        grid-template-columns: 1fr;
-        min-height: auto;
-    }
-    .admin-editor-workspace textarea, 
-    .admin-editor-workspace .preview-box {
-        min-height: 350px !important;
-    }
-}
 
 .tool-btn {
     display: inline-flex;
@@ -600,4 +583,50 @@ p a:hover {
 
 .tool-btn:active {
     transform: translateY(1px);
+}
+
+.admin-editor-workspace {
+    display: grid;
+    grid-template-columns: 240px 1.2fr 1fr;
+    gap: 1.5rem;
+    flex: 1;
+    min-height: 520px;
+}
+
+@media (max-width: 1024px) {
+    .admin-editor-workspace {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+}
+
+.block-hierarchy-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    gap: 10px;
+}
+
+.block-hierarchy-card:hover {
+    background: rgba(59, 130, 246, 0.05);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.hierarchy-btn {
+    transition: all 0.15s ease;
+}
+
+.hierarchy-btn:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.hierarchy-btn.delete-block:hover {
+    background: rgba(239, 68, 68, 0.25) !important;
+    border-color: rgba(239, 68, 68, 0.5) !important;
 }
