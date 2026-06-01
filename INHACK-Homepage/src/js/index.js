@@ -1981,8 +1981,8 @@ async function initializeAdminPanel() {
                 showToast(`메뉴 #${i + 1}의 제목(이름)을 입력해 주세요. ('새 메뉴' 제외)`, 'error');
                 return;
               }
-              if (!url) {
-                showToast(`메뉴 #${i + 1}의 URL을 입력해 주세요. (페이지가 없으면 # 입력)`, 'error');
+              if (!url || url === '#') {
+                showToast(`메뉴 #${i + 1}의 URL을 입력해 주세요. (기본값 '#' 제외)`, 'error');
                 return;
               }
 
