@@ -17,16 +17,7 @@
         "tag": "COMPETITION //",
         "title": "CTF & 실전 해킹 대회",
         "desc": "국내외 CTF 대회에 참가하여 실시간으로 취약점을 발굴하고 정교한 익스플로잇 코드를 작성하며 압도적인 기술적 역량을 단련합니다."
-      }
-    ]
-  },
-  {
-    "type": "spacer",
-    "height": "1.75rem"
-  },
-  {
-    "type": "features",
-    "items": [
+      },
       {
         "tag": "UNIVERSITY //",
         "title": "INHACK 공식 소개 ↗",

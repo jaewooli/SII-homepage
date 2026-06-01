@@ -791,9 +791,9 @@ async function initializeAdminPanel() {
             <span style="font-size: 0.75rem; color: #e2e8f0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${icon} ${titlePreview || block.type}</span>
           </div>
           <div style="display: flex; gap: 4px; flex-shrink: 0; align-items: center;">
-            <button type="button" class="hierarchy-btn move-up" data-index="${index}" title="위로 이동" style="padding: 4px 6px; font-size: 0.65rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: #fff; cursor: pointer;">↑</button>
-            <button type="button" class="hierarchy-btn move-down" data-index="${index}" title="아래로 이동" style="padding: 4px 6px; font-size: 0.65rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: #fff; cursor: pointer;">↓</button>
-            <button type="button" class="hierarchy-btn delete-block" data-index="${index}" title="삭제" style="padding: 4px 6px; font-size: 0.65rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 3px; color: #ef4444; cursor: pointer;">🗑️</button>
+            <button type="button" class="hierarchy-btn move-up" data-index="${index}" title="위로 이동">↑</button>
+            <button type="button" class="hierarchy-btn move-down" data-index="${index}" title="아래로 이동">↓</button>
+            <button type="button" class="hierarchy-btn delete-block" data-index="${index}" title="삭제">🗑️</button>
           </div>
         `;
         
@@ -922,7 +922,7 @@ async function initializeAdminPanel() {
           <div class="block-card-item feature-item" data-item-index="${idx}">
             <div class="block-card-header">
               <span class="block-card-title-label">CARD #${idx + 1}</span>
-              <button type="button" class="hierarchy-btn delete-card-item" data-item-index="${idx}" style="padding: 4px 8px; font-size: 0.7rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; color: #ef4444; cursor: pointer;">삭제</button>
+              <button type="button" class="hierarchy-btn delete-card-item" data-item-index="${idx}">삭제</button>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
               <div class="block-form-group">
@@ -948,7 +948,7 @@ async function initializeAdminPanel() {
         wrapper.innerHTML += `
           <div style="display: flex; flex-direction: column; gap: 10px;">
             ${itemsHtml}
-            <button type="button" class="action-btn add-card-item" style="border-color: #10b981; color: #10b981; font-size: 0.75rem; padding: 8px; width: 100%;">+ 새 카드 추가</button>
+            <button type="button" class="action-btn add-card-item">+ 새 카드 추가</button>
           </div>
         `;
       } 
@@ -958,7 +958,7 @@ async function initializeAdminPanel() {
           <div class="block-card-item phase-item" data-item-index="${idx}">
             <div class="block-card-header">
               <span class="block-card-title-label">PHASE #${idx + 1}</span>
-              <button type="button" class="hierarchy-btn delete-card-item" data-item-index="${idx}" style="padding: 4px 8px; font-size: 0.7rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; color: #ef4444; cursor: pointer;">삭제</button>
+              <button type="button" class="hierarchy-btn delete-card-item" data-item-index="${idx}">삭제</button>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
               <div class="block-form-group">
@@ -984,7 +984,7 @@ async function initializeAdminPanel() {
         wrapper.innerHTML += `
           <div style="display: flex; flex-direction: column; gap: 10px;">
             ${itemsHtml}
-            <button type="button" class="action-btn add-card-item" style="border-color: #10b981; color: #10b981; font-size: 0.75rem; padding: 8px; width: 100%;">+ 새 단계 추가</button>
+            <button type="button" class="action-btn add-card-item">+ 새 단계 추가</button>
           </div>
         `;
       } 
@@ -994,7 +994,7 @@ async function initializeAdminPanel() {
           <div class="block-card-item timeline-item" data-item-index="${idx}">
             <div class="block-card-header">
               <span class="block-card-title-label">WEEK/ITEM #${idx + 1}</span>
-              <button type="button" class="hierarchy-btn delete-card-item" data-item-index="${idx}" style="padding: 4px 8px; font-size: 0.7rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; color: #ef4444; cursor: pointer;">삭제</button>
+              <button type="button" class="hierarchy-btn delete-card-item" data-item-index="${idx}">삭제</button>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
               <div class="block-form-group">
@@ -1020,7 +1020,7 @@ async function initializeAdminPanel() {
         wrapper.innerHTML += `
           <div style="display: flex; flex-direction: column; gap: 10px;">
             ${itemsHtml}
-            <button type="button" class="action-btn add-card-item" style="border-color: #10b981; color: #10b981; font-size: 0.75rem; padding: 8px; width: 100%;">+ 새 일정 추가</button>
+            <button type="button" class="action-btn add-card-item">+ 새 일정 추가</button>
           </div>
         `;
       } 
@@ -1032,7 +1032,7 @@ async function initializeAdminPanel() {
           <div class="block-card-item ctf-leaderboard-item" data-item-index="${idx}">
             <div class="block-card-header">
               <span class="block-card-title-label">RANK #${idx + 1}</span>
-              <button type="button" class="hierarchy-btn delete-leaderboard-item" data-item-index="${idx}" style="padding: 4px 8px; font-size: 0.7rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; color: #ef4444; cursor: pointer;">삭제</button>
+              <button type="button" class="hierarchy-btn delete-leaderboard-item" data-item-index="${idx}">삭제</button>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
               <div class="block-form-group">
@@ -1061,7 +1061,7 @@ async function initializeAdminPanel() {
           <div class="block-card-item ctf-challenge-item" data-item-index="${idx}">
             <div class="block-card-header">
               <span class="block-card-title-label">CHALLENGE #${idx + 1}</span>
-              <button type="button" class="hierarchy-btn delete-challenge-item" data-item-index="${idx}" style="padding: 4px 8px; font-size: 0.7rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; color: #ef4444; cursor: pointer;">삭제</button>
+              <button type="button" class="hierarchy-btn delete-challenge-item" data-item-index="${idx}">삭제</button>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px;">
               <div class="block-form-group">
@@ -1094,12 +1094,12 @@ async function initializeAdminPanel() {
             <h4 style="color: var(--color-cyan); margin: 0 0 10px 0; font-size: 0.85rem; border-bottom: 1px solid rgba(59,130,246,0.2); padding-bottom: 6px;">🏆 LEADERBOARD</h4>
             <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
               ${leaderboardHtml}
-              <button type="button" class="action-btn add-leaderboard-item" style="border-color: #10b981; color: #10b981; font-size: 0.75rem; padding: 6px 12px; width: 100%;">+ 리더보드 항목 추가</button>
+              <button type="button" class="action-btn add-leaderboard-item">+ 리더보드 항목 추가</button>
             </div>
             <h4 style="color: var(--color-cyan); margin: 20px 0 10px 0; font-size: 0.85rem; border-bottom: 1px solid rgba(59,130,246,0.2); padding-bottom: 6px;">🧩 ACTIVE CHALLENGES</h4>
             <div style="display: flex; flex-direction: column; gap: 10px;">
               ${challengesHtml}
-              <button type="button" class="action-btn add-challenge-item" style="border-color: #10b981; color: #10b981; font-size: 0.75rem; padding: 6px 12px; width: 100%;">+ 챌린지 추가</button>
+              <button type="button" class="action-btn add-challenge-item">+ 챌린지 추가</button>
             </div>
           </div>
         `;
@@ -1445,7 +1445,7 @@ async function initializeAdminPanel() {
           <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px;">${user.username}</div>
           <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px;">${user.name}</div>
           <div style="width: 60px; display: flex; justify-content: center;">
-            <button class="delete-user-btn action-btn" style="margin: 0; padding: 4px 8px; font-size: 0.7rem; border-color: #ef4444; color: #ef4444; background: transparent; cursor: pointer;">삭제</button>
+            <button class="delete-user-btn action-btn">삭제</button>
           </div>
         `;
 

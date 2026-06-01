@@ -961,3 +961,283 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================================================
+   [11] Admin Control Panel Cybernetic Styling
+   ========================================================================== */
+.page-admin {
+    color: #e2e8f0;
+}
+
+/* Reset and apply cybernetic style to ALL buttons on the admin page */
+.page-admin button, 
+.page-admin .action-btn, 
+.page-admin .tool-btn {
+    all: unset; /* reset browser default button styles */
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 18px;
+    font-family: 'Space Grotesk', var(--font-body), sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+}
+
+/* Standard cybernetic cyan button outline */
+.page-admin button.action-btn,
+.page-admin button[type="submit"] {
+    background: rgba(0, 240, 255, 0.03);
+    border: 1px solid var(--color-cyan);
+    color: var(--color-cyan);
+    width: 100%;
+}
+
+.page-admin button.action-btn:hover,
+.page-admin button[type="submit"]:hover {
+    background: var(--color-cyan) !important;
+    color: #000000 !important;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+}
+
+.page-admin button.action-btn:active,
+.page-admin button[type="submit"]:active {
+    transform: scale(0.98);
+}
+
+/* File Upload Button Specifics */
+.page-admin #admin-upload-trigger-btn {
+    background: rgba(16, 185, 129, 0.05);
+    border: 1px solid #10b981;
+    color: #10b981;
+    font-size: 0.75rem;
+    padding: 8px 14px;
+    width: auto;
+}
+.page-admin #admin-upload-trigger-btn:hover {
+    background: #10b981 !important;
+    color: #000000 !important;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Tool Buttons inside toolbar */
+.page-admin .block-toolbar .tool-btn {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    color: #cbd5e1;
+    padding: 8px 14px;
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+    text-transform: none;
+}
+.page-admin .block-toolbar .tool-btn:hover {
+    background: rgba(59, 130, 246, 0.15) !important;
+    border-color: #00f0ff !important;
+    color: #00f0ff !important;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+}
+
+/* All inputs, textareas, and select elements on admin page */
+.page-admin input[type="text"],
+.page-admin input[type="password"],
+.page-admin select,
+.page-admin textarea,
+.page-admin .block-form-input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(10, 15, 26, 0.65);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 4px;
+    color: #ffffff;
+    font-family: var(--font-body), sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.page-admin input[type="text"]::placeholder,
+.page-admin input[type="password"]::placeholder,
+.page-admin textarea::placeholder,
+.page-admin .block-form-input::placeholder {
+    color: rgba(148, 163, 184, 0.35); /* clearly visible but placeholder-like */
+}
+
+.page-admin input[type="text"]:focus,
+.page-admin input[type="password"]:focus,
+.page-admin select:focus,
+.page-admin textarea:focus,
+.page-admin .block-form-input:focus {
+    border-color: #00f0ff;
+    background: rgba(10, 15, 26, 0.85);
+    box-shadow: 0 0 8px rgba(0, 240, 255, 0.25);
+}
+
+/* Select element styling */
+.page-admin select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%233b82f6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 36px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+/* Left Sidebar Block Cards */
+.page-admin .block-hierarchy-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    gap: 10px;
+}
+.page-admin .block-hierarchy-card:hover {
+    background: rgba(59, 130, 246, 0.05);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+.page-admin .block-hierarchy-card.active {
+    background: rgba(0, 240, 255, 0.08) !important;
+    border-color: #00f0ff !important;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+}
+
+/* Hierarchy small utility buttons (up/down arrows) */
+.page-admin .block-hierarchy-card .hierarchy-btn {
+    padding: 4px 6px;
+    font-size: 0.65rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+    border-radius: 3px;
+    width: auto;
+    letter-spacing: 0;
+    text-transform: none;
+}
+.page-admin .block-hierarchy-card .hierarchy-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    color: #fff !important;
+}
+
+/* Left panel delete button */
+.page-admin .block-hierarchy-card .hierarchy-btn.delete-block {
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+.page-admin .block-hierarchy-card .hierarchy-btn.delete-block:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: #ef4444 !important;
+    color: #fff !important;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.25);
+}
+
+/* Block Card Items - Visual card lists inside form */
+.page-admin .block-card-item {
+    background: rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    border-left: 3px solid rgba(0, 240, 255, 0.5); /* distinct glowing cybernetic bar */
+    border-radius: 6px;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+.page-admin .block-card-item:hover {
+    border-color: rgba(0, 240, 255, 0.35);
+    background: rgba(15, 23, 42, 0.5);
+    border-left-color: #00f0ff;
+    box-shadow: 0 4px 15px rgba(0, 240, 255, 0.05);
+}
+
+/* Sub-card Header */
+.page-admin .block-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 8px;
+}
+.page-admin .block-card-title-label {
+    font-size: 0.72rem;
+    color: #00f0ff;
+    font-family: var(--font-mono), monospace;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+/* Sub-card Delete button overrides */
+.page-admin .block-card-item .delete-card-item, 
+.page-admin .block-card-item .delete-leaderboard-item, 
+.page-admin .block-card-item .delete-challenge-item {
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    width: auto;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.page-admin .block-card-item .delete-card-item:hover, 
+.page-admin .block-card-item .delete-leaderboard-item:hover, 
+.page-admin .block-card-item .delete-challenge-item:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: #ef4444 !important;
+    color: #fff !important;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.25);
+}
+
+/* Sub-card Add button overrides */
+.page-admin .add-card-item, 
+.page-admin .add-leaderboard-item, 
+.page-admin .add-challenge-item {
+    background: rgba(16, 185, 129, 0.03) !important;
+    border: 1px solid rgba(16, 185, 129, 0.25) !important;
+    color: #10b981 !important;
+    width: 100%;
+    padding: 10px !important;
+    font-size: 0.75rem !important;
+}
+.page-admin .add-card-item:hover, 
+.page-admin .add-leaderboard-item:hover, 
+.page-admin .add-challenge-item:hover {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border-color: #10b981 !important;
+    color: #fff !important;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+/* User Registration List delete button */
+.page-admin .delete-user-btn {
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    width: auto;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.page-admin .delete-user-btn:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: #ef4444 !important;
+    color: #fff !important;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.25);
+}

@@ -11,17 +11,17 @@
             <form id="admin-register-form" style="display: flex; flex-direction: column; gap: 1rem;">
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <label for="admin-reg-username" style="font-size: 0.75rem; color: #64748b;">아이디 (Username)</label>
-                    <input type="text" id="admin-reg-username" placeholder="사용자 ID 입력" style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #fff;" required>
+                    <input type="text" id="admin-reg-username" placeholder="사용자 ID 입력" required>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <label for="admin-reg-name" style="font-size: 0.75rem; color: #64748b;">성명/닉네임 (Name)</label>
-                    <input type="text" id="admin-reg-name" placeholder="홍길동" style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #fff;" required>
+                    <input type="text" id="admin-reg-name" placeholder="홍길동" required>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <label for="admin-reg-password" style="font-size: 0.75rem; color: #64748b;">비밀번호 (Password)</label>
-                    <input type="password" id="admin-reg-password" placeholder="비밀번호 입력" style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #fff;" required>
+                    <input type="password" id="admin-reg-password" placeholder="비밀번호 입력" required>
                 </div>
-                <button type="submit" class="action-btn" style="border-color: #ff4b4b; color: #ff4b4b; margin-top: 1rem; width: 100%;">계정 생성</button>
+                <button type="submit" class="action-btn">계정 생성</button>
             </form>
         </div>
 
@@ -31,7 +31,7 @@
             
             <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 1rem;">
                 <label for="admin-edit-section" style="font-size: 0.75rem; color: #64748b;">수정할 섹션 선택</label>
-                <select id="admin-edit-section" style="padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #fff; outline: none; cursor: pointer;">
+                <select id="admin-edit-section">
                     <option value="home">동아리 소개 (Home)</option>
                     <option value="curriculum">Curriculum</option>
                     <option value="seminar">Seminar</option>
@@ -43,7 +43,7 @@
                 <label style="font-size: 0.75rem; color: #64748b;">구조화 데이터 (.json) 파일 업로드</label>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="file" id="admin-md-file" accept=".json" style="display: none;">
-                    <button type="button" id="admin-upload-trigger-btn" class="action-btn" style="margin: 0; padding: 10px 14px; font-size: 0.75rem; border-color: #10b981; color: #10b981;">JSON 파일 선택</button>
+                    <button type="button" id="admin-upload-trigger-btn" class="action-btn">JSON 파일 선택</button>
                     <span id="admin-md-filename" style="font-size: 0.75rem; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;">선택된 파일 없음</span>
                 </div>
             </div>
@@ -78,7 +78,7 @@
                 </div>
             </div>
 
-            <button type="button" id="admin-save-content-btn" class="action-btn" style="border-color: var(--color-cyan); color: var(--color-cyan); margin-top: 1.5rem; width: 100%;">변경 사항 저장</button>
+            <button type="button" id="admin-save-content-btn" class="action-btn">변경 사항 저장</button>
         </div>
 
         <!-- Card 3: User List and Deletion -->
