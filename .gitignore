@@ -11,6 +11,8 @@ node_modules/
 *.log
 *.pem
 package-lock.json
+*.bak
+
 
 
 .antigravitycli/

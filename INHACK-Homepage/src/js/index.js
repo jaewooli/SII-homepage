@@ -312,19 +312,126 @@ function showForcePasswordChangeModal() {
   });
 }
 
+// Confirmation overlay modal to verify markdown preview and prevent accidental edits
+function showSaveConfirmationModal(sectionId, onConfirm) {
+  const overlay = document.createElement('div');
+  overlay.id = 'admin-save-confirm-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(8, 11, 18, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  `;
+
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    width: 100%;
+    max-width: 480px;
+    padding: 2rem;
+    background: #0d131f;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    color: #fff;
+    font-family: 'Inter', system-ui, sans-serif;
+  `;
+
+  const sectionNameMap = {
+    'home': '동아리 소개 (Home)',
+    'curriculum': 'Curriculum',
+    'seminar': 'Seminar',
+    'ctf': 'CTF Challenge'
+  };
+  const sectionName = sectionNameMap[sectionId] || sectionId;
+
+  modal.innerHTML = `
+    <h3 style="color: #06b6d4; font-size: 1.15rem; margin-top: 0; margin-bottom: 1rem; font-weight: 700; letter-spacing: 0.03em;">변경 사항 저장 확인</h3>
+    <p style="font-size: 0.85rem; color: #e2e8f0; line-height: 1.6; margin-bottom: 1rem;">
+      <strong>[${sectionName}]</strong> 섹션의 마크다운 수정 내용을 저장하시겠습니까?
+    </p>
+    <div style="background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3b82f6; padding: 12px; margin-bottom: 1.5rem; border-radius: 0 4px 4px 0;">
+      <p style="font-size: 0.75rem; color: #94a3b8; margin: 0; line-height: 1.5;">
+        ⚠️ <strong>불필요한 수정 방지 안내:</strong><br>
+        우측의 <strong>실시간 미리보기(HTML Preview)</strong>를 통해 렌더링된 화면에 이상이 없는지 확인하셨나요? 오탈자나 마크다운 서식 오류가 없는지 다시 한번 점검해 주세요.
+      </p>
+    </div>
+    
+    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+      <button id="confirm-cancel-btn" style="padding: 10px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #94a3b8; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; outline: none;">취소</button>
+      <button id="confirm-save-btn" style="padding: 10px 20px; background: #3b82f6; border: none; border-radius: 4px; color: #fff; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; outline: none;">확인 및 저장</button>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const cancelBtn = modal.querySelector('#confirm-cancel-btn');
+  const saveBtn = modal.querySelector('#confirm-save-btn');
+
+  cancelBtn.addEventListener('mouseenter', () => { cancelBtn.style.background = 'rgba(255,255,255,0.1)'; cancelBtn.style.color = '#fff'; });
+  cancelBtn.addEventListener('mouseleave', () => { cancelBtn.style.background = 'rgba(255,255,255,0.05)'; cancelBtn.style.color = '#94a3b8'; });
+  saveBtn.addEventListener('mouseenter', () => { saveBtn.style.background = '#2563eb'; });
+  saveBtn.addEventListener('mouseleave', () => { saveBtn.style.background = '#3b82f6'; });
+
+  cancelBtn.addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  saveBtn.addEventListener('click', () => {
+    overlay.remove();
+    onConfirm();
+  });
+}
+
 async function initializeAdminPanel() {
   const selectSection = document.getElementById('admin-edit-section');
-  const textareaContent = document.getElementById('admin-edit-content');
+  const textareaMarkdown = document.getElementById('admin-edit-markdown');
+  const previewArea = document.getElementById('admin-html-preview');
   const saveBtn = document.getElementById('admin-save-content-btn');
   const registerForm = document.getElementById('admin-register-form');
 
-  if (selectSection && textareaContent) {
+  if (selectSection && textareaMarkdown && previewArea) {
     // Load default section on load
-    await loadSectionContent(selectSection.value);
+    await loadSectionMarkdown(selectSection.value);
 
     selectSection.addEventListener('change', async () => {
-      await loadSectionContent(selectSection.value);
+      await loadSectionMarkdown(selectSection.value);
     });
+
+    // Real-time Preview Logic
+    textareaMarkdown.addEventListener('input', () => {
+      renderPreview(textareaMarkdown.value);
+    });
+  }
+
+  function renderPreview(markdownText) {
+    if (!previewArea) return;
+    let htmlResult = '';
+    
+    if (window.marked && window.marked.parse) {
+      htmlResult = window.marked.parse(markdownText);
+    } else {
+      // Simple regex markdown-to-html fallback if marked CDN fails to load
+      htmlResult = markdownText
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+        .replace(/\*(.*)\*/gim, '<em>$1</em>')
+        .replace(/`(.*)`/gim, '<code>$1</code>')
+        .replace(/\[(.*?)\]\((.*?)\)/gim, "<a href='$2' target='_blank' rel='noopener noreferrer'>$1</a>")
+        .split('\n')
+        .map(line => line.trim() ? `<p>${line.trim()}</p>` : '')
+        .join('\n');
+    }
+    previewArea.innerHTML = htmlResult;
   }
 
   // Markdown File Upload and Parse
@@ -332,7 +439,7 @@ async function initializeAdminPanel() {
   const fileTrigger = document.getElementById('admin-upload-trigger-btn');
   const filenameSpan = document.getElementById('admin-md-filename');
 
-  if (fileTrigger && fileInput && textareaContent) {
+  if (fileTrigger && fileInput && textareaMarkdown) {
     fileTrigger.addEventListener('click', () => {
       fileInput.click();
     });
@@ -348,38 +455,24 @@ async function initializeAdminPanel() {
       const reader = new FileReader();
       reader.onload = function(e) {
         const markdownText = e.target.result;
-        let htmlResult = '';
-        
-        if (window.marked && window.marked.parse) {
-          htmlResult = window.marked.parse(markdownText);
-        } else {
-          // Simple regex markdown-to-html fallback if marked CDN fails to load
-          htmlResult = markdownText
-            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-            .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-            .replace(/\*(.*)\*/gim, '<em>$1</em>')
-            .replace(/`(.*)`/gim, '<code>$1</code>')
-            .replace(/\[(.*?)\]\((.*?)\)/gim, "<a href='$2' target='_blank' rel='noopener noreferrer'>$1</a>")
-            .split('\n')
-            .map(line => line.trim() ? `<p>${line.trim()}</p>` : '')
-            .join('\n');
-        }
-        
-        textareaContent.value = htmlResult;
-        showToast('마크다운 파일이 HTML로 파싱되어 에디터에 로드되었습니다! 내용을 검토한 후 저장해 주세요.', 'success');
+        textareaMarkdown.value = markdownText;
+        renderPreview(markdownText);
+        showToast('마크다운 파일이 에디터에 로드되었습니다! 미리보기를 확인한 후 저장해 주세요.', 'success');
       };
       reader.readAsText(file);
     });
   }
 
-  async function loadSectionContent(sectionId) {
+  async function loadSectionMarkdown(sectionId) {
     try {
-      const response = await fetch(`/frags/${sectionId}.html?_t=${Date.now()}`);
+      const response = await fetch(`/admin/content/${sectionId}?_t=${Date.now()}`);
       if (response.ok) {
-        const text = await response.text();
-        textareaContent.value = text;
+        const payload = await response.json();
+        if (payload.ok && payload.data) {
+          const content = payload.data.content || '';
+          textareaMarkdown.value = content;
+          renderPreview(content);
+        }
       }
     } catch (e) {
       console.error('Failed to load section content:', e);
@@ -388,27 +481,29 @@ async function initializeAdminPanel() {
   }
 
   if (saveBtn) {
-    saveBtn.addEventListener('click', async () => {
+    saveBtn.addEventListener('click', () => {
       const sectionId = selectSection.value;
-      const contentHtml = textareaContent.value;
-      
-      showToast('저장 중...', 'info', 0);
-      try {
-        const res = await fetch('/admin/update-content', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sectionId, contentHtml })
-        });
-        const data = await res.json();
-        if (res.ok && data.ok) {
-          showToast('컨텐츠가 안전하게 업데이트되었습니다!', 'success');
-        } else {
-          showToast(data.message || '저장 실패', 'error');
+      const content_md = textareaMarkdown.value;
+
+      showSaveConfirmationModal(sectionId, async () => {
+        showToast('저장 중...', 'info', 0);
+        try {
+          const res = await fetch('/admin/update-content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sectionId, content_md })
+          });
+          const data = await res.json();
+          if (res.ok && data.ok) {
+            showToast('컨텐츠가 안전하게 업데이트되었습니다!', 'success');
+          } else {
+            showToast(data.message || '저장 실패', 'error');
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('서버 통신 오류', 'error');
         }
-      } catch (err) {
-        console.error(err);
-        showToast('서버 통신 오류', 'error');
-      }
+      });
     });
   }
 

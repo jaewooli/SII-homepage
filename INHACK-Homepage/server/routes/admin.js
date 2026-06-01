@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
+const { marked } = require('marked');
 const db = require('../config/db');
 const { sendJson } = require('../helpers/response');
 
@@ -115,29 +118,87 @@ router.post('/delete-user', (req, res) => {
   }
 });
 
-// Admin Route: Update site section content HTML
+// Admin Route: Get raw content (Markdown/HTML) for a section
+router.get('/content/:sectionId', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+  const { sectionId } = req.params;
+  const validSections = ['home', 'curriculum', 'seminar', 'ctf'];
+  if (!validSections.includes(sectionId)) {
+    return sendJson(res, { status: 400, ok: false, message: '유효하지 않은 섹션 ID입니다.', code: 'BAD_REQUEST' });
+  }
+
+  db.get(`SELECT content_md, content_html FROM site_contents WHERE section_id = ?`, [sectionId], (err, row) => {
+    if (err) {
+      console.error('[Database Error] Failed to fetch content:', err.message);
+      return sendJson(res, { status: 500, ok: false, message: '데이터 로드 실패', code: 'DB_ERROR' });
+    }
+    // If content_md is empty, fallback to content_html for legacy support
+    const content = (row && row.content_md) ? row.content_md : (row ? row.content_html : '');
+    sendJson(res, {
+      status: 200,
+      ok: true,
+      data: { content },
+      code: 'SUCCESS'
+    });
+  });
+});
+
+// Admin Route: Update site section content (Markdown + HTML)
 router.post('/update-content', (req, res) => {
   if (!req.session.user || !req.session.user.isAdmin) {
     return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
   }
-  const { sectionId, contentHtml } = req.body;
+  const { sectionId, content_md } = req.body;
   const validSections = ['home', 'curriculum', 'seminar', 'ctf'];
-  if (!sectionId || contentHtml === undefined) {
+  if (!sectionId || content_md === undefined) {
     return sendJson(res, { status: 400, ok: false, message: '필수 필드가 누락되었습니다.', code: 'BAD_REQUEST' });
   }
   if (!validSections.includes(sectionId)) {
     return sendJson(res, { status: 400, ok: false, message: '유효하지 않은 섹션 ID입니다.', code: 'BAD_REQUEST' });
   }
 
-  const timestamp = new Date().toISOString();
-  db.run(`INSERT OR REPLACE INTO site_contents (section_id, content_html, updated_at) VALUES (?, ?, ?)`,
-    [sectionId, contentHtml, timestamp], (err) => {
-      if (err) {
-        console.error('[Database Error] Content update failed:', err.message);
-        return sendJson(res, { status: 500, ok: false, message: '컨텐츠 업데이트 실패', code: 'DB_ERROR' });
+  try {
+    const mdPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.md`);
+    const backupPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.md.bak`);
+    const htmlPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.html`);
+
+    // 1. Save previous .md file as backup if it exists
+    if (fs.existsSync(mdPath)) {
+      try {
+        fs.copyFileSync(mdPath, backupPath);
+      } catch (backupErr) {
+        console.error(`[Backup Error] Failed to backup old markdown for ${sectionId}:`, backupErr.message);
       }
-      return sendJson(res, { status: 200, ok: true, message: '컨텐츠가 성공적으로 업데이트되었습니다.', code: 'SUCCESS' });
-    });
+    }
+
+    // 2. Write new .md content
+    fs.writeFileSync(mdPath, content_md, 'utf8');
+
+    // 3. Convert markdown to HTML on the server
+    const compiledHtml = marked.parse(content_md);
+
+    // 4. Save HTML file physically
+    fs.writeFileSync(htmlPath, compiledHtml, 'utf8');
+
+    // 5. Update SQLite database
+    const timestamp = new Date().toISOString();
+    db.run(
+      `INSERT OR REPLACE INTO site_contents (section_id, content_md, content_html, updated_at) VALUES (?, ?, ?, ?)`,
+      [sectionId, content_md, compiledHtml, timestamp],
+      (err) => {
+        if (err) {
+          console.error('[Database Error] Content update failed:', err.message);
+          return sendJson(res, { status: 500, ok: false, message: '데이터베이스 업데이트 실패', code: 'DB_ERROR' });
+        }
+        return sendJson(res, { status: 200, ok: true, message: '컨텐츠가 성공적으로 업데이트되었습니다.', code: 'SUCCESS' });
+      }
+    );
+  } catch (error) {
+    console.error('[Update Content Error] Process failed:', error.message);
+    return sendJson(res, { status: 500, ok: false, message: '컨텐츠 처리 중 서버 에러가 발생했습니다.', code: 'SERVER_ERROR' });
+  }
 });
 
 module.exports = router;
