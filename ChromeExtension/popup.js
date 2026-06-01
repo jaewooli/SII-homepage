@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
     openHomepageBtn.addEventListener('click', () => {
       chrome.runtime.sendMessage({
         type: "URL_REDIRECT",
-        url: SERVER_BASE + '/homepage/login'
+        url: SERVER_BASE + '/login'
       });
     });
   }
@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
   dreamhackBtn.addEventListener('click', () => {
     chrome.runtime.sendMessage({
       type: "URL_REDIRECT",
-      url: SERVER_BASE + '/homepage/dreamhack'
+      url: SERVER_BASE + '/dreamhack'
     });
   });
 

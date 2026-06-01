@@ -353,9 +353,12 @@ router.post('/update-content', (req, res) => {
 
           const isExternal = item.external || /^https?:\/\//i.test(url);
           const isLocked = item.deleteLocked === true;
-          if (!isExternal && !isLocked) {
-            if (!url.startsWith('#')) {
-              return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 URL은 '#'으로 시작해야 합니다.`, code: 'VALIDATION_ERROR' });
+          if (!isExternal) {
+            if (!url.startsWith('#') && !url.startsWith('/')) {
+              return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 URL은 '/' 또는 '#'으로 시작해야 합니다.`, code: 'VALIDATION_ERROR' });
+            }
+            if (!isLocked && !url.startsWith('#')) {
+              return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 URL은 '#'으로 시작해야 합니다. ('메뉴 삭제 방지 보호(지울 수 없음)'를 체크하면 '#' 없이 입력할 수 있습니다.)`, code: 'VALIDATION_ERROR' });
             }
           }
 

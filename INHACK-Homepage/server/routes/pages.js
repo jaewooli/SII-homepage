@@ -4,18 +4,21 @@ const path = require('path');
 const db = require('../config/db');
 const { sendJson } = require('../helpers/response');
 
+// / serves index.html (the SPA) directly
 router.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../../src/html/index.html'), (err) => {
-        if (err) {
-            res.status(404).send('<h1>404 Not Found</h1>');
-        }
-    });
+  res.sendFile(path.join(__dirname, '../../src/html/index.html'), (err) => {
+    if (err) {
+      res.status(404).send('<h1>404 Not Found</h1>');
+    }
+  });
 });
 
+// Redirect legacy /homepage requests to root /
 router.get('/homepage', (req, res) => {
   res.redirect('/');
 });
 
+// Redirect legacy /homepage/main requests to root /
 router.get('/homepage/main', (req, res) => {
   res.redirect('/');
 });
@@ -47,7 +50,13 @@ router.get('/frags/:id.html', (req, res, next) => {
   }
 });
 
+// /homepage/:url redirects to /:url (e.g. /homepage/login -> /login)
 router.get('/homepage/:url', (req, res) => {
+  res.redirect(`/${req.params.url}`);
+});
+
+// Serve actual pages directly under /:url
+router.get('/:url', (req, res) => {
   let fileName = req.params.url || 'index';
   if (fileName.endsWith('.html')) {
     fileName = fileName.substring(0, fileName.length - 5);
@@ -55,7 +64,7 @@ router.get('/homepage/:url', (req, res) => {
   
   // Guard: Redirect unauthenticated requests to Dreamhack to login page
   if (fileName === 'dreamhack' && !req.session.user) {
-    return res.redirect('/homepage/login');
+    return res.redirect('/login');
   }
   
   res.sendFile(path.join(__dirname, `../../src/html/${fileName}.html`), (err) => {
@@ -67,10 +76,6 @@ router.get('/homepage/:url', (req, res) => {
       }
     }
   });
-});
-
-router.get('/:url', (req, res) => {
-    res.redirect(`/homepage/${req.params.url}`);
 });
 
 module.exports = router;
