@@ -95,10 +95,8 @@ async function updateSharedSessionStatus() {
     const res = await apiRequest('/dreamhack/shared-session', 'GET');
     if (res.ok && res.data && res.data.sessionid) {
       const timeStr = res.data.updated_at ? new Date(res.data.updated_at).toLocaleString() : 'N/A';
-      const valid = res.data.valid_sessions || 1;
-      const total = res.data.total_sessions || 1;
       badge.className = 'status-badge status-connected';
-      badge.innerHTML = `<span class="status-dot"></span>세션: 활성화됨 (풀: ${valid}/${total}, 업데이트: ${timeStr})`;
+      badge.innerHTML = `<span class="status-dot"></span>세션: 활성화됨 (업데이트: ${timeStr})`;
     } else {
       badge.className = 'status-badge status-disconnected';
       badge.innerHTML = '<span class="status-dot"></span>세션: 비활성화됨 (재발급 필요)';
@@ -360,6 +358,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       showToast('공용 계정 세션 이식 성공! 새 탭에 드림핵이 열립니다.', 'success');
     } else {
       showToast(`세션 연동 실패: ${message || '알 수 없는 오류'}`, 'error');
+      // Auto-reload after 1.5 seconds when session fails (e.g. inactive session)
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     }
   });
   // Listen for sync response event from extension content script
