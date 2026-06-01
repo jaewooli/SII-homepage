@@ -24,6 +24,7 @@ if (!fs.existsSync(logDir)) {
 
 // Security headers with Helmet
 app.use(helmet({
+  crossOriginEmbedderPolicy: false,
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],

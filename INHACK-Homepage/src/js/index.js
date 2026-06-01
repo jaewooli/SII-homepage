@@ -1838,6 +1838,28 @@ async function initializeAdminPanel() {
       }
     }
 
+    function updateBlockToolbarVisibility(sectionId) {
+      const toolbar = document.querySelector('.block-toolbar');
+      if (!toolbar) return;
+      
+      toolbar.querySelectorAll('.tool-btn').forEach(btn => {
+        const blockType = btn.getAttribute('data-block-type');
+        if (sectionId === 'navigation') {
+          if (blockType === 'menu_item') {
+            btn.style.display = '';
+          } else {
+            btn.style.display = 'none';
+          }
+        } else {
+          if (blockType === 'menu_item') {
+            btn.style.display = 'none';
+          } else {
+            btn.style.display = '';
+          }
+        }
+      });
+    }
+
     async function loadSectionMarkdown(sectionId) {
       try {
         const response = await fetch(`/admin/content/${sectionId}?_t=${Date.now()}`);
@@ -1858,6 +1880,7 @@ async function initializeAdminPanel() {
             renderBlockList();
             renderActiveBlockForm();
             renderPreview(true);
+            updateBlockToolbarVisibility(sectionId);
             isDirty = false;
           }
         }
