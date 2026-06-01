@@ -6,26 +6,86 @@ function renderMarkdownInline(text) {
   return marked.parseInline(text);
 }
 
-function compileJsonToHtml(sectionId, data) {
+function compileJsonToHtml(sectionId, blocks) {
+  // Support legacy format gracefully by converting it to blocks in-memory
+  if (!Array.isArray(blocks)) {
+    const data = blocks;
+    const legacyBlocks = [];
+    if (sectionId === 'home') {
+      if (data.banner) legacyBlocks.push({ type: 'banner', ...data.banner });
+      if (data.features) legacyBlocks.push({ type: 'features', items: data.features });
+      if (data.links) legacyBlocks.push({ type: 'links', items: data.links });
+    } else if (sectionId === 'curriculum') {
+      if (data.header) legacyBlocks.push({ type: 'header', ...data.header });
+      if (data.phases) legacyBlocks.push({ type: 'phases', items: data.phases });
+    } else if (sectionId === 'seminar') {
+      if (data.header) legacyBlocks.push({ type: 'header', ...data.header });
+      if (data.items) legacyBlocks.push({ type: 'timeline', items: data.items });
+    } else if (sectionId === 'ctf') {
+      if (data.header) legacyBlocks.push({ type: 'header', ...data.header });
+      if (data.leaderboard || data.challenges) {
+        legacyBlocks.push({
+          type: 'ctf_dashboard',
+          leaderboard: data.leaderboard || [],
+          challenges: data.challenges || []
+        });
+      }
+    }
+    blocks = legacyBlocks;
+  }
+
+  let htmlResult = '';
+  // Determine outer section wrapper classes and ID
   if (sectionId === 'home') {
-    const bannerTitle = renderMarkdownInline(data.banner.title);
-    const bannerLead = renderMarkdownInline(data.banner.lead);
-    const bannerDesc = renderMarkdownInline(data.banner.desc);
-    
-    let featuresHtml = '';
-    (data.features || []).forEach(f => {
-      featuresHtml += `<div class="feat-card">
+    htmlResult += '<section class="page-home animate-fade-in">\n';
+  } else if (sectionId === 'curriculum') {
+    htmlResult += '<section id="curriculum" class="curriculum-view animate-fade-in">\n';
+  } else if (sectionId === 'seminar') {
+    htmlResult += '<section id="seminar" class="seminar-view animate-fade-in">\n';
+  } else if (sectionId === 'ctf') {
+    htmlResult += '<section id="ctf" class="ctf-view animate-fade-in">\n';
+  } else {
+    htmlResult += `<section id="${sectionId}" class="animate-fade-in">\n`;
+  }
+
+  blocks.forEach(block => {
+    try {
+      if (block.type === 'banner') {
+        const title = renderMarkdownInline(block.title);
+        const lead = renderMarkdownInline(block.lead);
+        const desc = renderMarkdownInline(block.desc);
+        htmlResult += `<div class="terminal-banner">
+<h2 class="hero-title">${title}</h2>
+<p class="lead-text">${lead}</p>
+<p class="hero-desc">${desc}</p>
+</div>\n`;
+      } 
+      else if (block.type === 'header') {
+        const title = renderMarkdownInline(block.title);
+        const desc = renderMarkdownInline(block.desc);
+        htmlResult += `<div class="section-header">
+<h2>${title}</h2>
+<p class="section-desc">${desc}</p>
+</div>\n`;
+      } 
+      else if (block.type === 'features') {
+        let featuresHtml = '';
+        (block.items || []).forEach(f => {
+          featuresHtml += `<div class="feat-card">
 <div class="feat-card-header">
 <span class="feat-card-id">${f.tag}</span>
 <h4>${f.title}</h4>
 </div>
 <p>${renderMarkdownInline(f.desc)}</p>
 </div>\n`;
-    });
-
-    let linksHtml = '';
-    (data.links || []).forEach(l => {
-      linksHtml += `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+        });
+        htmlResult += `<div class="features-grid">
+${featuresHtml}</div>\n`;
+      } 
+      else if (block.type === 'links') {
+        let linksHtml = '';
+        (block.items || []).forEach(l => {
+          linksHtml += `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
 <div class="feat-card" style="height: 100%; border: 1px solid rgba(59, 130, 246, 0.15);">
 <div class="feat-card-header">
 <span class="feat-card-id">${l.tag}</span>
@@ -34,62 +94,32 @@ function compileJsonToHtml(sectionId, data) {
 <p>${renderMarkdownInline(l.desc)}</p>
 </div>
 </a>\n`;
-    });
-
-    return `<section class="page-home animate-fade-in">
-<div class="terminal-banner">
-<h2 class="hero-title">${bannerTitle}</h2>
-<p class="lead-text">${bannerLead}</p>
-<p class="hero-desc">${bannerDesc}</p>
-</div>
-
-<!-- Feature Grids -->
-<div class="features-grid">
-${featuresHtml}</div>
-
-<!-- External Links Grids -->
-<div class="features-grid" style="margin-top: 1.75rem;">
-${linksHtml}</div>
-</section>`;
-  }
-
-  if (sectionId === 'curriculum') {
-    const headerTitle = renderMarkdownInline(data.header.title);
-    const headerDesc = renderMarkdownInline(data.header.desc);
-
-    let phasesHtml = '';
-    (data.phases || []).forEach((p, idx) => {
-      let topicsHtml = '';
-      (p.topics || []).forEach(t => {
-        topicsHtml += `<li>${renderMarkdownInline(t)}</li>\n`;
-      });
-
-      phasesHtml += `<div class="roadmap-card">
+        });
+        htmlResult += `<div class="features-grid" style="margin-top: 1.75rem;">
+${linksHtml}</div>\n`;
+      } 
+      else if (block.type === 'phases') {
+        let phasesHtml = '';
+        (block.items || []).forEach(p => {
+          let topicsHtml = '';
+          (p.topics || []).forEach(t => {
+            topicsHtml += `<li>${renderMarkdownInline(t)}</li>\n`;
+          });
+          phasesHtml += `<div class="roadmap-card">
 <div class="card-badge">${p.phase}</div>
 <h3 class="card-title">${p.title}</h3>
 <p class="card-desc">${renderMarkdownInline(p.desc)}</p>
 <ul class="card-topics">
 ${topicsHtml}</ul>
 </div>\n`;
-    });
-
-    return `<section id="curriculum" class="curriculum-view animate-fade-in">
-<div class="section-header">
-<h2>${headerTitle}</h2>
-<p class="section-desc">${headerDesc}</p>
-</div>
-<div class="roadmap-grid">
-${phasesHtml}</div>
-</section>`;
-  }
-
-  if (sectionId === 'seminar') {
-    const headerTitle = renderMarkdownInline(data.header.title);
-    const headerDesc = renderMarkdownInline(data.header.desc);
-
-    let itemsHtml = '';
-    (data.items || []).forEach(item => {
-      itemsHtml += `<div class="timeline-item">
+        });
+        htmlResult += `<div class="roadmap-grid">
+${phasesHtml}</div>\n`;
+      } 
+      else if (block.type === 'timeline') {
+        let itemsHtml = '';
+        (block.items || []).forEach(item => {
+          itemsHtml += `<div class="timeline-item">
 <div class="timeline-date">${item.week}</div>
 <div class="timeline-content">
 <h3 class="timeline-title">${item.title}</h3>
@@ -97,41 +127,30 @@ ${phasesHtml}</div>
 <span class="presenter">${item.presenter}</span>
 </div>
 </div>\n`;
-    });
-
-    return `<section id="seminar" class="seminar-view animate-fade-in">
-<div class="section-header">
-<h2>${headerTitle}</h2>
-<p class="section-desc">${headerDesc}</p>
-</div>
-<div class="timeline">
-${itemsHtml}</div>
-</section>`;
-  }
-
-  if (sectionId === 'ctf') {
-    const headerTitle = renderMarkdownInline(data.header.title);
-    const headerDesc = renderMarkdownInline(data.header.desc);
-
-    let ranksHtml = '';
-    (data.leaderboard || []).forEach((r, idx) => {
-      ranksHtml += `<tr class="rank-${idx + 1}">
+        });
+        htmlResult += `<div class="timeline">
+${itemsHtml}</div>\n`;
+      } 
+      else if (block.type === 'ctf_dashboard') {
+        let ranksHtml = '';
+        (block.leaderboard || []).forEach((r, idx) => {
+          ranksHtml += `<tr class="rank-${idx + 1}">
 <td>${r.rank}</td>
 <td class="user-cell">${r.user}</td>
 <td class="pts-cell">${r.score}</td>
 <td class="status-cell">${r.status}</td>
 </tr>\n`;
-    });
+        });
 
-    let chalsHtml = '';
-    (data.challenges || []).forEach(c => {
-      const isSolved = c.status.toLowerCase() === 'solved';
-      const cardClass = isSolved ? 'challenge-card solved' : 'challenge-card';
-      const badgeClass = `status-badge ${isSolved ? 'solved' : 'open'}`;
-      const badgeText = isSolved ? 'COMPLETED' : 'ACTIVE';
-      const categoryClass = `chal-category ${c.category.toLowerCase()}`;
+        let chalsHtml = '';
+        (block.challenges || []).forEach(c => {
+          const isSolved = c.status.toLowerCase() === 'solved';
+          const cardClass = isSolved ? 'challenge-card solved' : 'challenge-card';
+          const badgeClass = `status-badge ${isSolved ? 'solved' : 'open'}`;
+          const badgeText = isSolved ? 'COMPLETED' : 'ACTIVE';
+          const categoryClass = `chal-category ${c.category.toLowerCase()}`;
 
-      chalsHtml += `<div class="${cardClass}">
+          chalsHtml += `<div class="${cardClass}">
 <span class="${categoryClass}">${c.category}</span>
 <div class="chal-details">
 <h4>${c.title}</h4>
@@ -139,14 +158,9 @@ ${itemsHtml}</div>
 </div>
 <span class="${badgeClass}">${badgeText}</span>
 </div>\n`;
-    });
+        });
 
-    return `<section id="ctf" class="ctf-view animate-fade-in">
-<div class="section-header">
-<h2>${headerTitle}</h2>
-<p class="section-desc">${headerDesc}</p>
-</div>
-<div class="ctf-container">
+        htmlResult += `<div class="ctf-container">
 <!-- Scoreboard Panel -->
 <div class="scoreboard-section">
 <h3 class="panel-title">Leaderboard</h3>
@@ -169,11 +183,15 @@ ${ranksHtml}</tbody>
 <div class="challenge-list">
 ${chalsHtml}</div>
 </div>
-</div>
-</section>`;
-  }
+</div>\n`;
+      }
+    } catch (e) {
+      console.error('[Block Render Error] Failed rendering block:', e);
+    }
+  });
 
-  return '';
+  htmlResult += '</section>';
+  return htmlResult;
 }
 
 module.exports = { compileJsonToHtml };

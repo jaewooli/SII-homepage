@@ -1,46 +1,50 @@
-{
-  "header": {
+[
+  {
+    "type": "header",
     "title": "CTF Dashboard",
     "desc": "INHACK 자체 Capture The Flag 보안 경쟁 플랫폼의 실시간 스코어보드 및 활성 챌린지 리스트입니다."
   },
-  "leaderboard": [
-    {
-      "rank": "1st 🥇",
-      "user": "alice_sec",
-      "score": "1200 PTS",
-      "status": "5 / 5 SOLVED"
-    },
-    {
-      "rank": "2nd 🥈",
-      "user": "bob_overflow",
-      "score": "950 PTS",
-      "status": "4 / 5 SOLVED"
-    },
-    {
-      "rank": "3rd 🥉",
-      "user": "cyber_pwn",
-      "score": "700 PTS",
-      "status": "3 / 5 SOLVED"
-    }
-  ],
-  "challenges": [
-    {
-      "category": "WEB",
-      "title": "Super Simple SQL",
-      "score": "100 PTS",
-      "status": "solved"
-    },
-    {
-      "category": "PWN",
-      "title": "Stack Over Flowing",
-      "score": "300 PTS",
-      "status": "open"
-    },
-    {
-      "category": "REV",
-      "title": "Ghidra's Secret",
-      "score": "500 PTS",
-      "status": "open"
-    }
-  ]
-}
+  {
+    "type": "ctf_dashboard",
+    "leaderboard": [
+      {
+        "rank": "1st 🥇",
+        "user": "alice_sec",
+        "score": "1200 PTS",
+        "status": "5 / 5 SOLVED"
+      },
+      {
+        "rank": "2nd 🥈",
+        "user": "bob_overflow",
+        "score": "950 PTS",
+        "status": "4 / 5 SOLVED"
+      },
+      {
+        "rank": "3rd 🥉",
+        "user": "cyber_pwn",
+        "score": "700 PTS",
+        "status": "3 / 5 SOLVED"
+      }
+    ],
+    "challenges": [
+      {
+        "category": "WEB",
+        "title": "Super Simple SQL",
+        "score": "100 PTS",
+        "status": "solved"
+      },
+      {
+        "category": "PWN",
+        "title": "Stack Over Flowing",
+        "score": "300 PTS",
+        "status": "open"
+      },
+      {
+        "category": "REV",
+        "title": "Ghidra's Secret",
+        "score": "500 PTS",
+        "status": "open"
+      }
+    ]
+  }
+]
