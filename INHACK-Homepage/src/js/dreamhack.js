@@ -20,6 +20,16 @@ async function isLoggedIn() {
 // Auto-seed E2E credentials if plain text exists in env and database is empty
 async function autoSeedE2ECredentials(plainEmail, plainPassword) {
   console.log('[E2E Setup] Plain text credentials detected in env. Auto-seeding E2E environment...');
+
+  // CRITICAL: Only seed if the Chrome Extension is installed.
+  // If we save an encrypted key to the DB without the extension present,
+  // the extension will never receive the master key → permanent key mismatch → 401 on every renewal.
+  const isExtensionInstalled = checkExtensionInstalled();
+  if (!isExtensionInstalled) {
+    console.warn('[E2E Setup] Extension not detected. Skipping auto-seed to prevent DB/key desync. Please install the INHACK extension and reload the page.');
+    return;
+  }
+
   try {
     // 1. Generate AES-GCM Key (JWK)
     const key = await window.crypto.subtle.generateKey(
@@ -76,16 +86,30 @@ function checkExtensionInstalled() {
 
 function updateExtensionStatus() {
   const statusBadge = document.getElementById('ext-status');
-  if (!statusBadge) return;
+  const sessionStatus = document.getElementById('session-status');
+  const warningBanner = document.getElementById('session-warning-banner');
+  const sharedSessionCard = document.getElementById('shared-session-card');
+  const extInstallNotice = document.getElementById('ext-install-notice');
 
-  if (checkExtensionInstalled()) {
-    statusBadge.className = 'status-badge status-connected';
-    statusBadge.innerHTML = '<span class="status-dot"></span>확장 프로그램: 연결됨';
-  } else {
-    statusBadge.className = 'status-badge status-disconnected';
-    statusBadge.innerHTML = '<span class="status-dot"></span>확장 프로그램: 감지되지 않음';
+  const installed = checkExtensionInstalled();
+
+  if (statusBadge) {
+    if (installed) {
+      statusBadge.className = 'status-badge status-connected';
+      statusBadge.innerHTML = '<span class="status-dot"></span>확장 프로그램: 연결됨';
+    } else {
+      statusBadge.className = 'status-badge status-disconnected';
+      statusBadge.innerHTML = '<span class="status-dot"></span>확장 프로그램: 감지되지 않음';
+    }
   }
+
+  // Show/hide session-dependent elements based on extension presence
+  if (sessionStatus)     sessionStatus.style.display    = installed ? '' : 'none';
+  if (warningBanner)     warningBanner.style.display     = installed ? '' : 'none';
+  if (sharedSessionCard) sharedSessionCard.style.display = installed ? '' : 'none';
+  if (extInstallNotice)  extInstallNotice.style.display  = installed ? 'none' : '';
 }
+
 
 async function updateSharedSessionStatus() {
   const badge = document.getElementById('session-status');
@@ -121,7 +145,13 @@ async function executeSpecificFeature(userdata) {
   window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_SYNC_TRIGGER'));
 }
 
-async function loadActivityLogs() {
+async function loadActivityLogs(userdata) {
+  // Hide intercept log card for non-admins
+  const interceptCard = document.getElementById('intercept-log-card');
+  if (interceptCard) {
+    interceptCard.style.display = (userdata && userdata.isAdmin) ? '' : 'none';
+  }
+
   try {
     const res = await apiRequest('/dreamhack/logs', 'GET');
     if (res.ok && res.data) {
@@ -165,22 +195,24 @@ async function loadActivityLogs() {
         }
       }
 
-      // Render logout interception logs
-      const interceptBody = document.querySelector('#intercept-log-table tbody');
-      if (interceptBody) {
-        if (interceptLogs && interceptLogs.length > 0) {
-          interceptBody.innerHTML = interceptLogs.map(log => {
-            const timeStr = new Date(log.timestamp).toLocaleString();
-            return `
-              <tr>
-                <td>${escapeHtml(log.username)}</td>
-                <td>${escapeHtml(log.ip_address)}</td>
-                <td>${timeStr}</td>
-              </tr>
-            `;
-          }).join('');
-        } else {
-          interceptBody.innerHTML = `<tr><td colspan="3" class="log-empty">아직 로그아웃 차단 기록이 없습니다.</td></tr>`;
+      // Render logout interception logs (admin only)
+      if (userdata && userdata.isAdmin) {
+        const interceptBody = document.querySelector('#intercept-log-table tbody');
+        if (interceptBody) {
+          if (interceptLogs && interceptLogs.length > 0) {
+            interceptBody.innerHTML = interceptLogs.map(log => {
+              const timeStr = new Date(log.timestamp).toLocaleString();
+              return `
+                <tr>
+                  <td>${escapeHtml(log.username)}</td>
+                  <td>${escapeHtml(log.ip_address)}</td>
+                  <td>${timeStr}</td>
+                </tr>
+              `;
+            }).join('');
+          } else {
+            interceptBody.innerHTML = `<tr><td colspan="3" class="log-empty">아직 로그아웃 차단 기록이 없습니다.</td></tr>`;
+          }
         }
       }
     }
@@ -408,9 +440,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Brief timeout check to avoid injection race conditions
   setTimeout(updateExtensionStatus, 300);
 
-  // Load activity logs list
-  loadActivityLogs();
-  
   // Load shared session status badge
   updateSharedSessionStatus();
 
@@ -421,6 +450,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.__currentUser = userdata;
   renderUserUI(userdata);
   await loadSidebarNavigation();
+
+  // Load activity logs after userdata is known (so intercept card is correctly shown/hidden)
+  loadActivityLogs(userdata);
+
 
   if (confirmbtn) {
     if (userdata) {

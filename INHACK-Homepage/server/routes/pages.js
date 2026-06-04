@@ -194,6 +194,12 @@ router.get('/:url', (req, res) => {
   if (fileName === 'dreamhack' && !req.session.user) {
     return res.redirect('/login');
   }
+
+  // Guard: Redirect unauthenticated requests to My Page to login page
+  if (fileName === 'mypage' && !req.session.user) {
+    return res.redirect('/login');
+  }
+
   
   res.sendFile(path.join(__dirname, `../../src/html/${fileName}.html`), (err) => {
     if (err) {

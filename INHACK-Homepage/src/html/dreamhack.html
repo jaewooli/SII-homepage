@@ -8,9 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fira+Code:wght@400;500;700&family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/style.css?v=2026060201">
-    <link rel="stylesheet" href="/assets/css/auth.css?v=2026060201">
-    <link rel="stylesheet" href="/assets/css/toast.css?v=2026060201">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2026060402">
+    <link rel="stylesheet" href="/assets/css/auth.css?v=2026060402">
+    <link rel="stylesheet" href="/assets/css/toast.css?v=2026060402">
     <style>
         body {
             display: flex;
@@ -21,8 +21,38 @@
             min-height: 100vh;
             overflow-x: hidden;
         }
+        /* Override generic section styles from auth.css on parent view container */
+        section#view {
+            max-width: none;
+            box-shadow: none;
+            animation: none;
+        }
+        section#view::before {
+            display: none;
+        }
+        /* Style dreamhack page layout overrides */
+        #dreamhack {
+            max-width: none;
+            padding: 0;
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+        }
+        #dreamhack::before {
+            display: none;
+        }
+        .logs-container {
+            max-width: none;
+            padding: 0;
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+        }
+        .logs-container::before {
+            display: none;
+        }
     </style>
-    <script type="module" src="/assets/js/dreamhack.js?v=2026060201"></script>
+    <script type="module" src="/assets/js/dreamhack.js?v=2026060402"></script>
 </head>
 <body>
     <header>
@@ -67,14 +97,15 @@
                     </span>
                 </div>
 
-                <div class="warning-banner">
+                <!-- Warning banner: hidden when extension is not installed -->
+                <div id="session-warning-banner" class="warning-banner">
                     <span class="warning-icon">⚠️</span>
                     <span class="warning-text">공유 세션을 사용하는 동안에는 <strong>INHACK 확장 프로그램을 반드시 활성화</strong>해 주시고, <strong>확장 프로그램이 비활성화된 상태에서 드림핵 사이트 로그아웃을 자제</strong>해 주세요. 비활성화 상태에서 로그아웃 시 다른 사용자의 세션 연동도 함께 해제됩니다.</span>
                 </div>
 
                 <div class="option-container">
-                    <!-- Option 1: Chrome Extension Sync -->
-                    <div class="option-card">
+                    <!-- Option 1: Chrome Extension Sync (hidden when extension not installed) -->
+                    <div id="shared-session-card" class="option-card">
                         <div class="option-title">
                             <span>공유 세션 연동</span>
                         </div>
@@ -84,8 +115,8 @@
                         <button id="dreamhack-confirm" class="action-btn" type="button">연동 시작</button>
                     </div>
 
-                    <!-- Option 2: Download Extension -->
-                    <div class="option-card">
+                    <!-- Option 2: Download Extension (always visible) -->
+                    <div id="extension-install-card" class="option-card">
                         <div class="option-title">
                             <span>확장 프로그램 설치</span>
                         </div>
@@ -93,6 +124,10 @@
                             INHACK 크롬 확장 프로그램이 없거나 비활성화되어 있는 경우, 확장 프로그램을 다운로드하여 브라우저에 수동으로 설치해 주세요.
                         </div>
                         <a href="/assets/INHACK-Extension.zip" download id="dreamhack-download" class="download-btn">확장 프로그램 다운로드 (.ZIP)</a>
+                        <!-- Shown only when extension is NOT detected -->
+                        <div id="ext-install-notice" style="display:none; margin-top: 14px; padding: 10px 14px; background: rgba(255,193,7,0.08); border: 1px solid rgba(255,193,7,0.25); border-radius: 8px; color: #ffc107; font-size: 0.82rem; line-height: 1.5;">
+                            📦 설치 완료 후 <strong>이 페이지를 새로고침(F5)</strong>하면 자동으로 확장 프로그램이 인식됩니다.
+                        </div>
                     </div>
                 </div>
             </section>
@@ -141,7 +176,7 @@
                         </div>
                     </div>
                     
-                    <div class="log-card">
+                    <div id="intercept-log-card" class="log-card">
                         <div class="log-card-title">로그아웃 차단 기록</div>
                         <div class="log-table-wrapper">
                             <table class="log-table" id="intercept-log-table">

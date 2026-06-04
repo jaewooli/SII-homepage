@@ -130,21 +130,31 @@ router.get('/logs', async (req, res) => {
   });
 
   try {
-    const [accessLogs, solveLogs, interceptLogs] = await Promise.all([
-      queryPromise(queryAccess, queryParams),
-      queryPromise(querySolves, queryParams),
-      queryPromise(queryIntercepts, queryParams)
-    ]);
+    // Non-admins do not receive intercept logs at all (admin-only data)
+    const parallelQueries = isAdmin
+      ? [
+          queryPromise(queryAccess, queryParams),
+          queryPromise(querySolves, queryParams),
+          queryPromise(queryIntercepts, queryParams)
+        ]
+      : [
+          queryPromise(queryAccess, queryParams),
+          queryPromise(querySolves, queryParams),
+          Promise.resolve([])
+        ];
+
+    const [accessLogs, solveLogs, interceptLogs] = await Promise.all(parallelQueries);
 
     sendJson(res, {
       status: 200, ok: true, action: 'read', resource: 'dreamhack_logs',
       data: {
         accessLogs,
         solveLogs,
-        interceptLogs
+        ...(isAdmin ? { interceptLogs } : {})
       },
       code: 'SUCCESS'
     });
+
   } catch (err) {
     console.error('[Database Read Error] Parallel read failed:', err.message);
     sendJson(res, {
@@ -155,6 +165,12 @@ router.get('/logs', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
+    if (!req.session.user) {
+      return sendJson(res, {
+        status: 401, ok: false, action: 'auth', resource: 'dreamhack',
+        message: 'Unauthorized', code: 'UNAUTHORIZED'
+      });
+    }
     const { id, username, isAdmin: sessionIsAdmin } = req.session.user;
     const adminUser = env.ADMIN_USERNAME;
     if (username !== adminUser && !sessionIsAdmin) {

@@ -411,7 +411,13 @@ router.post('/toggle-admin', (req, res) => {
   });
 
   function performToggle(userId, userNm) {
-    const query = userId ? `UPDATE users SET is_admin = ? WHERE id = ?` : `UPDATE users SET is_admin = ? WHERE username = ?`;
+    // When demoting admin → regular user, also mark password_changed = 1.
+    // Admins bypass the password-change check, so their password_changed is 0.
+    // Without this, the moment they become a regular user the middleware forces
+    // a password change — even though they've been using the account normally.
+    const query = userId
+      ? `UPDATE users SET is_admin = ?${targetAdminVal === 0 ? ', password_changed = 1' : ''} WHERE id = ?`
+      : `UPDATE users SET is_admin = ?${targetAdminVal === 0 ? ', password_changed = 1' : ''} WHERE username = ?`;
     const param = userId || userNm;
 
     db.run(query, [targetAdminVal, param], function(err) {

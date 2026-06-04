@@ -18,6 +18,7 @@ function passwordEnforceMiddleware(req, res, next) {
                          req.path.startsWith('/logout') || 
                          req.path.startsWith('/me') || 
                          req.path.startsWith('/change-password') || 
+                         req.path.startsWith('/mypage') ||
                          req.path.startsWith('/assets') || 
                          req.path.startsWith('/images') ||
                          req.path === '/frags/home.html';
