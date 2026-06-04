@@ -1590,7 +1590,6 @@ async function initializeAdminPanel() {
             </div>
           </div>
         `).join('');
-
         let challengesHtml = challenges.map((chal, idx) => `
           <div class="block-card-item ctf-challenge-item" data-item-index="${idx}">
             <div class="block-card-header">
@@ -1600,7 +1599,14 @@ async function initializeAdminPanel() {
             <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px;">
               <div class="block-form-group">
                 <label>분류 (Category)</label>
-                <input type="text" class="block-form-input challenge-field" data-field="category" value="${chal.category || ''}">
+                <select class="block-form-input challenge-field" data-field="category">
+                  <option value="WEB" ${chal.category === 'WEB' ? 'selected' : ''}>WEB</option>
+                  <option value="PWN" ${chal.category === 'PWN' ? 'selected' : ''}>PWN</option>
+                  <option value="REV" ${chal.category === 'REV' ? 'selected' : ''}>REV</option>
+                  <option value="CRYPTO" ${chal.category === 'CRYPTO' ? 'selected' : ''}>CRYPTO</option>
+                  <option value="FORENSICS" ${chal.category === 'FORENSICS' ? 'selected' : ''}>FORENSICS</option>
+                  <option value="MISC" ${chal.category === 'MISC' ? 'selected' : ''}>MISC</option>
+                </select>
               </div>
               <div class="block-form-group">
                 <label>문제 제목 (Title)</label>
@@ -1846,8 +1852,7 @@ async function initializeAdminPanel() {
           }
         });
       });
-
-      formContainer.querySelectorAll('.challenge-field').forEach(input => {
+      formContainer.querySelectorAll('input.challenge-field').forEach(input => {
         input.addEventListener('input', (e) => {
           const cardItem = e.target.closest('.ctf-challenge-item');
           const idx = parseInt(cardItem.getAttribute('data-item-index'));
@@ -2210,8 +2215,79 @@ async function initializeAdminPanel() {
             }
           }
         }
-        
-        // Deep copy currentBlocks and clean any img-broken classes or titles in HTML fields
+
+        // Validation: CTF dashboard blocks
+        if (sectionId === 'ctf') {
+          for (let i = 0; i < currentBlocks.length; i++) {
+            const block = currentBlocks[i];
+            if (block.type === 'ctf_dashboard') {
+              const leaderboard = block.leaderboard || [];
+              for (let j = 0; j < leaderboard.length; j++) {
+                const item = leaderboard[j];
+                const rank = (item.rank || '').trim();
+                const user = (item.user || '').trim();
+                const score = (item.score || '').trim();
+                const status = (item.status || '').trim();
+
+                if (!rank) {
+                  showToast(`리더보드 #${j + 1} 항목의 순위(Rank)를 입력해 주세요.`, 'error');
+                  return;
+                }
+                if (!user || user === '닉네임' || user === 'new_player') {
+                  showToast(`리더보드 #${j + 1} 항목의 올바른 닉네임(User)을 입력해 주세요.`, 'error');
+                  return;
+                }
+                if (!score) {
+                  showToast(`리더보드 #${j + 1} 항목의 점수(Score)를 입력해 주세요.`, 'error');
+                  return;
+                }
+                if (!/^\d+\s*PTS$/i.test(score)) {
+                  showToast(`리더보드 #${j + 1} 항목의 점수(Score)는 숫자와 'PTS' 조합이어야 합니다. (예: 1200 PTS)`, 'error');
+                  return;
+                }
+                if (!status) {
+                  showToast(`리더보드 #${j + 1} 항목의 해결 현황(Status)을 입력해 주세요.`, 'error');
+                  return;
+                }
+                if (!/^\d+\s*\/\s*\d+\s*SOLVED$/i.test(status)) {
+                  showToast(`리더보드 #${j + 1} 항목의 해결 현황(Status)은 'X / Y SOLVED' 형식이어야 합니다. (예: 5 / 5 SOLVED)`, 'error');
+                  return;
+                }
+              }
+
+              const challenges = block.challenges || [];
+              for (let j = 0; j < challenges.length; j++) {
+                const chal = challenges[j];
+                const category = (chal.category || '').trim().toUpperCase();
+                const title = (chal.title || '').trim();
+                const score = (chal.score || '').trim();
+                const status = (chal.status || '').trim();
+
+                if (!category) {
+                  showToast(`챌린지 #${j + 1} 항목의 분류(Category)를 지정해 주세요.`, 'error');
+                  return;
+                }
+                if (!title || title === 'New Challenge' || title === 'Web Challenge 1') {
+                  showToast(`챌린지 #${j + 1} 항목의 올바른 문제 제목(Title)을 입력해 주세요.`, 'error');
+                  return;
+                }
+                if (!score) {
+                  showToast(`챌린지 #${j + 1} 항목의 점수(Score)를 입력해 주세요.`, 'error');
+                  return;
+                }
+                if (!/^\d+\s*PTS$/i.test(score)) {
+                  showToast(`챌린지 #${j + 1} 항목의 점수(Score)는 숫자와 'PTS' 조합이어야 합니다. (예: 100 PTS)`, 'error');
+                  return;
+                }
+                if (status !== 'open' && status !== 'solved') {
+                  showToast(`챌린지 #${j + 1} 항목의 상태(Status)를 올바르게 선택해 주세요.`, 'error');
+                  return;
+                }
+              }
+            }
+          }
+        }
+
         const cleanedBlocks = JSON.parse(JSON.stringify(currentBlocks));
         const cleanHtml = (html) => {
           if (!html || typeof html !== 'string') return html;
@@ -2302,6 +2378,106 @@ async function initializeAdminPanel() {
   // Load and render user list
   const userListContainer = document.getElementById('admin-user-list-container');
   
+  function showUserSolvesModal(username, name) {
+    const overlay = document.createElement('div');
+    overlay.id = 'admin-user-solves-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(8, 11, 18, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    `;
+
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      width: 100%;
+      max-width: 520px;
+      padding: 2rem;
+      background: #0d131f;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      color: #fff;
+      font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+    `;
+
+    const escHtml = (str) => {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+    };
+
+    modal.innerHTML = `
+      <h3 style="color: #3b82f6; font-size: 1.2rem; margin-top: 0; margin-bottom: 0.5rem; font-weight: 700; letter-spacing: 0.03em;">문제 풀이 내역</h3>
+      <p style="font-size: 0.9rem; color: #94a3b8; margin-top: 0; margin-bottom: 1.5rem;">
+        사용자: <strong>${escHtml(name)} (${escHtml(username)})</strong>
+      </p>
+      
+      <div id="solves-list-container" style="max-height: 280px; overflow-y: auto; margin-bottom: 1.5rem; padding-right: 4px;">
+        <div style="text-align: center; color: #64748b; padding: 20px; font-size: 0.85rem;">기록 불러오는 중...</div>
+      </div>
+      
+      <div style="display: flex; justify-content: flex-end;">
+        <button id="solves-close-btn" style="padding: 10px 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #94a3b8; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; outline: none;">닫기</button>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const closeBtn = modal.querySelector('#solves-close-btn');
+    closeBtn.addEventListener('mouseenter', () => { closeBtn.style.background = 'rgba(255,255,255,0.1)'; closeBtn.style.color = '#fff'; });
+    closeBtn.addEventListener('mouseleave', () => { closeBtn.style.background = 'rgba(255,255,255,0.05)'; closeBtn.style.color = '#94a3b8'; });
+    closeBtn.addEventListener('click', () => {
+      overlay.remove();
+    });
+
+    // Fetch user solves
+    fetch(`/admin/user-solves/${encodeURIComponent(username)}`)
+      .then(res => res.json())
+      .then(payload => {
+        const container = modal.querySelector('#solves-list-container');
+        if (payload.ok && payload.data) {
+          const solves = payload.data;
+          if (solves.length === 0) {
+            container.innerHTML = `<div style="text-align: center; color: #64748b; padding: 20px; font-size: 0.85rem;">푼 문제가 없습니다.</div>`;
+            return;
+          }
+
+          container.innerHTML = solves.map(solve => {
+            const timeStr = new Date(solve.timestamp).toLocaleString();
+            return `
+              <div style="padding: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 0.85rem;">
+                <div style="color: #e2e8f0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  ${escHtml(solve.challenge_name || solve.challenge_id)}
+                </div>
+                <div style="color: #64748b; font-size: 0.75rem; flex-shrink: 0;">
+                  ${timeStr}
+                </div>
+              </div>
+            `;
+          }).join('');
+        } else {
+          container.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px; font-size: 0.85rem;">조회 실패: ${payload.message || '오류'}</div>`;
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        const container = modal.querySelector('#solves-list-container');
+        container.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px; font-size: 0.85rem;">서버 통신 오류</div>`;
+      });
+  }
+
   async function loadUserList() {
     if (!userListContainer) return;
     try {
@@ -2322,23 +2498,33 @@ async function initializeAdminPanel() {
       userListContainer.innerHTML = '';
       users.forEach(user => {
         const userRow = document.createElement('div');
-        userRow.style.cssText = "display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 0.8rem; color: #e2e8f0;";
-        
         const isBlocked = user.is_blocked === 1;
         const blockText = isBlocked ? '해제' : '차단';
-        const blockColor = isBlocked ? '#10b981' : '#f59e0b';
-        const blockBorder = isBlocked ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)';
+        const blockClass = isBlocked ? 'btn-unblock' : 'btn-block';
 
+        userRow.className = 'user-row' + (isBlocked ? ' blocked' : '');
         userRow.innerHTML = `
-          <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; ${isBlocked ? 'text-decoration: line-through; color: #64748b;' : ''}">${user.username}</div>
-          <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; ${isBlocked ? 'color: #64748b;' : ''}">
-            ${user.name} ${isBlocked ? '<span style="font-size: 0.65rem; color: #f59e0b; padding: 1px 4px; border: 1px solid rgba(245,158,11,0.3); border-radius: 3px; margin-left: 4px;">차단됨</span>' : ''}
+          <div class="user-col-username">${user.username}</div>
+          <div class="user-col-name">
+            ${user.name} ${isBlocked ? '<span class="blocked-badge">차단됨</span>' : ''}
           </div>
-          <div style="width: 110px; display: flex; gap: 4px; justify-content: center;">
-            <button class="block-user-btn action-btn" style="padding: 3px 6px; font-size: 0.7rem; border-color: ${blockBorder}; color: ${blockColor};">${blockText}</button>
-            <button class="delete-user-btn action-btn" style="padding: 3px 6px; font-size: 0.7rem; border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">삭제</button>
+          <div class="user-col-solved">
+            <a href="#" class="view-solves-link" data-username="${user.username}" data-name="${user.name}">
+              ${user.solve_count || 0}개
+            </a>
+          </div>
+          <div class="user-actions">
+            <button class="block-user-btn action-btn ${blockClass}">${blockText}</button>
+            <button class="delete-user-btn action-btn">삭제</button>
           </div>
         `;
+        
+        // View Solves Button Event Listener
+        const viewSolvesLink = userRow.querySelector('.view-solves-link');
+        viewSolvesLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          showUserSolvesModal(user.username, user.name);
+        });
 
         // Block/Unblock Button Event Listener
         const blockBtn = userRow.querySelector('.block-user-btn');

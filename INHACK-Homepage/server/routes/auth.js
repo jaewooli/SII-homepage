@@ -48,7 +48,7 @@ router.post('/login', validateLogin, (req, res) => {
             }
 
             const adminUser = env.ADMIN_USERNAME;
-            const isAdmin = (row.username === adminUser);
+            const isAdmin = (row.is_admin === 1 || row.username === adminUser);
             req.session.user = { 
                 id: row.id, 
                 username: row.username, 

@@ -12,21 +12,44 @@ router.post('/register-user', (req, res) => {
   if (!req.session.user || !req.session.user.isAdmin) {
     return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
   }
-  const { username, password, name } = req.body;
+  const { username, password, name, is_admin, adminPassword } = req.body;
   if (!username || !password || !name) {
     return sendJson(res, { status: 400, ok: false, message: '모든 필드(아이디, 비밀번호, 이름)를 입력해주세요.', code: 'BAD_REQUEST' });
   }
 
-  const hashedPassword = bcrypt.hashSync(password, 10);
-  db.run(`INSERT INTO users (username, password, name) VALUES (?, ?, ?)`, [username, hashedPassword, name], (err) => {
-    if (err) {
-      if (err.message.includes('UNIQUE constraint failed')) {
-        return sendJson(res, { status: 409, ok: false, message: '이미 존재하는 사용자 아이디입니다.', code: 'ALREADY_EXISTS' });
-      }
-      return sendJson(res, { status: 500, ok: false, message: '사용자 등록 실패', code: 'DB_ERROR' });
+  const isAdminVal = (is_admin === true || is_admin === 1 || is_admin === 'true') ? 1 : 0;
+
+  if (isAdminVal === 1) {
+    if (!adminPassword) {
+      return sendJson(res, { status: 400, ok: false, message: '관리자 계정을 생성하려면 본인(현재 관리자)의 비밀번호를 입력해야 합니다.', code: 'ADMIN_PASSWORD_REQUIRED' });
     }
-    return sendJson(res, { status: 200, ok: true, message: `사용자 '${name}'(이)가 성공적으로 등록되었습니다.`, code: 'SUCCESS' });
-  });
+
+    db.get(`SELECT password FROM users WHERE id = ?`, [req.session.user.id], (err, adminRow) => {
+      if (err || !adminRow) {
+        return sendJson(res, { status: 500, ok: false, message: '데이터베이스 조회 실패', code: 'DB_ERROR' });
+      }
+      const match = bcrypt.compareSync(adminPassword, adminRow.password);
+      if (!match) {
+        return sendJson(res, { status: 401, ok: false, message: '현재 관리자 비밀번호가 일치하지 않습니다.', code: 'INVALID_ADMIN_PASSWORD' });
+      }
+      performRegister(isAdminVal);
+    });
+  } else {
+    performRegister(0);
+  }
+
+  function performRegister(adminFlag) {
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    db.run(`INSERT INTO users (username, password, name, is_admin) VALUES (?, ?, ?, ?)`, [username, hashedPassword, name, adminFlag], (err) => {
+      if (err) {
+        if (err.message.includes('UNIQUE constraint failed')) {
+          return sendJson(res, { status: 409, ok: false, message: '이미 존재하는 사용자 아이디입니다.', code: 'ALREADY_EXISTS' });
+        }
+        return sendJson(res, { status: 500, ok: false, message: '사용자 등록 실패', code: 'DB_ERROR' });
+      }
+      return sendJson(res, { status: 200, ok: true, message: `사용자 '${name}'(이)가 성공적으로 등록되었습니다.`, code: 'SUCCESS' });
+    });
+  }
 });
 
 // Admin Route: Get list of all users
@@ -35,7 +58,7 @@ router.get('/users', (req, res) => {
     return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
   }
 
-  db.all(`SELECT id, username, name, is_blocked FROM users ORDER BY id DESC`, [], (err, rows) => {
+  db.all(`SELECT id, username, name, is_blocked, is_admin, (SELECT COUNT(*) FROM dreamhack_solves s WHERE s.username = users.username) AS solve_count FROM users ORDER BY id DESC`, [], (err, rows) => {
     if (err) {
       console.error('[Database Error] Failed to list users:', err.message);
       return sendJson(res, { status: 500, ok: false, message: '사용자 목록 조회 실패', code: 'DB_ERROR' });
@@ -47,6 +70,30 @@ router.get('/users', (req, res) => {
       code: 'SUCCESS'
     });
   });
+});
+
+// Admin Route: Get list of solves for a specific user
+router.get('/user-solves/:username', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+  const targetUsername = req.params.username;
+  db.all(
+    `SELECT challenge_id, challenge_name, timestamp FROM dreamhack_solves WHERE username = ? ORDER BY timestamp DESC`,
+    [targetUsername],
+    (err, rows) => {
+      if (err) {
+        console.error('[Database Error] Failed to list user solves:', err.message);
+        return sendJson(res, { status: 500, ok: false, message: '사용자 풀이 기록 조회 실패', code: 'DB_ERROR' });
+      }
+      sendJson(res, {
+        status: 200,
+        ok: true,
+        data: rows,
+        code: 'SUCCESS'
+      });
+    }
+  );
 });
 
 // Admin Route: Block/Unblock a user
@@ -271,6 +318,91 @@ router.post('/delete-user', (req, res) => {
   }
 });
 
+// Admin Route: Toggle admin role for a user
+router.post('/toggle-admin', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+
+  const { id, username, is_admin, adminPassword } = req.body;
+  if (!id && !username) {
+    return sendJson(res, { status: 400, ok: false, message: '사용자 ID 또는 Username이 필요합니다.', code: 'BAD_REQUEST' });
+  }
+
+  if (!adminPassword) {
+    return sendJson(res, { status: 400, ok: false, message: '관리자 권한을 변경하려면 본인(현재 관리자)의 비밀번호를 입력해야 합니다.', code: 'ADMIN_PASSWORD_REQUIRED' });
+  }
+
+  const targetAdminVal = (is_admin === true || is_admin === 1 || is_admin === 'true') ? 1 : 0;
+  const currentUsername = req.session.user.username;
+  const targetUsername = username || '';
+
+  if (targetUsername === 'developer' || targetUsername === currentUsername) {
+    return sendJson(res, {
+      status: 400,
+      ok: false,
+      message: '시스템 관리자 계정 및 본인의 권한은 변경할 수 없습니다.',
+      code: 'NOT_ALLOWED'
+    });
+  }
+
+  // Verify current admin's password
+  db.get(`SELECT password FROM users WHERE id = ?`, [req.session.user.id], (err, adminRow) => {
+    if (err || !adminRow) {
+      return sendJson(res, { status: 500, ok: false, message: '데이터베이스 조회 실패', code: 'DB_ERROR' });
+    }
+    const match = bcrypt.compareSync(adminPassword, adminRow.password);
+    if (!match) {
+      return sendJson(res, { status: 401, ok: false, message: '현재 관리자 비밀번호가 일치하지 않습니다.', code: 'INVALID_ADMIN_PASSWORD' });
+    }
+
+    // Verify target user is not developer or self
+    if (id) {
+      db.get(`SELECT username FROM users WHERE id = ?`, [id], (err, row) => {
+        if (err) {
+          console.error('[Database Error] Failed to fetch user during admin check:', err.message);
+          return sendJson(res, { status: 500, ok: false, message: '데이터베이스 에러', code: 'DB_ERROR' });
+        }
+        if (!row) {
+          return sendJson(res, { status: 404, ok: false, message: '해당 사용자를 찾을 수 없습니다.', code: 'NOT_FOUND' });
+        }
+        if (row.username === 'developer' || row.username === currentUsername) {
+          return sendJson(res, {
+            status: 400,
+            ok: false,
+            message: '시스템 관리자 계정 및 본인의 권한은 변경할 수 없습니다.',
+            code: 'NOT_ALLOWED'
+          });
+        }
+        performToggle(id, null);
+      });
+    } else {
+      performToggle(null, username);
+    }
+  });
+
+  function performToggle(userId, userNm) {
+    const query = userId ? `UPDATE users SET is_admin = ? WHERE id = ?` : `UPDATE users SET is_admin = ? WHERE username = ?`;
+    const param = userId || userNm;
+
+    db.run(query, [targetAdminVal, param], function(err) {
+      if (err) {
+        console.error('[Database Error] Failed to update user admin role:', err.message);
+        return sendJson(res, { status: 500, ok: false, message: '관리자 권한 변경 실패', code: 'DB_ERROR' });
+      }
+      if (this.changes === 0) {
+        return sendJson(res, { status: 404, ok: false, message: '해당 사용자를 찾을 수 없습니다.', code: 'NOT_FOUND' });
+      }
+      sendJson(res, {
+        status: 200,
+        ok: true,
+        message: `사용자가 성공적으로 ${targetAdminVal ? '관리자로 지정' : '일반 사용자로 변경'}되었습니다.`,
+        code: 'SUCCESS'
+      });
+    });
+  }
+});
+
 // Helper to check if section ID is valid and safe
 function isValidSectionId(sectionId) {
   if (!sectionId || typeof sectionId !== 'string') return false;
@@ -389,6 +521,73 @@ router.post('/update-content', (req, res) => {
                   return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 서브메뉴 #${j + 1} URL은 '#'으로 시작해야 합니다.`, code: 'VALIDATION_ERROR' });
                 }
               }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Server-side validation: CTF dashboard blocks
+  if (sectionId === 'ctf') {
+    if (Array.isArray(jsonData)) {
+      for (let i = 0; i < jsonData.length; i++) {
+        const block = jsonData[i];
+        if (block.type === 'ctf_dashboard') {
+          const leaderboard = block.leaderboard || [];
+          for (let j = 0; j < leaderboard.length; j++) {
+            const item = leaderboard[j];
+            const rank = (item.rank || '').trim();
+            const user = (item.user || '').trim();
+            const score = (item.score || '').trim();
+            const status = (item.status || '').trim();
+
+            if (!rank) {
+              return sendJson(res, { status: 400, ok: false, message: `리더보드 #${j + 1} 항목의 순위(Rank)를 입력해 주세요.`, code: 'VALIDATION_ERROR' });
+            }
+            if (!user || user === '닉네임' || user === 'new_player') {
+              return sendJson(res, { status: 400, ok: false, message: `리더보드 #${j + 1} 항목의 올바른 닉네임(User)을 입력해 주세요.`, code: 'VALIDATION_ERROR' });
+            }
+            if (!score) {
+              return sendJson(res, { status: 400, ok: false, message: `리더보드 #${j + 1} 항목의 점수(Score)를 입력해 주세요.`, code: 'VALIDATION_ERROR' });
+            }
+            if (!/^\d+\s*PTS$/i.test(score)) {
+              return sendJson(res, { status: 400, ok: false, message: `리더보드 #${j + 1} 항목의 점수(Score)는 숫자와 'PTS' 조합이어야 합니다. (예: 1200 PTS)`, code: 'VALIDATION_ERROR' });
+            }
+            if (!status) {
+              return sendJson(res, { status: 400, ok: false, message: `리더보드 #${j + 1} 항목의 해결 현황(Status)을 입력해 주세요.`, code: 'VALIDATION_ERROR' });
+            }
+            if (!/^\d+\s*\/\s*\d+\s*SOLVED$/i.test(status)) {
+              return sendJson(res, { status: 400, ok: false, message: `리더보드 #${j + 1} 항목의 해결 현황(Status)은 'X / Y SOLVED' 형식이어야 합니다. (예: 5 / 5 SOLVED)`, code: 'VALIDATION_ERROR' });
+            }
+          }
+
+          const challenges = block.challenges || [];
+          for (let j = 0; j < challenges.length; j++) {
+            const chal = challenges[j];
+            const category = (chal.category || '').trim().toUpperCase();
+            const title = (chal.title || '').trim();
+            const score = (chal.score || '').trim();
+            const status = (chal.status || '').trim();
+
+            if (!category) {
+              return sendJson(res, { status: 400, ok: false, message: `챌린지 #${j + 1} 항목의 분류(Category)를 지정해 주세요.`, code: 'VALIDATION_ERROR' });
+            }
+            const validCategories = ['WEB', 'PWN', 'REV', 'CRYPTO', 'FORENSICS', 'MISC'];
+            if (!validCategories.includes(category)) {
+              return sendJson(res, { status: 400, ok: false, message: `챌린지 #${j + 1} 항목의 분류(Category)는 WEB, PWN, REV, CRYPTO, FORENSICS, MISC 중 하나여야 합니다.`, code: 'VALIDATION_ERROR' });
+            }
+            if (!title || title === 'New Challenge' || title === 'Web Challenge 1') {
+              return sendJson(res, { status: 400, ok: false, message: `챌린지 #${j + 1} 항목의 올바른 문제 제목(Title)을 입력해 주세요.`, code: 'VALIDATION_ERROR' });
+            }
+            if (!score) {
+              return sendJson(res, { status: 400, ok: false, message: `챌린지 #${j + 1} 항목의 점수(Score)를 입력해 주세요.`, code: 'VALIDATION_ERROR' });
+            }
+            if (!/^\d+\s*PTS$/i.test(score)) {
+              return sendJson(res, { status: 400, ok: false, message: `챌린지 #${j + 1} 항목의 점수(Score)는 숫자와 'PTS' 조합이어야 합니다. (예: 100 PTS)`, code: 'VALIDATION_ERROR' });
+            }
+            if (status !== 'open' && status !== 'solved') {
+              return sendJson(res, { status: 400, ok: false, message: `챌린지 #${j + 1} 항목의 상태(Status)를 올바르게 선택해 주세요.`, code: 'VALIDATION_ERROR' });
             }
           }
         }

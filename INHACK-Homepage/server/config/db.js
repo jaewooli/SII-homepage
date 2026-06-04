@@ -34,6 +34,13 @@ db.serialize(() => {
             console.error('[Database Migration] Failed to add is_blocked column:', err.message);
         }
     });
+
+    // Add is_admin column for user roles (Admin User Management)
+    db.run(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0`, [], (err) => {
+        if (err && !err.message.includes('duplicate column name') && !err.message.includes('already exists')) {
+            console.error('[Database Migration] Failed to add is_admin column:', err.message);
+        }
+    });
     
     // Create dreamhack access tracking log table
     db.run(`CREATE TABLE IF NOT EXISTS dreamhack_access_logs (
@@ -99,10 +106,16 @@ db.serialize(() => {
     
     if (adminPass) {
         const hashedPassword = bcrypt.hashSync(adminPass, 10);
-        db.run(`INSERT OR IGNORE INTO users (username, password, name) 
-                VALUES (?, ?, 'Developer')`, [adminUser, hashedPassword], (err) => {
+        db.run(`INSERT OR IGNORE INTO users (username, password, name, is_admin) 
+                VALUES (?, ?, 'Developer', 1)`, [adminUser, hashedPassword], (err) => {
             if (err) {
                 console.error('[Database Seed Error] Failed to seed admin user:', err.message);
+            }
+        });
+        // Ensure the developer account has admin privileges in case it was already created
+        db.run(`UPDATE users SET is_admin = 1 WHERE username = ?`, [adminUser], (err) => {
+            if (err) {
+                console.error('[Database Seed Error] Failed to set admin role for developer:', err.message);
             }
         });
     } else {

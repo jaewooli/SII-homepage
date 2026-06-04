@@ -334,6 +334,52 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
     })();
     return true; // Keep message channel open for async response
+  } else if (msg.type === "DREAMHACK_SOLVE_DETECTED") {
+    (async () => {
+      try {
+        const storageData = await chrome.storage.local.get('portalOrigin');
+        const portalOrigin = storageData.portalOrigin || 'http://localhost:8080';
+        
+        console.log('[INHACK Background] Solve detected! Fetching user identity from:', portalOrigin);
+        const meRes = await fetch(`${portalOrigin}/me`);
+        if (!meRes.ok) {
+          throw new Error(`Failed to query session identity: status ${meRes.status}`);
+        }
+        
+        const meData = await meRes.json();
+        if (!meData.ok || !meData.data || !meData.data.username) {
+          throw new Error('User is not logged into INHACK Portal');
+        }
+        
+        const username = meData.data.username;
+        console.log(`[INHACK Background] Solve identified. Logged user: ${username}. Logging challenge:`, msg.challengeName);
+        
+        const logRes = await fetch(`${portalOrigin}/dreamhack/solve-log`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            username,
+            challengeId: msg.challengeId,
+            challengeName: msg.challengeName,
+            timestamp: msg.timestamp
+          })
+        });
+        
+        const logData = await logRes.json();
+        if (logRes.ok && logData.ok) {
+          console.log('[INHACK Background] Solve successfully logged on server.');
+          sendResponse({ ok: true });
+        } else {
+          throw new Error(logData.message || 'Server log failed');
+        }
+      } catch (err) {
+        console.error('[INHACK Background] Solve log failed:', err.message);
+        sendResponse({ ok: false, error: err.message });
+      }
+    })();
+    return true; // Keep message channel open for async response
   }
 });
 

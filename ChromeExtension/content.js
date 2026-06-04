@@ -330,3 +330,104 @@ window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', (event) => {
     }
   });
 });
+
+// Intercept wargame challenge solves on dreamhack.io page
+const isDreamhack = window.location.hostname.endsWith('dreamhack.io');
+if (isDreamhack) {
+  // Inject monkey patching script into Dreamhack page context (Main World)
+  const script = document.createElement('script');
+  script.textContent = `
+    (function() {
+      // 1. Monkey-patch window.fetch
+      const originalFetch = window.fetch;
+      window.fetch = async function(...args) {
+        const url = args[0];
+        const response = await originalFetch.apply(this, args);
+        try {
+          const urlStr = typeof url === 'string' ? url : (url && url.url) || '';
+          if (urlStr.includes('/wargame/challenges/') && urlStr.includes('/submit/')) {
+            const clone = response.clone();
+            const data = await clone.json();
+            if (data && data.correct === true) {
+              const parts = urlStr.split('/');
+              const submitIndex = parts.indexOf('submit');
+              const challengeId = (submitIndex > 0) ? parts[submitIndex - 1] : 'unknown';
+              
+              const event = new CustomEvent('DREAMHACK_CHALLENGE_SOLVED_EVENT', {
+                detail: {
+                  challengeId: challengeId,
+                  challengeName: document.title || challengeId
+                }
+              });
+              window.dispatchEvent(event);
+            }
+          }
+        } catch (e) {
+          console.warn('[INHACK Interceptor] Error parsing fetch response:', e);
+        }
+        return response;
+      };
+
+      // 2. Monkey-patch XMLHttpRequest
+      const originalOpen = XMLHttpRequest.prototype.open;
+      const originalSend = XMLHttpRequest.prototype.send;
+      
+      XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+        this._url = url;
+        return originalOpen.apply(this, [method, url, ...rest]);
+      };
+      
+      XMLHttpRequest.prototype.send = function(...args) {
+        this.addEventListener('load', async () => {
+          try {
+            const urlStr = this._url || '';
+            if (urlStr.includes('/wargame/challenges/') && urlStr.includes('/submit/')) {
+              const data = JSON.parse(this.responseText);
+              if (data && data.correct === true) {
+                const parts = urlStr.split('/');
+                const submitIndex = parts.indexOf('submit');
+                const challengeId = (submitIndex > 0) ? parts[submitIndex - 1] : 'unknown';
+                const event = new CustomEvent('DREAMHACK_CHALLENGE_SOLVED_EVENT', {
+                  detail: {
+                    challengeId: challengeId,
+                    challengeName: document.title || challengeId
+                  }
+                });
+                window.dispatchEvent(event);
+              }
+            }
+          } catch (e) {
+            // Ignored
+          }
+        });
+        return originalSend.apply(this, args);
+      };
+    })();
+  `;
+  (document.head || document.documentElement).appendChild(script);
+  script.remove();
+
+  // Listen for the custom DOM event and forward it to the background script
+  window.addEventListener('DREAMHACK_CHALLENGE_SOLVED_EVENT', (event) => {
+    if (!isContextValid()) return;
+    const { challengeId, challengeName } = event.detail;
+    
+    // Resolve challenge title from DOM elements if possible for readability
+    let resolvedChallengeName = challengeName;
+    try {
+      const titleEl = document.querySelector('h1, h2, .challenge-title, [class*="title" i]');
+      if (titleEl && titleEl.textContent) {
+        resolvedChallengeName = titleEl.textContent.trim();
+      }
+    } catch (e) {}
+
+    console.log('[INHACK Extension] Solved challenge detected! Challenge:', resolvedChallengeName, 'ID:', challengeId);
+    
+    chrome.runtime.sendMessage({
+      type: 'DREAMHACK_SOLVE_DETECTED',
+      challengeId,
+      challengeName: resolvedChallengeName,
+      timestamp: new Date().toISOString()
+    });
+  });
+}

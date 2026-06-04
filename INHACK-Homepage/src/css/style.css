@@ -884,6 +884,22 @@ section h2 {
     border-color: rgba(255, 0, 60, 0.25);
     color: var(--color-red);
 }
+.chal-category.crypto {
+    background-color: rgba(234, 179, 8, 0.06);
+    border-color: rgba(234, 179, 8, 0.25);
+    color: #ffd700;
+}
+.chal-category.forensics {
+    background-color: rgba(168, 85, 247, 0.06);
+    border-color: rgba(168, 85, 247, 0.25);
+    color: #c084fc;
+}
+.chal-category.misc {
+    background-color: rgba(236, 72, 153, 0.06);
+    border-color: rgba(236, 72, 153, 0.25);
+    color: #f472b6;
+}
+
 
 .chal-details {
     flex: 1;
@@ -1778,4 +1794,297 @@ footer {
 body.resizing-active {
     cursor: col-resize !important;
     user-select: none !important;
+}
+
+/* ==========================================================================
+   Admin Control Panel Scoped Styles
+   ========================================================================== */
+.page-admin .admin-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-bottom: 3rem;
+}
+
+.page-admin .admin-banner {
+    margin-bottom: 2rem;
+}
+
+.page-admin .admin-banner .hero-title {
+    color: #ff4b4b;
+}
+
+.page-admin .admin-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    grid-auto-rows: min-content;
+}
+
+.page-admin .admin-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* Log Card variations */
+.page-admin .log-card {
+    padding: 2rem;
+    background-color: var(--bg-surface);
+    display: flex;
+    flex-direction: column;
+    border-radius: 4px;
+}
+
+.page-admin .log-card.card-red {
+    border: 1px solid rgba(255, 75, 75, 0.15);
+}
+
+.page-admin .log-card.card-blue {
+    border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.page-admin .log-card.card-purple {
+    border: 1px solid rgba(168, 85, 247, 0.15);
+}
+
+.page-admin .log-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.page-admin .log-card.card-red .log-card-title {
+    color: #ff4b4b;
+    margin-bottom: 1.5rem;
+}
+
+.page-admin .log-card.card-blue .log-card-title {
+    color: #3b82f6;
+    margin-bottom: 1rem;
+}
+
+.page-admin .log-card.card-purple .log-card-title {
+    color: #a855f7;
+    margin-bottom: 1.5rem;
+}
+
+/* CSV Uploading Form elements */
+.page-admin .log-card p {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    line-height: 1.4;
+    margin-bottom: 1.2rem;
+}
+
+.page-admin .download-wrapper {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.page-admin .download-btn {
+    text-decoration: none;
+    text-align: center;
+    font-size: 0.72rem;
+    padding: 6px 12px;
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #3b82f6;
+    width: auto;
+    font-weight: 600;
+}
+
+.page-admin input[type="file"] {
+    font-size: 0.8rem;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    color: #e2e8f0;
+}
+
+.page-admin .csv-result {
+    margin-top: 1rem;
+    font-size: 0.75rem;
+    display: none;
+    padding: 10px;
+    border-radius: 4px;
+    line-height: 1.4;
+}
+
+/* User management table/list elements */
+.page-admin .user-list-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.page-admin .user-list-header {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 8px;
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.page-admin .user-list-header .header-col-grow {
+    flex: 1;
+}
+
+.page-admin .user-list-header .header-col-solved {
+    width: 75px;
+    text-align: center;
+}
+
+.page-admin .user-list-header .header-col-fixed {
+    width: 110px;
+    text-align: center;
+}
+
+.page-admin .user-list-container {
+    max-height: 520px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.page-admin .user-list-message {
+    text-align: center;
+    color: #64748b;
+    padding: 20px;
+    font-size: 0.8rem;
+}
+
+/* User list dynamic row styling */
+.page-admin .user-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    font-size: 0.8rem;
+    color: #e2e8f0;
+}
+
+.page-admin .user-row.blocked {
+    color: #64748b;
+}
+
+.page-admin .user-col-username {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 8px;
+}
+
+.page-admin .user-row.blocked .user-col-username {
+    text-decoration: line-through;
+}
+
+.page-admin .user-col-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 8px;
+}
+
+.page-admin .user-col-solved {
+    width: 75px;
+    text-align: center;
+    color: #3b82f6;
+}
+
+.page-admin .user-col-solved a.view-solves-link {
+    color: #3b82f6;
+    text-decoration: underline;
+    font-weight: 500;
+    transition: color 0.15s ease;
+}
+
+.page-admin .user-col-solved a.view-solves-link:hover {
+    color: #60a5fa;
+}
+
+.page-admin .blocked-badge {
+    font-size: 0.65rem;
+    color: #f59e0b;
+    padding: 1px 4px;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 3px;
+    margin-left: 4px;
+}
+
+.page-admin .user-actions {
+    width: 110px;
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.page-admin .user-actions .block-user-btn {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+}
+
+.page-admin .user-actions .block-user-btn.btn-unblock {
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #10b981;
+}
+
+.page-admin .user-actions .block-user-btn.btn-block {
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #f59e0b;
+}
+
+.page-admin .user-actions .delete-user-btn {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+}
+
+/* Content Launch Screen styling */
+.page-admin .content-launch-card {
+    padding: 2.5rem;
+    background-color: var(--bg-surface);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    text-align: center;
+    border-radius: 4px;
+}
+
+.page-admin .content-launch-icon {
+    font-size: 2.5rem;
+}
+
+.page-admin .content-launch-title {
+    color: var(--color-cyan);
+    font-size: 1.2rem;
+    margin: 0;
+    font-weight: 700;
+}
+
+.page-admin .content-launch-desc {
+    color: #94a3b8;
+    font-size: 0.85rem;
+    max-width: 500px;
+    margin: 0;
+}
+
+.page-admin .launch-btn {
+    padding: 14px 28px;
+    font-size: 0.9rem;
+    border-color: #00f0ff;
+    color: #00f0ff;
+    font-weight: 700;
+    width: auto;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
 }
