@@ -68,6 +68,10 @@ async function isHomepageTabOpen() {
         "https://localhost:8080/*",
         "http://127.0.0.1:8080/*",
         "https://127.0.0.1:8080/*",
+        "http://localhost:8081/*",
+        "https://localhost:8081/*",
+        "http://127.0.0.1:8081/*",
+        "https://127.0.0.1:8081/*",
         "http://ddyoru.duckdns.org/*",
         "https://ddyoru.duckdns.org/*"
       ]
@@ -88,7 +92,7 @@ function verifyMessageSender(sender) {
     try {
       const url = new URL(sender.tab.url);
       if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-        return url.port === '8080';
+        return url.port === '8080' || url.port === '8081';
       }
       if (url.hostname === 'ddyoru.duckdns.org') {
         return true;
