@@ -55,6 +55,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
+    overflow-anchor: none;
 }
 
 a {
@@ -325,21 +326,31 @@ aside ul li .submenu-toggle {
     position: absolute;
     right: 0;
     top: 0;
-    width: 48px;
+    width: 80px;
     height: 48px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
+    padding-right: 1.25rem;
     cursor: pointer;
     z-index: 5;
     color: #475569;
     font-size: 1.1rem;
-    transition: transform 0.2s ease, color 0.2s ease;
+    transition: color 0.2s ease;
+}
+
+aside ul li .submenu-toggle span {
+    display: inline-block;
+    transition: transform 0.2s ease;
+    transform-origin: center;
 }
 
 aside ul li.has-submenu.open > .submenu-toggle {
-    transform: rotate(90deg);
     color: var(--color-cyan);
+}
+
+aside ul li.has-submenu.open > .submenu-toggle span {
+    transform: rotate(90deg);
 }
 
 aside ul li.has-submenu.open > ul.submenu {
@@ -348,10 +359,12 @@ aside ul li.has-submenu.open > ul.submenu {
 
 aside ul li.has-submenu > a {
     padding-left: 1.1rem;
+    padding-right: 80px;
 }
 
 aside ul li.has-submenu > a:hover, aside ul li.has-submenu > a.active {
     padding-left: calc(1.1rem - 3px);
+    padding-right: 80px;
 }
 
 aside ul li ul.submenu li a {
@@ -1047,8 +1060,10 @@ footer {
             max-height: 250px;
         }
         aside ul li:hover > .submenu-toggle {
-            transform: rotate(90deg);
             color: var(--color-cyan);
+        }
+        aside ul li:hover > .submenu-toggle span {
+            transform: rotate(90deg);
         }
     }
     

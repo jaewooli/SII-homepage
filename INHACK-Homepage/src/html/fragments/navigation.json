@@ -38,8 +38,16 @@
   },
   {
     "type": "menu_item",
-    "title": "Seminar",
-    "url": "#seminar",
+    "title": "특별 행사",
+    "url": "#other-events",
+    "external": false,
+    "allowedRoles": ["guest", "member", "admin"],
+    "submenus": []
+  },
+  {
+    "type": "menu_item",
+    "title": "활동 아카이브",
+    "url": "#past-events",
     "external": false,
     "allowedRoles": ["guest", "member", "admin"],
     "submenus": []

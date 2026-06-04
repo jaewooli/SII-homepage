@@ -30,7 +30,7 @@ function renderSidebarNav(menuItems) {
     if (hasSubmenu) {
       const toggle = document.createElement('span');
       toggle.className = 'submenu-toggle';
-      toggle.textContent = '›';
+      toggle.innerHTML = '<span>›</span>';
       toggle.addEventListener('click', e => {
         e.stopPropagation();
         e.preventDefault();

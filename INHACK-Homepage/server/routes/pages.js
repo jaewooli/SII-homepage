@@ -155,7 +155,7 @@ router.get('/frags/:id*', (req, res, next) => {
       return res.status(403).send('Forbidden');
     }
     
-    const validSections = ['home', 'curriculum', 'seminar', 'ctf', 'navigation', 'projects', 'curriculum/system', 'curriculum/web', 'curriculum/forensic', 'curriculum/cryptography'];
+    const validSections = ['home', 'curriculum', 'other-events', 'past-events', 'ctf', 'navigation', 'projects', 'curriculum/system', 'curriculum/web', 'curriculum/forensic', 'curriculum/cryptography'];
     if (validSections.includes(fragmentID)) {
       db.get(`SELECT content_html FROM site_contents WHERE section_id = ?`, [fragmentID], (dbErr, contentRow) => {
         if (dbErr || !contentRow) {
@@ -197,6 +197,11 @@ router.get('/:url', (req, res) => {
 
   // Guard: Redirect unauthenticated requests to My Page to login page
   if (fileName === 'mypage' && !req.session.user) {
+    return res.redirect('/login');
+  }
+
+  // Guard: Redirect unauthenticated/non-admin requests to Admin Panel to login page
+  if (fileName === 'admin' && (!req.session.user || !req.session.user.isAdmin)) {
     return res.redirect('/login');
   }
 

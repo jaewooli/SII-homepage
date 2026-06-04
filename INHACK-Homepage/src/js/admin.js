@@ -88,7 +88,7 @@ function renderSidebarNav(menuItems) {
       // Create separate submenu toggle arrow
       const toggle = document.createElement('span');
       toggle.className = 'submenu-toggle';
-      toggle.textContent = '›';
+      toggle.innerHTML = '<span>›</span>';
       
       toggle.addEventListener('click', (e) => {
         e.stopPropagation();

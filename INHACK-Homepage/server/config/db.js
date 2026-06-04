@@ -130,7 +130,19 @@ db.serialize(() => {
 
     // Seed and compile site contents from JSON files on server startup
     const { compileJsonToHtml } = require('../helpers/template');
-    const sections = ['home', 'curriculum', 'seminar', 'ctf', 'navigation'];
+    const sections = [
+        'home',
+        'curriculum',
+        'curriculum/system',
+        'curriculum/web',
+        'curriculum/forensic',
+        'curriculum/cryptography',
+        'projects',
+        'other-events',
+        'past-events',
+        'ctf',
+        'navigation'
+    ];
     
     sections.forEach(sec => {
         try {

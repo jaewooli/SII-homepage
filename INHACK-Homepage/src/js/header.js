@@ -149,3 +149,19 @@ if (!window.__headerInitialized) {
   window.__headerInitialized = true;
   document.addEventListener('DOMContentLoaded', initHeader);
 }
+
+// Prevent automatic viewport scroll jump when navigation anchors are clicked or hash changes
+let lastScrollY = window.scrollY;
+window.addEventListener('click', (e) => {
+  const anchor = e.target.closest('a');
+  if (anchor && anchor.getAttribute('href') && anchor.getAttribute('href').includes('#')) {
+    lastScrollY = window.scrollY;
+  }
+}, { passive: true });
+
+window.addEventListener('hashchange', () => {
+  // Restore scroll position to prevent browser anchor jump
+  requestAnimationFrame(() => {
+    window.scrollTo(window.scrollX, lastScrollY);
+  });
+});
