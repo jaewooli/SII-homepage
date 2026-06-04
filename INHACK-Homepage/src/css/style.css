@@ -1938,7 +1938,7 @@ body.resizing-active {
 }
 
 .page-admin .user-list-header .header-col-fixed {
-    width: 110px;
+    width: 165px;
     text-align: center;
 }
 
@@ -2019,7 +2019,7 @@ body.resizing-active {
 }
 
 .page-admin .user-actions {
-    width: 110px;
+    width: 165px;
     display: flex;
     gap: 4px;
     justify-content: center;
@@ -2038,6 +2038,30 @@ body.resizing-active {
 .page-admin .user-actions .block-user-btn.btn-block {
     border-color: rgba(245, 158, 11, 0.4);
     color: #f59e0b;
+}
+
+.page-admin .user-actions .toggle-admin-btn {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+}
+
+.page-admin .user-actions .toggle-admin-btn.btn-promote {
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #3b82f6;
+}
+
+.page-admin .user-actions .toggle-admin-btn.btn-demote {
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+}
+
+.page-admin .admin-badge {
+    font-size: 0.65rem;
+    color: #ef4444;
+    padding: 1px 4px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 3px;
+    margin-left: 4px;
 }
 
 .page-admin .user-actions .delete-user-btn {

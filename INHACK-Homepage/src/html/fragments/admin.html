@@ -34,6 +34,14 @@
                                 <label for="admin-reg-password">비밀번호 (Password)</label>
                                 <input type="password" id="admin-reg-password" placeholder="비밀번호 입력" required>
                             </div>
+                            <div class="admin-form-group" style="display: flex; align-items: center; gap: 8px; margin-top: 10px; margin-bottom: 10px;">
+                                <input type="checkbox" id="admin-reg-is-admin" style="width: auto; height: auto; cursor: pointer; margin: 0;">
+                                <label for="admin-reg-is-admin" style="margin: 0; cursor: pointer; font-size: 0.8rem; color: #fbbf24; font-weight: 500;">관리자(Admin) 권한 부여</label>
+                            </div>
+                            <div class="admin-form-group" id="admin-reg-admin-password-group" style="display: none;">
+                                <label for="admin-reg-admin-password" style="color: #fbbf24;">현재 관리자 비밀번호 확인</label>
+                                <input type="password" id="admin-reg-admin-password" placeholder="본인 비밀번호 입력">
+                            </div>
                             <button type="submit" class="action-btn">계정 생성</button>
                         </form>
                     </div>

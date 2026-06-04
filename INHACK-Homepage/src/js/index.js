@@ -2347,23 +2347,46 @@ async function initializeAdminPanel() {
   }
 
   if (registerForm) {
+    const isAdminCheckbox = document.getElementById('admin-reg-is-admin');
+    const adminPasswordGroup = document.getElementById('admin-reg-admin-password-group');
+    const adminPasswordInput = document.getElementById('admin-reg-admin-password');
+
+    if (isAdminCheckbox) {
+      isAdminCheckbox.addEventListener('change', () => {
+        if (isAdminCheckbox.checked) {
+          if (adminPasswordGroup) adminPasswordGroup.style.display = 'block';
+          if (adminPasswordInput) adminPasswordInput.required = true;
+        } else {
+          if (adminPasswordGroup) adminPasswordGroup.style.display = 'none';
+          if (adminPasswordInput) {
+            adminPasswordInput.required = false;
+            adminPasswordInput.value = '';
+          }
+        }
+      });
+    }
+
     registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const username = document.getElementById('admin-reg-username').value;
       const name = document.getElementById('admin-reg-name').value;
       const password = document.getElementById('admin-reg-password').value;
+      const is_admin = isAdminCheckbox ? isAdminCheckbox.checked : false;
+      const adminPassword = adminPasswordInput ? adminPasswordInput.value : '';
 
       showToast('사용자 등록 중...', 'info', 0);
       try {
         const res = await fetch('/admin/register-user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password, name })
+          body: JSON.stringify({ username, password, name, is_admin, adminPassword })
         });
         const data = await res.json();
         if (res.ok && data.ok) {
           showToast(data.message, 'success');
           registerForm.reset();
+          if (adminPasswordGroup) adminPasswordGroup.style.display = 'none';
+          if (adminPasswordInput) adminPasswordInput.required = false;
           loadUserList();
         } else {
           showToast(data.message || '등록 실패', 'error');
@@ -2502,11 +2525,17 @@ async function initializeAdminPanel() {
         const blockText = isBlocked ? '해제' : '차단';
         const blockClass = isBlocked ? 'btn-unblock' : 'btn-block';
 
+        const isAdmin = user.is_admin === 1;
+        const adminText = isAdmin ? '일반화' : '임명';
+        const adminClass = isAdmin ? 'btn-demote' : 'btn-promote';
+
         userRow.className = 'user-row' + (isBlocked ? ' blocked' : '');
         userRow.innerHTML = `
           <div class="user-col-username">${user.username}</div>
           <div class="user-col-name">
-            ${user.name} ${isBlocked ? '<span class="blocked-badge">차단됨</span>' : ''}
+            ${user.name}
+            ${isAdmin ? '<span class="admin-badge">관리자</span>' : ''}
+            ${isBlocked ? '<span class="blocked-badge">차단됨</span>' : ''}
           </div>
           <div class="user-col-solved">
             <a href="#" class="view-solves-link" data-username="${user.username}" data-name="${user.name}">
@@ -2514,6 +2543,7 @@ async function initializeAdminPanel() {
             </a>
           </div>
           <div class="user-actions">
+            <button class="toggle-admin-btn action-btn ${adminClass}">${adminText}</button>
             <button class="block-user-btn action-btn ${blockClass}">${blockText}</button>
             <button class="delete-user-btn action-btn">삭제</button>
           </div>
@@ -2524,6 +2554,42 @@ async function initializeAdminPanel() {
         viewSolvesLink.addEventListener('click', (e) => {
           e.preventDefault();
           showUserSolvesModal(user.username, user.name);
+        });
+
+        // Toggle Admin Button Event Listener
+        const toggleAdminBtn = userRow.querySelector('.toggle-admin-btn');
+        toggleAdminBtn.addEventListener('click', async () => {
+          const actionWord = isAdmin ? '관리자 권한 해제' : '관리자 권한 부여';
+          if (user.username === 'developer') {
+            showToast('시스템 개발자 계정의 권한은 변경할 수 없습니다.', 'error');
+            return;
+          }
+          
+          const adminPassword = prompt(`사용자 '${user.username}' (${user.name})에게 ${actionWord}를 진행합니다.\n본인(현재 로그인된 관리자)의 비밀번호를 입력해 주세요:`);
+          if (adminPassword === null) return; // Cancelled
+          if (!adminPassword.trim()) {
+            showToast('비밀번호를 입력해야 권한을 변경할 수 있습니다.', 'error');
+            return;
+          }
+
+          showToast('권한 변경 처리 중...', 'info', 0);
+          try {
+            const toggleRes = await fetch('/admin/toggle-admin', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: user.id, username: user.username, is_admin: !isAdmin, adminPassword })
+            });
+            const toggleData = await toggleRes.json();
+            if (toggleRes.ok && toggleData.ok) {
+              showToast(`사용자 권한이 성공적으로 변경되었습니다.`, 'success');
+              loadUserList();
+            } else {
+              showToast(toggleData.message || '처리 실패', 'error');
+            }
+          } catch (err) {
+            console.error(err);
+            showToast('서버 통신 오류', 'error');
+          }
         });
 
         // Block/Unblock Button Event Listener
