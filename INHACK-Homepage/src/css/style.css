@@ -234,6 +234,30 @@ nav button#logout-shared-btn:hover {
     background-color: rgba(239, 68, 68, 0.08);
 }
 
+nav a#mypage-btn {
+    display: inline-flex;
+    align-items: center;
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.75);
+    border: var(--border-dim);
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 0.65rem 1.4rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+nav a#mypage-btn:hover {
+    color: #ffffff;
+    border-color: var(--color-cyan);
+    background-color: rgba(59, 130, 246, 0.08);
+}
+
 /* ==========================================================================
    Main Grid Layout
    ========================================================================== */

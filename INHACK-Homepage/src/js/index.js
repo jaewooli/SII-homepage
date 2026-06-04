@@ -404,11 +404,9 @@ function renderUserUI(user){
   let logoutbtn = document.getElementById('logout-btn');
 
   if (user) {
-    window.__currentUser = user;   // Make available to renderSidebarNav
-    if (loginbtn && supportbtn){
-    loginbtn.hidden = true;
-    supportbtn.hidden = true;
-    }
+    window.__currentUser = user;
+    if (loginbtn) loginbtn.hidden = true;
+    if (supportbtn) supportbtn.hidden = true;
 
     if (user.isAdmin) {
       // Append Admin Panel to sidebar
@@ -419,54 +417,56 @@ function renderUserUI(user){
         sidebarList.appendChild(adminLi);
       }
 
-      const renewbtn = document.createElement('button');
-      renewbtn.id = 'renew-btn';
-      renewbtn.textContent = 'Renew Session';
-      renewbtn.addEventListener('click', async () => {
-        await triggerAdminSessionRenewal();
-      });
-      document.querySelector('nav').appendChild(renewbtn);
-
-
-    }
-
-    logoutbtn = document.createElement('button');
-    logoutbtn.id = 'logout-btn';
-    logoutbtn.textContent = 'Logout';
-    document.querySelector('nav').appendChild(logoutbtn);
-
-    logoutbtn.addEventListener('click', async() => {
-      const res = await fetch('/logout', {
-        method: 'POST',
-      });
-
-      if (res.ok) {
-        location.href = '/';
-      } else {
-        showToast('Logout failed', 'error');
+      if (!document.getElementById('renew-btn')) {
+        const renewbtn = document.createElement('button');
+        renewbtn.id = 'renew-btn';
+        renewbtn.textContent = 'Renew Session';
+        renewbtn.addEventListener('click', async () => { await triggerAdminSessionRenewal(); });
+        document.querySelector('nav').appendChild(renewbtn);
       }
-    });
-  }else{
-    if (logoutbtn){
-    logoutbtn.hidden = true;
     }
-    loginbtn = document.createElement('button');
-    loginbtn.id = 'login-btn';
-    loginbtn.textContent = 'Login';
-    document.querySelector('nav').appendChild(loginbtn);
 
-    supportbtn = document.createElement('button');
-    supportbtn.id = 'support-btn';
-    supportbtn.textContent = 'Support';
-    document.querySelector('nav').appendChild(supportbtn);
+    // 마이페이지 link
+    if (!document.getElementById('mypage-btn')) {
+      const mypageBtn = document.createElement('a');
+      mypageBtn.id = 'mypage-btn';
+      mypageBtn.href = '/mypage';
+      mypageBtn.textContent = '마이페이지';
+      document.querySelector('nav').appendChild(mypageBtn);
+    }
 
-    loginbtn.addEventListener('click', () => {
-      location.href = '/login';
-    });
+    // Logout button
+    if (!document.getElementById('logout-btn')) {
+      logoutbtn = document.createElement('button');
+      logoutbtn.id = 'logout-btn';
+      logoutbtn.textContent = 'Logout';
+      document.querySelector('nav').appendChild(logoutbtn);
+      logoutbtn.addEventListener('click', async () => {
+        const res = await fetch('/logout', { method: 'POST' });
+        if (res.ok) location.href = '/';
+        else showToast('Logout failed', 'error');
+      });
+    }
+  } else {
+    if (logoutbtn) logoutbtn.hidden = true;
 
-    supportbtn.addEventListener('click', () =>{
-      window.location.href = 'mailto:jaeu1341@naver.com?subject=[INHACK Homepage] Support / Account Request';
-    });
+    if (!document.getElementById('login-btn')) {
+      loginbtn = document.createElement('button');
+      loginbtn.id = 'login-btn';
+      loginbtn.textContent = 'Login';
+      document.querySelector('nav').appendChild(loginbtn);
+      loginbtn.addEventListener('click', () => { location.href = '/login'; });
+    }
+
+    if (!document.getElementById('support-btn')) {
+      supportbtn = document.createElement('button');
+      supportbtn.id = 'support-btn';
+      supportbtn.textContent = 'Support';
+      document.querySelector('nav').appendChild(supportbtn);
+      supportbtn.addEventListener('click', () => {
+        window.location.href = 'mailto:jaeu1341@naver.com?subject=[INHACK Homepage] Support / Account Request';
+      });
+    }
   }
 }
 

@@ -248,55 +248,57 @@ function renderUserUI(user) {
   let logoutbtn = document.getElementById('logout-btn');
 
   if (user) {
-    window.__currentUser = user;   // Make available to renderSidebarNav
-    if (loginbtn && supportbtn){
-      loginbtn.hidden = true;
-      supportbtn.hidden = true;
+    window.__currentUser = user;
+    if (loginbtn) loginbtn.hidden = true;
+    if (supportbtn) supportbtn.hidden = true;
+
+    // 마이페이지 link
+    if (!document.getElementById('mypage-btn')) {
+      const mypageBtn = document.createElement('a');
+      mypageBtn.id = 'mypage-btn';
+      mypageBtn.href = '/mypage';
+      mypageBtn.textContent = '마이페이지';
+      mypageBtn.style.cssText = 'font-size:0.85rem;color:rgba(255,255,255,0.65);text-decoration:none;padding:6px 12px;border:1px solid rgba(255,255,255,0.12);border-radius:6px;transition:all 0.2s;';
+      mypageBtn.addEventListener('mouseenter', () => { mypageBtn.style.color='#fff'; mypageBtn.style.borderColor='rgba(255,255,255,0.3)'; });
+      mypageBtn.addEventListener('mouseleave', () => { mypageBtn.style.color='rgba(255,255,255,0.65)'; mypageBtn.style.borderColor='rgba(255,255,255,0.12)'; });
+      document.querySelector('nav').appendChild(mypageBtn);
     }
 
-    if (user.isAdmin) {
-      if (!document.getElementById('renew-btn')) {
-        const renewbtn = document.createElement('button');
-        renewbtn.id = 'renew-btn';
-        renewbtn.textContent = 'Renew Session';
-        renewbtn.addEventListener('click', async () => {
-          await triggerAdminSessionRenewal();
-        });
-        document.querySelector('nav').appendChild(renewbtn);
-      }
-    }
-
+    // Logout button
     if (!document.getElementById('logout-btn')) {
       logoutbtn = document.createElement('button');
       logoutbtn.id = 'logout-btn';
       logoutbtn.textContent = 'Logout';
       document.querySelector('nav').appendChild(logoutbtn);
 
-      logoutbtn.addEventListener('click', async() => {
-        const res = await fetch('/logout', {
-          method: 'POST',
-        });
-
-        if (res.ok) {
-          location.href = '/';
-        } else {
-          showToast('Logout failed', 'error');
-        }
+      logoutbtn.addEventListener('click', async () => {
+        const res = await fetch('/logout', { method: 'POST' });
+        if (res.ok) location.href = '/';
+        else showToast('Logout failed', 'error');
       });
     }
-  } else {
-    if (logoutbtn){
-      logoutbtn.hidden = true;
+
+    // Admin-only: append Admin link to sidebar (handled by renderSidebarNav)
+    if (user.isAdmin) {
+      if (!document.getElementById('renew-btn')) {
+        // Renew Session button lives in the admin E2E card on this page;
+        // add it to the nav too for quick access
+        const renewbtn = document.createElement('button');
+        renewbtn.id = 'renew-btn';
+        renewbtn.textContent = 'Renew Session';
+        renewbtn.addEventListener('click', async () => { await triggerAdminSessionRenewal(); });
+        document.querySelector('nav').insertBefore(renewbtn, document.getElementById('mypage-btn'));
+      }
     }
+  } else {
+    if (logoutbtn) logoutbtn.hidden = true;
+
     if (!document.getElementById('login-btn')) {
       loginbtn = document.createElement('button');
       loginbtn.id = 'login-btn';
       loginbtn.textContent = 'Login';
       document.querySelector('nav').appendChild(loginbtn);
-
-      loginbtn.addEventListener('click', () => {
-        location.href = '/login';
-      });
+      loginbtn.addEventListener('click', () => { location.href = '/login'; });
     }
 
     if (!document.getElementById('support-btn')) {
@@ -304,8 +306,7 @@ function renderUserUI(user) {
       supportbtn.id = 'support-btn';
       supportbtn.textContent = 'Support';
       document.querySelector('nav').appendChild(supportbtn);
-
-      supportbtn.addEventListener('click', () =>{
+      supportbtn.addEventListener('click', () => {
         window.location.href = 'mailto:jaeu1341@naver.com?subject=[INHACK Homepage] Support / Account Request';
       });
     }
