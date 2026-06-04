@@ -69,10 +69,15 @@ router.get('/users', (req, res) => {
       console.error('[Database Error] Failed to list users:', err.message);
       return sendJson(res, { status: 500, ok: false, message: '사용자 목록 조회 실패', code: 'DB_ERROR' });
     }
+    const env = require('../config/env');
+    const mappedRows = rows.map(row => ({
+      ...row,
+      is_super_admin: (row.username === 'developer' || row.username === env.ADMIN_USERNAME) ? 1 : 0
+    }));
     sendJson(res, {
       status: 200,
       ok: true,
-      data: rows,
+      data: mappedRows,
       code: 'SUCCESS'
     });
   });

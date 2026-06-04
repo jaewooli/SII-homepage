@@ -2633,17 +2633,31 @@ async function initializeAdminPanel() {
         const blockClass = isBlocked ? 'btn-unblock' : 'btn-block';
 
         const isAdmin = user.is_admin === 1;
-        const adminText = isAdmin ? '관리자 해제' : '관리자 지정';
+        const isSuper = user.is_super_admin === 1;
+        const adminText = isAdmin ? '해임' : '임명';
         const adminClass = isAdmin ? 'btn-demote' : 'btn-promote';
         const currentUserIsSuperAdmin = window.__currentUser && window.__currentUser.isSuperAdmin;
 
         userRow.className = 'user-row' + (isBlocked ? ' blocked' : '');
+        
+        let statusPrefix = '';
+        if (isSuper) {
+          statusPrefix = '<span title="최고 관리자(Super Admin)" style="font-size: 0.95rem; flex-shrink: 0; margin-right: 4px; display: inline-block; vertical-align: middle;">👑</span>';
+        } else if (isAdmin) {
+          statusPrefix = '<span title="관리자(Admin)" style="font-size: 0.95rem; flex-shrink: 0; margin-right: 4px; display: inline-block; vertical-align: middle;">🛡️</span>';
+        }
+        
+        if (isBlocked) {
+          statusPrefix += '<span title="차단됨" style="font-size: 0.95rem; flex-shrink: 0; margin-right: 4px; display: inline-block; vertical-align: middle;">🔒</span>';
+        }
+
         userRow.innerHTML = `
-          <div class="user-col-username">${user.username}</div>
-          <div class="user-col-name" style="display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; flex: 1;">
-            <span class="user-name-text" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0;">${user.name}</span>
-            ${isAdmin ? '<span class="admin-badge" style="flex-shrink: 0; background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 1px 4px; border-radius: 3px; font-size: 0.65rem; font-weight: 600;">관리자</span>' : ''}
-            ${isBlocked ? '<span class="blocked-badge" style="flex-shrink: 0; background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); padding: 1px 4px; border-radius: 3px; font-size: 0.65rem; font-weight: 600;">차단됨</span>' : ''}
+          <div class="user-col-username" style="display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px;">
+            ${statusPrefix}
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${user.username}</span>
+          </div>
+          <div class="user-col-name">
+            <span class="user-name-text">${user.name}</span>
           </div>
           <div class="user-col-solved">
             <a href="#" class="view-solves-link" data-username="${user.username}" data-name="${user.name}">
@@ -2668,7 +2682,7 @@ async function initializeAdminPanel() {
         const toggleAdminBtn = userRow.querySelector('.toggle-admin-btn');
         if (toggleAdminBtn) {
           toggleAdminBtn.addEventListener('click', async () => {
-            const actionWord = isAdmin ? '관리자 해제' : '관리자 지정';
+            const actionWord = isAdmin ? '관리자 해임' : '관리자 임명';
             if (user.username === 'developer') {
               showToast('시스템 개발자 계정의 권한은 변경할 수 없습니다.', 'error');
               return;
