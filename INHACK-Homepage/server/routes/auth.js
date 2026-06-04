@@ -85,9 +85,12 @@ router.post('/login', validateLogin, (req, res) => {
 
 router.get('/me', (req, res) => {
   if (req.session.user) {
+    const env = require('../config/env');
+    const isSuperAdmin = (req.session.user.username === 'developer' || req.session.user.username === env.ADMIN_USERNAME);
+    const userData = { ...req.session.user, isSuperAdmin };
     return sendJson(res, {
       status: 200, ok: true, action: 'auth', resource: 'session',
-      message: 'Session active', data: req.session.user, code: 'SESSION_ACTIVE'
+      message: 'Session active', data: userData, code: 'SESSION_ACTIVE'
     });
   }
   return sendJson(res, {

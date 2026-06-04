@@ -2540,8 +2540,8 @@ async function initializeAdminPanel() {
         userRow.className = 'user-row' + (isBlocked ? ' blocked' : '');
         userRow.innerHTML = `
           <div class="user-col-username">${user.username}</div>
-          <div class="user-col-name" style="display: flex; align-items: center; gap: 4px; overflow: visible;">
-            <span class="user-name-text" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; display: inline-block;">${user.name}</span>
+          <div class="user-col-name" style="display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; flex: 1;">
+            <span class="user-name-text" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0;">${user.name}</span>
             ${isAdmin ? '<span class="admin-badge" style="flex-shrink: 0; background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 1px 4px; border-radius: 3px; font-size: 0.65rem; font-weight: 600;">관리자</span>' : ''}
             ${isBlocked ? '<span class="blocked-badge" style="flex-shrink: 0; background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); padding: 1px 4px; border-radius: 3px; font-size: 0.65rem; font-weight: 600;">차단됨</span>' : ''}
           </div>
