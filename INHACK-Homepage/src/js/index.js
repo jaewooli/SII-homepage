@@ -2351,6 +2351,13 @@ async function initializeAdminPanel() {
     const adminPasswordGroup = document.getElementById('admin-reg-admin-password-group');
     const adminPasswordInput = document.getElementById('admin-reg-admin-password');
 
+    // Show/hide admin checkbox based on isSuperAdmin privilege
+    const currentUserIsSuperAdmin = window.__currentUser && window.__currentUser.isSuperAdmin;
+    const adminRegIsAdminWrapper = document.getElementById('admin-reg-is-admin-wrapper');
+    if (adminRegIsAdminWrapper) {
+      adminRegIsAdminWrapper.style.display = currentUserIsSuperAdmin ? 'flex' : 'none';
+    }
+
     if (isAdminCheckbox) {
       isAdminCheckbox.addEventListener('change', () => {
         if (isAdminCheckbox.checked) {
@@ -2526,16 +2533,17 @@ async function initializeAdminPanel() {
         const blockClass = isBlocked ? 'btn-unblock' : 'btn-block';
 
         const isAdmin = user.is_admin === 1;
-        const adminText = isAdmin ? '일반화' : '임명';
+        const adminText = isAdmin ? '관리자 해제' : '관리자 지정';
         const adminClass = isAdmin ? 'btn-demote' : 'btn-promote';
+        const currentUserIsSuperAdmin = window.__currentUser && window.__currentUser.isSuperAdmin;
 
         userRow.className = 'user-row' + (isBlocked ? ' blocked' : '');
         userRow.innerHTML = `
           <div class="user-col-username">${user.username}</div>
-          <div class="user-col-name">
-            ${user.name}
-            ${isAdmin ? '<span class="admin-badge">관리자</span>' : ''}
-            ${isBlocked ? '<span class="blocked-badge">차단됨</span>' : ''}
+          <div class="user-col-name" style="display: flex; align-items: center; gap: 4px; overflow: visible;">
+            <span class="user-name-text" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; display: inline-block;">${user.name}</span>
+            ${isAdmin ? '<span class="admin-badge" style="flex-shrink: 0; background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 1px 4px; border-radius: 3px; font-size: 0.65rem; font-weight: 600;">관리자</span>' : ''}
+            ${isBlocked ? '<span class="blocked-badge" style="flex-shrink: 0; background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); padding: 1px 4px; border-radius: 3px; font-size: 0.65rem; font-weight: 600;">차단됨</span>' : ''}
           </div>
           <div class="user-col-solved">
             <a href="#" class="view-solves-link" data-username="${user.username}" data-name="${user.name}">
@@ -2543,7 +2551,7 @@ async function initializeAdminPanel() {
             </a>
           </div>
           <div class="user-actions">
-            <button class="toggle-admin-btn action-btn ${adminClass}">${adminText}</button>
+            ${currentUserIsSuperAdmin ? `<button class="toggle-admin-btn action-btn ${adminClass}">${adminText}</button>` : ''}
             <button class="block-user-btn action-btn ${blockClass}">${blockText}</button>
             <button class="delete-user-btn action-btn">삭제</button>
           </div>
@@ -2558,39 +2566,41 @@ async function initializeAdminPanel() {
 
         // Toggle Admin Button Event Listener
         const toggleAdminBtn = userRow.querySelector('.toggle-admin-btn');
-        toggleAdminBtn.addEventListener('click', async () => {
-          const actionWord = isAdmin ? '관리자 권한 해제' : '관리자 권한 부여';
-          if (user.username === 'developer') {
-            showToast('시스템 개발자 계정의 권한은 변경할 수 없습니다.', 'error');
-            return;
-          }
-          
-          const adminPassword = prompt(`사용자 '${user.username}' (${user.name})에게 ${actionWord}를 진행합니다.\n본인(현재 로그인된 관리자)의 비밀번호를 입력해 주세요:`);
-          if (adminPassword === null) return; // Cancelled
-          if (!adminPassword.trim()) {
-            showToast('비밀번호를 입력해야 권한을 변경할 수 있습니다.', 'error');
-            return;
-          }
-
-          showToast('권한 변경 처리 중...', 'info', 0);
-          try {
-            const toggleRes = await fetch('/admin/toggle-admin', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: user.id, username: user.username, is_admin: !isAdmin, adminPassword })
-            });
-            const toggleData = await toggleRes.json();
-            if (toggleRes.ok && toggleData.ok) {
-              showToast(`사용자 권한이 성공적으로 변경되었습니다.`, 'success');
-              loadUserList();
-            } else {
-              showToast(toggleData.message || '처리 실패', 'error');
+        if (toggleAdminBtn) {
+          toggleAdminBtn.addEventListener('click', async () => {
+            const actionWord = isAdmin ? '관리자 해제' : '관리자 지정';
+            if (user.username === 'developer') {
+              showToast('시스템 개발자 계정의 권한은 변경할 수 없습니다.', 'error');
+              return;
             }
-          } catch (err) {
-            console.error(err);
-            showToast('서버 통신 오류', 'error');
-          }
-        });
+            
+            const adminPassword = prompt(`사용자 '${user.username}' (${user.name})에게 ${actionWord}를 진행합니다.\n본인(현재 로그인된 관리자)의 비밀번호를 입력해 주세요:`);
+            if (adminPassword === null) return; // Cancelled
+            if (!adminPassword.trim()) {
+              showToast('비밀번호를 입력해야 권한을 변경할 수 있습니다.', 'error');
+              return;
+            }
+
+            showToast('권한 변경 처리 중...', 'info', 0);
+            try {
+              const toggleRes = await fetch('/admin/toggle-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: user.id, username: user.username, is_admin: !isAdmin, adminPassword })
+              });
+              const toggleData = await toggleRes.json();
+              if (toggleRes.ok && toggleData.ok) {
+                showToast(`사용자 권한이 성공적으로 변경되었습니다.`, 'success');
+                loadUserList();
+              } else {
+                showToast(toggleData.message || '처리 실패', 'error');
+              }
+            } catch (err) {
+              console.error(err);
+              showToast('서버 통신 오류', 'error');
+            }
+          });
+        }
 
         // Block/Unblock Button Event Listener
         const blockBtn = userRow.querySelector('.block-user-btn');

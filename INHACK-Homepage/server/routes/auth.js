@@ -49,11 +49,13 @@ router.post('/login', validateLogin, (req, res) => {
 
             const adminUser = env.ADMIN_USERNAME;
             const isAdmin = (row.is_admin === 1 || row.username === adminUser);
+            const isSuperAdmin = (row.username === 'developer' || row.username === adminUser);
             req.session.user = { 
                 id: row.id, 
                 username: row.username, 
                 name: row.name, 
                 isAdmin, 
+                isSuperAdmin,
                 passwordChanged: row.password_changed || 0 
             };
             req.session.save((saveErr) => {

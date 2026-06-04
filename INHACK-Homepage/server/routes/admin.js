@@ -19,7 +19,13 @@ router.post('/register-user', (req, res) => {
 
   const isAdminVal = (is_admin === true || is_admin === 1 || is_admin === 'true') ? 1 : 0;
 
+  const env = require('../config/env');
   if (isAdminVal === 1) {
+    const isSuperAdmin = (req.session.user.username === 'developer' || req.session.user.username === env.ADMIN_USERNAME || req.session.user.isSuperAdmin);
+    if (!isSuperAdmin) {
+      return sendJson(res, { status: 403, ok: false, message: '관리자 계정을 생성할 권한이 없습니다. (최고 관리자 권한 필요)', code: 'FORBIDDEN' });
+    }
+
     if (!adminPassword) {
       return sendJson(res, { status: 400, ok: false, message: '관리자 계정을 생성하려면 본인(현재 관리자)의 비밀번호를 입력해야 합니다.', code: 'ADMIN_PASSWORD_REQUIRED' });
     }
@@ -322,6 +328,12 @@ router.post('/delete-user', (req, res) => {
 router.post('/toggle-admin', (req, res) => {
   if (!req.session.user || !req.session.user.isAdmin) {
     return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+
+  const env = require('../config/env');
+  const isSuperAdmin = (req.session.user.username === 'developer' || req.session.user.username === env.ADMIN_USERNAME || req.session.user.isSuperAdmin);
+  if (!isSuperAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: '관리자 임명/해제 권한이 없습니다. (최고 관리자 권한 필요)', code: 'FORBIDDEN' });
   }
 
   const { id, username, is_admin, adminPassword } = req.body;
