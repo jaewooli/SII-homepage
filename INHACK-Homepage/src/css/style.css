@@ -1922,13 +1922,17 @@ body.resizing-active {
 .page-admin .user-list-header {
     display: flex;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding-bottom: 8px;
+    padding: 0 8px 8px 8px;
     font-size: 0.75rem;
     color: #64748b;
     font-weight: 600;
 }
 
-.page-admin .user-list-header .header-col-grow {
+.page-admin .user-list-header .header-col-username {
+    flex: 1.5;
+}
+
+.page-admin .user-list-header .header-col-name {
     flex: 1;
 }
 
@@ -1938,7 +1942,7 @@ body.resizing-active {
 }
 
 .page-admin .user-list-header .header-col-fixed {
-    width: 165px;
+    width: 90px;
     text-align: center;
 }
 
@@ -1962,10 +1966,24 @@ body.resizing-active {
 .page-admin .user-row {
     display: flex;
     align-items: center;
-    padding: 10px 0;
+    padding: 10px 8px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border: 1px solid transparent;
     font-size: 0.8rem;
     color: #e2e8f0;
+    margin: 4px 0;
+    border-radius: 4px;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.page-admin .user-row.super-admin-row {
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    background: rgba(239, 68, 68, 0.04);
+}
+
+.page-admin .user-row.admin-row {
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    background: rgba(59, 130, 246, 0.04);
 }
 
 .page-admin .user-row.blocked {
@@ -1973,7 +1991,7 @@ body.resizing-active {
 }
 
 .page-admin .user-col-username {
-    flex: 1;
+    flex: 1.5;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2019,56 +2037,78 @@ body.resizing-active {
 }
 
 .page-admin .user-actions {
-    width: 165px;
+    width: 90px;
     display: flex;
     gap: 4px;
     justify-content: center;
+    position: relative;
 }
 
-.page-admin .user-actions .block-user-btn {
-    padding: 3px 6px;
-    font-size: 0.7rem;
+/* User Actions Dropdown Menu styling */
+.page-admin .user-actions-dropdown {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    background: #151b2d;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+    z-index: 100;
+    min-width: 130px;
+    display: none;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
 }
 
-.page-admin .user-actions .block-user-btn.btn-unblock {
-    border-color: rgba(16, 185, 129, 0.4);
-    color: #10b981;
+.page-admin .user-actions-dropdown.show {
+    display: flex;
 }
 
-.page-admin .user-actions .block-user-btn.btn-block {
-    border-color: rgba(245, 158, 11, 0.4);
-    color: #f59e0b;
+.page-admin .user-actions-dropdown-item {
+    padding: 10px 14px;
+    font-size: 0.75rem;
+    color: #e2e8f0;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    text-align: left;
+    cursor: pointer;
+    width: 100%;
+    font-weight: 500;
+    transition: background 0.15s ease, color 0.15s ease;
 }
 
-.page-admin .user-actions .toggle-admin-btn {
-    padding: 3px 6px;
-    font-size: 0.7rem;
+.page-admin .user-actions-dropdown-item:last-child {
+    border-bottom: none;
 }
 
-.page-admin .user-actions .toggle-admin-btn.btn-promote {
-    border-color: rgba(59, 130, 246, 0.4);
-    color: #3b82f6;
+/* Option Specific Colors & Hover States */
+.page-admin .user-actions-dropdown-item.toggle-admin-option {
+    color: #60a5fa;
 }
 
-.page-admin .user-actions .toggle-admin-btn.btn-demote {
-    border-color: rgba(239, 68, 68, 0.4);
-    color: #ef4444;
+.page-admin .user-actions-dropdown-item.toggle-admin-option:hover {
+    background: rgba(59, 130, 246, 0.1);
+    color: #93c5fd;
 }
 
-.page-admin .admin-badge {
-    font-size: 0.65rem;
-    color: #ef4444;
-    padding: 1px 4px;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: 3px;
-    margin-left: 4px;
+.page-admin .user-actions-dropdown-item.toggle-block-option {
+    color: #fbbf24;
 }
 
-.page-admin .user-actions .delete-user-btn {
-    padding: 3px 6px;
-    font-size: 0.7rem;
-    border-color: rgba(239, 68, 68, 0.4);
-    color: #ef4444;
+.page-admin .user-actions-dropdown-item.toggle-block-option:hover {
+    background: rgba(245, 158, 11, 0.1);
+    color: #fde047;
+}
+
+.page-admin .user-actions-dropdown-item.danger {
+    color: #f87171;
+}
+
+.page-admin .user-actions-dropdown-item.danger:hover {
+    background: rgba(239, 68, 68, 0.12);
+    color: #fca5a5;
 }
 
 /* Content Launch Screen styling */
@@ -2111,4 +2151,21 @@ body.resizing-active {
     font-weight: 700;
     width: auto;
     box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
+}
+
+/* Admin form styling & spacing */
+.page-admin .admin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.page-admin .admin-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.page-admin .admin-form button[type="submit"] {
+    margin-top: 14px;
 }

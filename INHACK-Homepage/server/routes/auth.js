@@ -48,8 +48,8 @@ router.post('/login', validateLogin, (req, res) => {
             }
 
             const adminUser = env.ADMIN_USERNAME;
-            const isAdmin = (row.is_admin === 1 || row.username === adminUser);
             const isSuperAdmin = (row.username === 'developer' || row.username === adminUser);
+            const isAdmin = (row.is_admin === 1 || row.username === adminUser || isSuperAdmin);
             req.session.user = { 
                 id: row.id, 
                 username: row.username, 
@@ -87,7 +87,8 @@ router.get('/me', (req, res) => {
   if (req.session.user) {
     const env = require('../config/env');
     const isSuperAdmin = (req.session.user.username === 'developer' || req.session.user.username === env.ADMIN_USERNAME);
-    const userData = { ...req.session.user, isSuperAdmin };
+    const isAdmin = !!(req.session.user.isAdmin || isSuperAdmin);
+    const userData = { ...req.session.user, isAdmin, isSuperAdmin };
     return sendJson(res, {
       status: 200, ok: true, action: 'auth', resource: 'session',
       message: 'Session active', data: userData, code: 'SESSION_ACTIVE'

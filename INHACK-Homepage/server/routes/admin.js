@@ -64,19 +64,31 @@ router.get('/users', (req, res) => {
     return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
   }
 
-  db.all(`SELECT id, username, name, is_blocked, is_admin, (SELECT COUNT(*) FROM dreamhack_solves s WHERE s.username = users.username) AS solve_count FROM users ORDER BY id DESC`, [], (err, rows) => {
-    if (err) {
-      console.error('[Database Error] Failed to list users:', err.message);
-      return sendJson(res, { status: 500, ok: false, message: '사용자 목록 조회 실패', code: 'DB_ERROR' });
-    }
-    const env = require('../config/env');
-    const mappedRows = rows.map(row => ({
-      ...row,
-      is_super_admin: (row.username === 'developer' || row.username === env.ADMIN_USERNAME) ? 1 : 0
-    }));
-    sendJson(res, {
-      status: 200,
-      ok: true,
+  const env = require('../config/env');
+  const superAdminUser = env.ADMIN_USERNAME || 'developer';
+
+  db.all(
+    `SELECT id, username, name, is_blocked, is_admin, 
+            (SELECT COUNT(*) FROM dreamhack_solves s WHERE s.username = users.username) AS solve_count 
+     FROM users 
+     ORDER BY (username = 'developer' OR username = ?) DESC, id DESC`,
+    [superAdminUser],
+    (err, rows) => {
+      if (err) {
+        console.error('[Database Error] Failed to list users:', err.message);
+        return sendJson(res, { status: 500, ok: false, message: '사용자 목록 조회 실패', code: 'DB_ERROR' });
+      }
+      const mappedRows = rows.map(row => {
+        const isSuper = (row.username === 'developer' || row.username === env.ADMIN_USERNAME) ? 1 : 0;
+        return {
+          ...row,
+          is_admin: isSuper ? 1 : row.is_admin,
+          is_super_admin: isSuper
+        };
+      });
+      sendJson(res, {
+        status: 200,
+        ok: true,
       data: mappedRows,
       code: 'SUCCESS'
     });
@@ -119,53 +131,53 @@ router.post('/block-user', (req, res) => {
   }
 
   const currentUsername = req.session.user.username;
-  const targetUsername = username || '';
-
-  if (targetUsername === 'developer' || targetUsername === currentUsername) {
-    return sendJson(res, {
-      status: 400,
-      ok: false,
-      message: '시스템 관리자 계정 및 본인의 계정은 차단할 수 없습니다.',
-      code: 'NOT_ALLOWED'
-    });
-  }
-
+  const targetSelector = id ? 'id = ?' : 'username = ?';
+  const targetParam = id || username;
   const blockVal = is_blocked ? 1 : 0;
 
-  if (id) {
-    db.get(`SELECT username FROM users WHERE id = ?`, [id], (err, row) => {
-      if (err) {
-        console.error('[Database Error] Failed to fetch user during block check:', err.message);
-        return sendJson(res, { status: 500, ok: false, message: '데이터베이스 에러', code: 'DB_ERROR' });
-      }
-      if (!row) {
-        return sendJson(res, { status: 404, ok: false, message: '해당 사용자를 찾을 수 없습니다.', code: 'NOT_FOUND' });
-      }
-      if (row.username === 'developer' || row.username === currentUsername) {
-        return sendJson(res, {
-          status: 400,
-          ok: false,
-          message: '시스템 관리자 계정 및 본인의 계정은 차단할 수 없습니다.',
-          code: 'NOT_ALLOWED'
-        });
-      }
-      performBlock(id, null);
-    });
-  } else {
-    performBlock(null, username);
-  }
+  db.get(`SELECT username, is_admin FROM users WHERE ${targetSelector}`, [targetParam], (err, row) => {
+    if (err) {
+      console.error('[Database Error] Failed to fetch user for block check validation:', err.message);
+      return sendJson(res, { status: 500, ok: false, message: '데이터베이스 에러', code: 'DB_ERROR' });
+    }
+    if (!row) {
+      return sendJson(res, { status: 404, ok: false, message: '해당 사용자를 찾을 수 없습니다.', code: 'NOT_FOUND' });
+    }
 
-  function performBlock(userId, userNm) {
-    const query = userId ? `UPDATE users SET is_blocked = ? WHERE id = ?` : `UPDATE users SET is_blocked = ? WHERE username = ?`;
-    const param = userId || userNm;
+    const env = require('../config/env');
+    const targetUsername = row.username;
+    const isTargetSuper = (targetUsername === 'developer' || targetUsername === env.ADMIN_USERNAME);
+    const isTargetAdmin = (row.is_admin === 1 || isTargetSuper);
 
-    db.run(query, [blockVal, param], function(err) {
+    // 1. 최고 관리자 및 본인 계정은 차단 불가
+    if (isTargetSuper || targetUsername === currentUsername) {
+      return sendJson(res, {
+        status: 400,
+        ok: false,
+        message: '시스템 관리자 계정 및 본인의 계정은 차단할 수 없습니다.',
+        code: 'NOT_ALLOWED'
+      });
+    }
+
+    // 2. 대상이 관리자인데, 요청자가 최고 관리자가 아닌 경우 차단 불가
+    const isRequesterSuper = (currentUsername === 'developer' || currentUsername === env.ADMIN_USERNAME || req.session.user.isSuperAdmin);
+    if (isTargetAdmin && !isRequesterSuper) {
+      return sendJson(res, {
+        status: 403,
+        ok: false,
+        message: '일반 관리자는 다른 관리자 계정을 차단할 수 없습니다. (최고 관리자 권한 필요)',
+        code: 'FORBIDDEN'
+      });
+    }
+
+    performBlock(targetUsername);
+  });
+
+  function performBlock(targetUser) {
+    db.run(`UPDATE users SET is_blocked = ? WHERE username = ?`, [blockVal, targetUser], function(err) {
       if (err) {
         console.error('[Database Error] Failed to block/unblock user:', err.message);
         return sendJson(res, { status: 500, ok: false, message: '사용자 차단 상태 변경 실패', code: 'DB_ERROR' });
-      }
-      if (this.changes === 0) {
-        return sendJson(res, { status: 404, ok: false, message: '해당 사용자를 찾을 수 없습니다.', code: 'NOT_FOUND' });
       }
       sendJson(res, {
         status: 200,
@@ -272,52 +284,52 @@ router.post('/delete-user', (req, res) => {
   }
 
   const currentUsername = req.session.user.username;
-  const targetUsername = username || '';
+  const targetSelector = id ? 'id = ?' : 'username = ?';
+  const targetParam = id || username;
 
-  if (targetUsername === 'developer' || targetUsername === currentUsername) {
-    return sendJson(res, {
-      status: 400,
-      ok: false,
-      message: '시스템 관리자 계정 및 본인의 계정은 삭제할 수 없습니다.',
-      code: 'NOT_ALLOWED'
-    });
-  }
+  db.get(`SELECT username, is_admin FROM users WHERE ${targetSelector}`, [targetParam], (err, row) => {
+    if (err) {
+      console.error('[Database Error] Failed to fetch user for validation:', err.message);
+      return sendJson(res, { status: 500, ok: false, message: '데이터베이스 에러', code: 'DB_ERROR' });
+    }
+    if (!row) {
+      return sendJson(res, { status: 404, ok: false, message: '해당 사용자를 찾을 수 없습니다.', code: 'NOT_FOUND' });
+    }
 
-  // Double check user detail if ID is sent
-  if (id) {
-    db.get(`SELECT username FROM users WHERE id = ?`, [id], (err, row) => {
-      if (err) {
-        console.error('[Database Error] Failed to fetch user during deletion check:', err.message);
-        return sendJson(res, { status: 500, ok: false, message: '데이터베이스 에러', code: 'DB_ERROR' });
-      }
-      if (!row) {
-        return sendJson(res, { status: 404, ok: false, message: '해당 사용자를 찾을 수 없습니다.', code: 'NOT_FOUND' });
-      }
-      if (row.username === 'developer' || row.username === currentUsername) {
-        return sendJson(res, {
-          status: 400,
-          ok: false,
-          message: '시스템 관리자 계정 및 본인의 계정은 삭제할 수 없습니다.',
-          code: 'NOT_ALLOWED'
-        });
-      }
-      performDelete(id, null);
-    });
-  } else {
-    performDelete(null, username);
-  }
+    const env = require('../config/env');
+    const targetUsername = row.username;
+    const isTargetSuper = (targetUsername === 'developer' || targetUsername === env.ADMIN_USERNAME);
+    const isTargetAdmin = (row.is_admin === 1 || isTargetSuper);
 
-  function performDelete(userId, userNm) {
-    const query = userId ? `DELETE FROM users WHERE id = ?` : `DELETE FROM users WHERE username = ?`;
-    const param = userId || userNm;
+    // 1. 최고 관리자 및 본인 계정은 삭제 불가
+    if (isTargetSuper || targetUsername === currentUsername) {
+      return sendJson(res, {
+        status: 400,
+        ok: false,
+        message: '시스템 관리자 계정 및 본인의 계정은 삭제할 수 없습니다.',
+        code: 'NOT_ALLOWED'
+      });
+    }
 
-    db.run(query, [param], function(err) {
+    // 2. 대상이 관리자인데, 요청자가 최고 관리자가 아닌 경우 삭제 불가
+    const isRequesterSuper = (currentUsername === 'developer' || currentUsername === env.ADMIN_USERNAME || req.session.user.isSuperAdmin);
+    if (isTargetAdmin && !isRequesterSuper) {
+      return sendJson(res, {
+        status: 403,
+        ok: false,
+        message: '일반 관리자는 다른 관리자 계정을 삭제할 수 없습니다. (최고 관리자 권한 필요)',
+        code: 'FORBIDDEN'
+      });
+    }
+
+    performDelete(targetUsername);
+  });
+
+  function performDelete(targetUser) {
+    db.run(`DELETE FROM users WHERE username = ?`, [targetUser], function(err) {
       if (err) {
         console.error('[Database Error] Failed to delete user:', err.message);
         return sendJson(res, { status: 500, ok: false, message: '사용자 삭제 실패', code: 'DB_ERROR' });
-      }
-      if (this.changes === 0) {
-        return sendJson(res, { status: 404, ok: false, message: '해당 사용자를 찾을 수 없습니다.', code: 'NOT_FOUND' });
       }
       sendJson(res, {
         status: 200,
@@ -338,7 +350,7 @@ router.post('/toggle-admin', (req, res) => {
   const env = require('../config/env');
   const isSuperAdmin = (req.session.user.username === 'developer' || req.session.user.username === env.ADMIN_USERNAME || req.session.user.isSuperAdmin);
   if (!isSuperAdmin) {
-    return sendJson(res, { status: 403, ok: false, message: '관리자 임명/해제 권한이 없습니다. (최고 관리자 권한 필요)', code: 'FORBIDDEN' });
+    return sendJson(res, { status: 403, ok: false, message: '관리자 지정/해제 권한이 없습니다. (최고 관리자 권한 필요)', code: 'FORBIDDEN' });
   }
 
   const { id, username, is_admin, adminPassword } = req.body;

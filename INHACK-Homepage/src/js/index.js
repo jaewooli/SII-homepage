@@ -2629,32 +2629,37 @@ async function initializeAdminPanel() {
       users.forEach(user => {
         const userRow = document.createElement('div');
         const isBlocked = user.is_blocked === 1;
-        const blockText = isBlocked ? '해제' : '차단';
-        const blockClass = isBlocked ? 'btn-unblock' : 'btn-block';
-
-        const isAdmin = user.is_admin === 1;
         const isSuper = user.is_super_admin === 1;
-        const adminText = isAdmin ? '해제' : '지정';
-        const adminClass = isAdmin ? 'btn-demote' : 'btn-promote';
+        const isAdmin = user.is_admin === 1 || isSuper;
         const currentUserIsSuperAdmin = window.__currentUser && window.__currentUser.isSuperAdmin;
 
-        userRow.className = 'user-row' + (isBlocked ? ' blocked' : '');
+        const isSelf = window.__currentUser && user.username === window.__currentUser.username;
+        const isTargetSuper = isSuper || user.username === 'developer';
+        const isTargetAdmin = isAdmin;
+        const isRequesterSuper = currentUserIsSuperAdmin;
+
+        // 관리 가능 조건: 본인 아님 AND 최고 관리자 아님 AND (대상이 일반 유저이거나, 본인이 최고 관리자여야 함)
+        const canManage = !isSelf && !isTargetSuper && (!isTargetAdmin || isRequesterSuper);
+
+        userRow.className = 'user-row' + (isBlocked ? ' blocked' : '') + (isSuper ? ' super-admin-row' : (isAdmin ? ' admin-row' : ''));
         
-        let tagsHtml = '';
+        let roleTagHtml = '';
         if (isSuper) {
-          tagsHtml = '<span style="font-size: 0.65rem; color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); padding: 1px 4px; border-radius: 2px; flex-shrink: 0; font-weight: 600;">최고</span>';
+          roleTagHtml = '<span style="font-size: 0.65rem; color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); padding: 1px 4px; border-radius: 2px; flex-shrink: 0; font-weight: 600;">최고</span>';
         } else if (isAdmin) {
-          tagsHtml = '<span style="font-size: 0.65rem; color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.1); padding: 1px 4px; border-radius: 2px; flex-shrink: 0; font-weight: 600;">관리자</span>';
+          roleTagHtml = '<span style="font-size: 0.65rem; color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.1); padding: 1px 4px; border-radius: 2px; flex-shrink: 0; font-weight: 600;">관리자</span>';
         }
         
+        let blockedTagHtml = '';
         if (isBlocked) {
-          tagsHtml += '<span style="font-size: 0.65rem; color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1); padding: 1px 4px; border-radius: 2px; flex-shrink: 0; font-weight: 600; margin-left: 4px;">차단됨</span>';
+          blockedTagHtml = '<span style="font-size: 0.65rem; color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1); padding: 1px 4px; border-radius: 2px; flex-shrink: 0; font-weight: 600; margin-left: 4px;">차단됨</span>';
         }
 
         userRow.innerHTML = `
           <div class="user-col-username" style="display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px;">
+            ${roleTagHtml}
             <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${user.username}</span>
-            ${tagsHtml}
+            ${blockedTagHtml}
           </div>
           <div class="user-col-name">
             <span class="user-name-text">${user.name}</span>
@@ -2665,9 +2670,16 @@ async function initializeAdminPanel() {
             </a>
           </div>
           <div class="user-actions">
-            ${currentUserIsSuperAdmin ? `<button class="toggle-admin-btn action-btn ${adminClass}">${adminText}</button>` : ''}
-            <button class="block-user-btn action-btn ${blockClass}">${blockText}</button>
-            <button class="delete-user-btn action-btn">삭제</button>
+            ${canManage ? `
+              <button class="action-btn manage-menu-btn" style="width: 100%; height: 26px; font-size: 0.75rem; padding: 0;">관리</button>
+              <div class="user-actions-dropdown">
+                ${isRequesterSuper ? `
+                  <button class="user-actions-dropdown-item toggle-admin-option">${isAdmin ? '관리자 해제' : '관리자 지정'}</button>
+                ` : ''}
+                <button class="user-actions-dropdown-item toggle-block-option">${isBlocked ? '차단 해제' : '계정 차단'}</button>
+                <button class="user-actions-dropdown-item delete-option danger">계정 삭제</button>
+              </div>
+            ` : ''}
           </div>
         `;
         
@@ -2678,10 +2690,25 @@ async function initializeAdminPanel() {
           showUserSolvesModal(user.username, user.name);
         });
 
-        // Toggle Admin Button Event Listener
-        const toggleAdminBtn = userRow.querySelector('.toggle-admin-btn');
-        if (toggleAdminBtn) {
-          toggleAdminBtn.addEventListener('click', async () => {
+        // Dropdown Menu Toggle Handler
+        const manageMenuBtn = userRow.querySelector('.manage-menu-btn');
+        const dropdown = userRow.querySelector('.user-actions-dropdown');
+        
+        if (manageMenuBtn && dropdown) {
+          manageMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Close all other dropdowns first
+            document.querySelectorAll('.user-actions-dropdown').forEach(d => {
+              if (d !== dropdown) d.classList.remove('show');
+            });
+            dropdown.classList.toggle('show');
+          });
+        }
+
+        // Toggle Admin Option Event Listener
+        const toggleAdminOption = userRow.querySelector('.toggle-admin-option');
+        if (toggleAdminOption) {
+          toggleAdminOption.addEventListener('click', async () => {
             const actionWord = isAdmin ? '관리자 해제' : '관리자 지정';
             if (user.username === 'developer') {
               showToast('시스템 개발자 계정의 권한은 변경할 수 없습니다.', 'error');
@@ -2711,56 +2738,74 @@ async function initializeAdminPanel() {
           });
         }
 
-        // Block/Unblock Button Event Listener
-        const blockBtn = userRow.querySelector('.block-user-btn');
-        blockBtn.addEventListener('click', async () => {
-          const actionWord = isBlocked ? '차단 해제' : '차단';
-          if (confirm(`정말로 사용자 '${user.username}' (${user.name}) 계정을 ${actionWord}하시겠습니까?`)) {
-            showToast(`${actionWord} 처리 중...`, 'info', 0);
-            try {
-              const blockRes = await fetch('/admin/block-user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: user.id, username: user.username, is_blocked: !isBlocked })
-              });
-              const blockData = await blockRes.json();
-              if (blockRes.ok && blockData.ok) {
-                showToast(`사용자 계정이 ${actionWord}되었습니다.`, 'success');
-                loadUserList();
-              } else {
-                showToast(blockData.message || '처리 실패', 'error');
+        // Block/Unblock Option Event Listener
+        const toggleBlockOption = userRow.querySelector('.toggle-block-option');
+        if (toggleBlockOption) {
+          toggleBlockOption.addEventListener('click', async () => {
+            const actionWord = isBlocked ? '차단 해제' : '차단';
+            if (confirm(`정말로 사용자 '${user.username}' (${user.name}) 계정을 ${actionWord}하시겠습니까?`)) {
+              showToast(`${actionWord} 처리 중...`, 'info', 0);
+              try {
+                const blockRes = await fetch('/admin/block-user', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ id: user.id, username: user.username, is_blocked: !isBlocked })
+                });
+                const blockData = await blockRes.json();
+                if (blockRes.ok && blockData.ok) {
+                  showToast(`사용자 계정이 ${actionWord}되었습니다.`, 'success');
+                  loadUserList();
+                } else {
+                  showToast(blockData.message || '처리 실패', 'error');
+                }
+              } catch (err) {
+                console.error(err);
+                showToast('서버 통신 오류', 'error');
               }
-            } catch (err) {
-              console.error(err);
-              showToast('서버 통신 오류', 'error');
             }
-          }
-        });
+          });
+        }
 
-        // Delete Button Event Listener
-        const deleteBtn = userRow.querySelector('.delete-user-btn');
-        deleteBtn.addEventListener('click', async () => {
-          if (confirm(`정말로 사용자 '${user.username}' (${user.name}) 계정을 삭제하시겠습니까?`)) {
-            showToast('사용자 삭제 중...', 'info', 0);
-            try {
-              const delRes = await fetch('/admin/delete-user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: user.id, username: user.username })
-              });
-              const delData = await delRes.json();
-              if (delRes.ok && delData.ok) {
-                showToast('사용자 계정이 삭제되었습니다.', 'success');
-                loadUserList();
-              } else {
-                showToast(delData.message || '삭제 실패', 'error');
-              }
-            } catch (err) {
-              console.error(err);
-              showToast('서버 통신 오류', 'error');
+        // Delete Option Event Listener
+        const deleteOption = userRow.querySelector('.delete-option');
+        if (deleteOption) {
+          deleteOption.addEventListener('click', async () => {
+            if (user.username === 'developer') {
+              showToast('시스템 개발자 계정은 삭제할 수 없습니다.', 'error');
+              return;
             }
-          }
-        });
+            if (confirm(`정말로 사용자 '${user.username}' (${user.name}) 계정을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없으며 문제 풀이 기록도 모두 삭제됩니다.`)) {
+              showToast('사용자 삭제 중...', 'info', 0);
+              try {
+                const delRes = await fetch('/admin/delete-user', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ id: user.id, username: user.username })
+                });
+                const delData = await delRes.json();
+                if (delRes.ok && delData.ok) {
+                  showToast('사용자 계정이 삭제되었습니다.', 'success');
+                  loadUserList();
+                } else {
+                  showToast(delData.message || '삭제 실패', 'error');
+                }
+              } catch (err) {
+                console.error(err);
+                showToast('서버 통신 오류', 'error');
+              }
+            }
+          });
+        }
+
+        // Global dropdown closing mechanism (once)
+        if (!window.__hasDropdownHandler) {
+          document.addEventListener('click', () => {
+            document.querySelectorAll('.user-actions-dropdown').forEach(d => {
+              d.classList.remove('show');
+            });
+          });
+          window.__hasDropdownHandler = true;
+        }
 
         userListContainer.appendChild(userRow);
       });
