@@ -210,6 +210,199 @@ async function executeLoadSharedSession(userdata) {
   window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_TRIGGER'));
 }
 
+function renderUserUI(user) {
+  let loginbtn = document.getElementById('login-btn');
+  let supportbtn = document.getElementById('support-btn');
+  let logoutbtn = document.getElementById('logout-btn');
+
+  if (user) {
+    window.__currentUser = user;   // Make available to renderSidebarNav
+    if (loginbtn && supportbtn){
+      loginbtn.hidden = true;
+      supportbtn.hidden = true;
+    }
+
+    if (user.isAdmin) {
+      if (!document.getElementById('renew-btn')) {
+        const renewbtn = document.createElement('button');
+        renewbtn.id = 'renew-btn';
+        renewbtn.textContent = 'Renew Session';
+        renewbtn.addEventListener('click', async () => {
+          await triggerAdminSessionRenewal();
+        });
+        document.querySelector('nav').appendChild(renewbtn);
+      }
+    }
+
+    if (!document.getElementById('logout-btn')) {
+      logoutbtn = document.createElement('button');
+      logoutbtn.id = 'logout-btn';
+      logoutbtn.textContent = 'Logout';
+      document.querySelector('nav').appendChild(logoutbtn);
+
+      logoutbtn.addEventListener('click', async() => {
+        const res = await fetch('/logout', {
+          method: 'POST',
+        });
+
+        if (res.ok) {
+          location.href = '/';
+        } else {
+          showToast('Logout failed', 'error');
+        }
+      });
+    }
+  } else {
+    if (logoutbtn){
+      logoutbtn.hidden = true;
+    }
+    if (!document.getElementById('login-btn')) {
+      loginbtn = document.createElement('button');
+      loginbtn.id = 'login-btn';
+      loginbtn.textContent = 'Login';
+      document.querySelector('nav').appendChild(loginbtn);
+
+      loginbtn.addEventListener('click', () => {
+        location.href = '/login';
+      });
+    }
+
+    if (!document.getElementById('support-btn')) {
+      supportbtn = document.createElement('button');
+      supportbtn.id = 'support-btn';
+      supportbtn.textContent = 'Support';
+      document.querySelector('nav').appendChild(supportbtn);
+
+      supportbtn.addEventListener('click', () =>{
+        window.location.href = 'mailto:jaeu1341@naver.com?subject=[INHACK Homepage] Support / Account Request';
+      });
+    }
+  }
+}
+
+async function loadSidebarNavigation() {
+  try {
+    const res = await fetch(`/navigation`);
+    if (res.ok) {
+      const payload = await res.json();
+      if (payload.ok && payload.data) {
+        renderSidebarNav(payload.data);
+        return;
+      }
+    }
+    // Fallback
+    const fallback = await fetch('/frags/navigation.json');
+    if (fallback.ok) {
+      const menuItems = await fallback.json();
+      const user = window.__currentUser;
+      const role = !user ? 'guest' : (user.isAdmin ? 'admin' : 'member');
+      const filtered = menuItems.filter(item => {
+        const allowed = item.allowedRoles || ['guest', 'member', 'admin'];
+        return allowed.includes(role);
+      }).map(item => {
+        const newItem = { ...item };
+        if (newItem.submenus && Array.isArray(newItem.submenus)) {
+          newItem.submenus = newItem.submenus.filter(sub => {
+            const allowed = sub.allowedRoles || ['guest', 'member', 'admin'];
+            return allowed.includes(role);
+          });
+        }
+        return newItem;
+      });
+      renderSidebarNav(filtered);
+    }
+  } catch (err) {
+    console.warn('[Nav] Failed to load dynamic navigation:', err.message);
+  }
+}
+
+function renderSidebarNav(menuItems) {
+  const navList = document.getElementById('sidebar-nav-list');
+  if (!navList) return;
+
+  navList.innerHTML = '';
+  menuItems.forEach(item => {
+    if (item.type !== 'menu_item') return;
+    const li = document.createElement('li');
+    li.style.position = 'relative';
+    
+    const isExternal = item.external;
+    const hasSubmenu = item.submenus && item.submenus.length > 0;
+    if (hasSubmenu) li.classList.add('has-submenu');
+
+    const a = document.createElement('a');
+    const isHomepage = window.location.pathname === '/' || window.location.pathname === '/homepage' || window.location.pathname === '/homepage/main';
+    let resolvedUrl = item.url || '#';
+    if (resolvedUrl.startsWith('#') && resolvedUrl !== '#') {
+      resolvedUrl = isHomepage ? resolvedUrl : `/${resolvedUrl}`;
+    }
+    a.href = resolvedUrl;
+    a.className = 'nav-item-link';
+    a.textContent = item.title;
+    if (isExternal) {
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+    }
+    
+    // Highlight active link
+    if (window.location.pathname === resolvedUrl) {
+      a.classList.add('active');
+    }
+    
+    li.appendChild(a);
+
+    if (hasSubmenu) {
+      const toggle = document.createElement('span');
+      toggle.className = 'submenu-toggle';
+      toggle.textContent = '›';
+      
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        li.classList.toggle('open');
+      });
+      li.appendChild(toggle);
+
+      const subUl = document.createElement('ul');
+      subUl.className = 'submenu';
+      item.submenus.forEach(sub => {
+        const subLi = document.createElement('li');
+        const subA = document.createElement('a');
+        const isHomepage = window.location.pathname === '/' || window.location.pathname === '/homepage' || window.location.pathname === '/homepage/main';
+        let resolvedSubUrl = sub.url || '#';
+        if (resolvedSubUrl.startsWith('#') && resolvedSubUrl !== '#') {
+          resolvedSubUrl = isHomepage ? resolvedSubUrl : `/${resolvedSubUrl}`;
+        }
+        subA.href = resolvedSubUrl;
+        subA.className = 'nav-item-link';
+        subA.textContent = sub.title;
+        if (sub.external) { subA.target = '_blank'; subA.rel = 'noopener noreferrer'; }
+        subLi.appendChild(subA);
+        subUl.appendChild(subLi);
+      });
+      li.appendChild(subUl);
+
+      const isPureCategory = !item.url || item.url === '#';
+      a.addEventListener('click', (e) => {
+        if (isPureCategory) {
+          e.preventDefault();
+          li.classList.toggle('open');
+        } else {
+          li.classList.add('open');
+        }
+      });
+    }
+    navList.appendChild(li);
+  });
+
+  // Re-append admin link if the current user is admin
+  if (window.__currentUser && window.__currentUser.isAdmin && !document.getElementById('nav-admin-link')) {
+    const adminLi = document.createElement('li');
+    adminLi.innerHTML = `<a href="/admin" id="nav-admin-link" class="nav-item-link" style="color: #ff4b4b; border-left: 2px solid #ff4b4b; font-weight: 700;">Admin Panel</a>`;
+    navList.appendChild(adminLi);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   updateExtensionStatus();
   // Brief timeout check to avoid injection race conditions
@@ -223,6 +416,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const confirmbtn = document.getElementById('dreamhack-confirm');
   const userdata = await isLoggedIn();
+
+  // Render Navigation and User interface elements
+  window.__currentUser = userdata;
+  renderUserUI(userdata);
+  await loadSidebarNavigation();
 
   if (confirmbtn) {
     if (userdata) {
