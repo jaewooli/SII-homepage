@@ -31,7 +31,13 @@ function renderSidebarNav(menuItems) {
       const toggle = document.createElement('span');
       toggle.className = 'submenu-toggle';
       toggle.textContent = '›';
-      toggle.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); li.classList.toggle('open'); });
+      toggle.addEventListener('click', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (window.innerWidth > 1100 || window.innerWidth <= 500) {
+          li.classList.toggle('open');
+        }
+      });
       li.appendChild(toggle);
 
       const subUl = document.createElement('ul');
@@ -52,8 +58,16 @@ function renderSidebarNav(menuItems) {
 
       const isPureCategory = !item.url || item.url === '#';
       a.addEventListener('click', e => {
-        if (isPureCategory) { e.preventDefault(); li.classList.toggle('open'); }
-        else li.classList.add('open');
+        if (isPureCategory) {
+          e.preventDefault();
+          if (window.innerWidth > 1100 || window.innerWidth <= 500) {
+            li.classList.toggle('open');
+          }
+        } else {
+          if (window.innerWidth > 1100 || window.innerWidth <= 500) {
+            li.classList.add('open');
+          }
+        }
       });
     }
     navList.appendChild(li);
@@ -224,40 +238,6 @@ function initPasswordForm() {
   });
 }
 
-// ── Header nav buttons ─────────────────────────────────────────────────────
-
-function renderHeaderNav(user) {
-  const nav = document.querySelector('nav');
-  if (!nav) return;
-
-  if (user) {
-    // Username chip (shows who's logged in)
-    const userChip = document.createElement('span');
-    userChip.id = 'user-chip';
-    userChip.textContent = `@${user.username}`;
-    userChip.style.cssText = 'font-size:0.82rem;color:rgba(255,255,255,0.5);font-family:"Fira Code",monospace;padding:5px 10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:6px;';
-    nav.appendChild(userChip);
-
-    const logoutBtn = document.createElement('button');
-    logoutBtn.id = 'logout-btn';
-    logoutBtn.textContent = 'Logout';
-    logoutBtn.addEventListener('click', async () => {
-      const res = await fetch('/logout', { method: 'POST' });
-      if (res.ok) location.href = '/';
-      else showToast('로그아웃 실패', 'error');
-    });
-    nav.appendChild(logoutBtn);
-  } else {
-    const loginBtn = document.createElement('button');
-    loginBtn.id = 'login-btn';
-    loginBtn.textContent = 'Login';
-    loginBtn.addEventListener('click', () => { location.href = '/login'; });
-    nav.appendChild(loginBtn);
-  }
-}
-
-// ── Init ───────────────────────────────────────────────────────────────────
-
 document.addEventListener('DOMContentLoaded', async () => {
   const res = await apiRequest('/me', 'GET');
   const user = res.ok ? res.data : null;
@@ -270,7 +250,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.__currentUser = user;
   renderProfile(user);
-  renderHeaderNav(user);
   await loadSidebarNavigation();
   initPasswordForm();
 });

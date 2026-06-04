@@ -157,7 +157,7 @@ input:focus {
 }
 
 /* Button & Action Link Styling */
-button, .action-btn {
+button:not(nav button), .action-btn {
     background-color: transparent;
     border: 1px solid var(--color-cyan);
     color: var(--color-cyan);
@@ -175,12 +175,12 @@ button, .action-btn {
     display: inline-block;
 }
 
-button:hover, .action-btn:hover {
+button:not(nav button):hover, .action-btn:hover {
     background-color: var(--color-cyan);
     color: #ffffff;
 }
 
-button:active, .action-btn:active {
+button:not(nav button):active, .action-btn:active {
     transform: scale(0.98);
 }
 

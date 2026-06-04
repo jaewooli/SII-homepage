@@ -1,5 +1,6 @@
 import { showToast } from "/assets/js/toast.js";
 import { apiRequest } from "/assets/js/api.js";
+import { triggerAdminSessionRenewal } from "/assets/js/header.js";
 
 function safeBtoa(uint8Array) {
   let binary = '';
@@ -242,76 +243,7 @@ async function executeLoadSharedSession(userdata) {
   window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_TRIGGER'));
 }
 
-function renderUserUI(user) {
-  let loginbtn = document.getElementById('login-btn');
-  let supportbtn = document.getElementById('support-btn');
-  let logoutbtn = document.getElementById('logout-btn');
 
-  if (user) {
-    window.__currentUser = user;
-    if (loginbtn) loginbtn.hidden = true;
-    if (supportbtn) supportbtn.hidden = true;
-
-    // 마이페이지 link
-    if (!document.getElementById('mypage-btn')) {
-      const mypageBtn = document.createElement('a');
-      mypageBtn.id = 'mypage-btn';
-      mypageBtn.href = '/mypage';
-      mypageBtn.textContent = '마이페이지';
-      mypageBtn.style.cssText = 'font-size:0.85rem;color:rgba(255,255,255,0.65);text-decoration:none;padding:6px 12px;border:1px solid rgba(255,255,255,0.12);border-radius:6px;transition:all 0.2s;';
-      mypageBtn.addEventListener('mouseenter', () => { mypageBtn.style.color='#fff'; mypageBtn.style.borderColor='rgba(255,255,255,0.3)'; });
-      mypageBtn.addEventListener('mouseleave', () => { mypageBtn.style.color='rgba(255,255,255,0.65)'; mypageBtn.style.borderColor='rgba(255,255,255,0.12)'; });
-      document.querySelector('nav').appendChild(mypageBtn);
-    }
-
-    // Logout button
-    if (!document.getElementById('logout-btn')) {
-      logoutbtn = document.createElement('button');
-      logoutbtn.id = 'logout-btn';
-      logoutbtn.textContent = 'Logout';
-      document.querySelector('nav').appendChild(logoutbtn);
-
-      logoutbtn.addEventListener('click', async () => {
-        const res = await fetch('/logout', { method: 'POST' });
-        if (res.ok) location.href = '/';
-        else showToast('Logout failed', 'error');
-      });
-    }
-
-    // Admin-only: append Admin link to sidebar (handled by renderSidebarNav)
-    if (user.isAdmin) {
-      if (!document.getElementById('renew-btn')) {
-        // Renew Session button lives in the admin E2E card on this page;
-        // add it to the nav too for quick access
-        const renewbtn = document.createElement('button');
-        renewbtn.id = 'renew-btn';
-        renewbtn.textContent = 'Renew Session';
-        renewbtn.addEventListener('click', async () => { await triggerAdminSessionRenewal(); });
-        document.querySelector('nav').insertBefore(renewbtn, document.getElementById('mypage-btn'));
-      }
-    }
-  } else {
-    if (logoutbtn) logoutbtn.hidden = true;
-
-    if (!document.getElementById('login-btn')) {
-      loginbtn = document.createElement('button');
-      loginbtn.id = 'login-btn';
-      loginbtn.textContent = 'Login';
-      document.querySelector('nav').appendChild(loginbtn);
-      loginbtn.addEventListener('click', () => { location.href = '/login'; });
-    }
-
-    if (!document.getElementById('support-btn')) {
-      supportbtn = document.createElement('button');
-      supportbtn.id = 'support-btn';
-      supportbtn.textContent = 'Support';
-      document.querySelector('nav').appendChild(supportbtn);
-      supportbtn.addEventListener('click', () => {
-        window.location.href = 'mailto:jaeu1341@naver.com?subject=[INHACK Homepage] Support / Account Request';
-      });
-    }
-  }
-}
 
 async function loadSidebarNavigation() {
   try {
@@ -392,7 +324,9 @@ function renderSidebarNav(menuItems) {
       toggle.addEventListener('click', (e) => {
         e.stopPropagation();
         e.preventDefault();
-        li.classList.toggle('open');
+        if (window.innerWidth > 1100 || window.innerWidth <= 500) {
+          li.classList.toggle('open');
+        }
       });
       li.appendChild(toggle);
 
@@ -419,9 +353,13 @@ function renderSidebarNav(menuItems) {
       a.addEventListener('click', (e) => {
         if (isPureCategory) {
           e.preventDefault();
-          li.classList.toggle('open');
+          if (window.innerWidth > 1100 || window.innerWidth <= 500) {
+            li.classList.toggle('open');
+          }
         } else {
-          li.classList.add('open');
+          if (window.innerWidth > 1100 || window.innerWidth <= 500) {
+            li.classList.add('open');
+          }
         }
       });
     }
@@ -449,7 +387,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Render Navigation and User interface elements
   window.__currentUser = userdata;
-  renderUserUI(userdata);
   await loadSidebarNavigation();
 
   // Load activity logs after userdata is known (so intercept card is correctly shown/hidden)
@@ -632,69 +569,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-async function triggerAdminSessionRenewal() {
-  try {
-    // 1. Invalidate and clear all existing sessions first!
-    showToast('기존 활성화된 세션 일괄 파기 중...', 'info', 0);
-    try {
-      await triggerAdminSessionTermination(true);
-    } catch (e) {
-      console.warn('기존 세션 파기 건너뜀 (이미 비어있음):', e.message);
-    }
 
-    showToast('서버에서 E2E 암호화 자격 증명 가져오는 중...', 'info', 0);
-    const credRes = await apiRequest('/dreamhack/encrypted-credentials', 'GET');
-    if (!credRes.ok) {
-      if (credRes.status === 404) {
-        throw new Error('드림핵 E2E 계정 정보가 설정되지 않았습니다. 먼저 E2E Credentials 설정을 완료해주세요.');
-      }
-      throw new Error(credRes.message || '자격 증명 정보를 가져오지 못했습니다.');
-    }
-
-    const { email, encryptedPassword, iv } = credRes.data;
-
-    const isExtensionInstalled = checkExtensionInstalled();
-    if (!isExtensionInstalled) {
-      throw new Error('Chrome Extension이 감지되지 않았습니다. 먼저 크롬 익스텐션을 설치 및 활성화해 주세요.');
-    }
-
-    showToast('드림핵 공용 계정 세션 재발급 및 갱신 중... (약 10초 소요)', 'info', 0);
-
-    await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        window.removeEventListener('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', responseListener);
-        reject(new Error('익스텐션 응답 타임아웃 (15초 초과)'));
-      }, 15000);
-
-      function responseListener(event) {
-        clearTimeout(timeout);
-        window.removeEventListener('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', responseListener);
-        const { ok, message } = event.detail;
-        if (ok) {
-          resolve();
-        } else {
-          reject(new Error(message || '익스텐션 처리 중 오류가 발생했습니다.'));
-        }
-      }
-
-      window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', responseListener);
-
-      window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', {
-        detail: { email, encryptedPassword, iv }
-      }));
-    });
-
-    showToast('드림핵 공용 계정 세션 재발급 및 서버 갱신 완료!', 'success');
-    
-    // Reload the page to refresh logs and status
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000);
-  } catch (err) {
-    console.error('[Admin Session Renewal] Error:', err);
-    showToast(`드림핵 세션 재발급 실패: ${err.message}`, 'error');
-  }
-}
 
 function triggerAdminSessionTermination(silent = false) {
   return new Promise(async (resolve, reject) => {

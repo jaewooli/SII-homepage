@@ -234,7 +234,7 @@ nav button#logout-shared-btn:hover {
     background-color: rgba(239, 68, 68, 0.08);
 }
 
-nav a#mypage-btn {
+nav button#mypage-btn {
     display: inline-flex;
     align-items: center;
     background-color: transparent;
@@ -249,10 +249,9 @@ nav a#mypage-btn {
     cursor: pointer;
     transition: all var(--transition-fast);
     border-radius: 4px;
-    text-decoration: none;
 }
 
-nav a#mypage-btn:hover {
+nav button#mypage-btn:hover {
     color: #ffffff;
     border-color: var(--color-cyan);
     background-color: rgba(59, 130, 246, 0.08);
@@ -305,6 +304,7 @@ aside ul {
 
 aside ul li {
     border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    position: relative;
 }
 
 /* Submenu (nested nav items) */
@@ -1009,6 +1009,48 @@ footer {
         justify-content: center;
         padding: 1.25rem 0.5rem;
     }
+
+    /* Submenu overlay behavior for grid navigation */
+    aside ul li ul.submenu {
+        display: block; /* Override display: grid from aside ul */
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 180px;
+        width: max-content;
+        z-index: 50;
+        background: #0e1320;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+    }
+
+    aside ul li ul.submenu li {
+        display: block; /* Override grid item layout */
+        width: 100%;
+        border-right: none; /* Override border-right from top-level li */
+        border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    }
+
+    aside ul li ul.submenu li a {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        padding: 0.65rem 1.25rem;
+        font-size: 0.78rem;
+        width: 100%;
+        border-left: none !important;
+    }
+
+    /* Hover dropdown for horizontal bar layout (between 501px and 1100px) */
+    @media (min-width: 501px) {
+        aside ul li:hover ul.submenu {
+            max-height: 250px;
+        }
+        aside ul li:hover > .submenu-toggle {
+            transform: rotate(90deg);
+            color: var(--color-cyan);
+        }
+    }
     
     .ctf-container {
         grid-template-columns: 1fr;
@@ -1018,7 +1060,31 @@ footer {
 
 @media (max-width: 768px) {
     header {
-        padding: 1.25rem 1.5rem;
+        flex-direction: column;
+        gap: 0.85rem;
+        padding: 1rem 1.5rem;
+    }
+
+    .header-left {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .logo-sub {
+        display: none; /* Hide subtext to save horizontal space on mobile */
+    }
+
+    nav {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    nav button {
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
     }
     
     main {
@@ -1062,6 +1128,29 @@ footer {
 @media (max-width: 500px) {
     aside ul {
         grid-template-columns: 1fr;
+    }
+
+    /* Reset submenu to vertical flow accordion on mobile portrait list layout */
+    aside ul li ul.submenu {
+        display: block;
+        position: static;
+        border: none;
+        box-shadow: none;
+        background: rgba(0, 0, 0, 0.2);
+        width: 100%;
+    }
+
+    aside ul li ul.submenu li {
+        display: block;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    }
+
+    aside ul li ul.submenu li a {
+        display: flex;
+        justify-content: flex-start;
+        padding: 0.65rem 1.5rem 0.65rem 3.25rem; /* Indented on mobile accordion */
     }
 }
 
