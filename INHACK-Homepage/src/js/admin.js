@@ -585,6 +585,49 @@ async function initializeAdminPanel() {
       });
     }
 
+    // Semester Archiver Form Submit Listener
+    const archiveForm = document.getElementById('admin-archive-semester-form');
+    if (archiveForm) {
+      archiveForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const semesterName = document.getElementById('admin-arch-name').value.trim();
+        const semesterCode = document.getElementById('admin-arch-code').value.trim();
+
+        if (!semesterName || !semesterCode) {
+          showToast('학기 이름과 학기 코드를 모두 입력해 주세요.', 'error');
+          return;
+        }
+
+        if (!confirm(`정말로 '${semesterName}' (${semesterCode}) 활동 내용을 아카이브로 보관하고 특별 행사 페이지를 리셋하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+          return;
+        }
+
+        try {
+          showToast('학기 아카이브 전환 및 리셋 작업 처리 중...', 'info', 0);
+          const res = await fetch('/admin/archive-semester', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ semesterName, semesterCode })
+          });
+          const data = await res.json();
+          if (res.ok && data.ok) {
+            showToast(data.message || '학기 아카이브 처리가 성공적으로 완료되었습니다!', 'success');
+            archiveForm.reset();
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } else {
+            showToast(data.message || '아카이브 전환 중 오류가 발생했습니다.', 'error');
+          }
+        } catch (err) {
+          console.error('[Archive Error]:', err);
+          showToast(`서버 통신 오류: ${err.message}`, 'error');
+        }
+      });
+    }
+
     if (closeEditorBtn && editorOverlay) {
       closeEditorBtn.addEventListener('click', () => {
         if (isDirty) {

@@ -728,4 +728,147 @@ router.post('/upload-image', (req, res) => {
   });
 });
 
+// Admin Route: Archive current semester events to activity archive
+router.post('/archive-semester', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+
+  const { semesterName, semesterCode } = req.body;
+  if (!semesterName || !semesterCode) {
+    return sendJson(res, { status: 400, ok: false, message: '학기 이름과 학기 코드를 모두 입력해 주세요.', code: 'BAD_REQUEST' });
+  }
+
+  // Sanitize semester code (only letters, numbers, and dashes allowed)
+  const codeRegex = /^[a-zA-Z0-9\-]+$/;
+  if (!codeRegex.test(semesterCode)) {
+    return sendJson(res, { status: 400, ok: false, message: '학기 코드는 영문, 숫자, 하이픈(-)만 사용할 수 있습니다.', code: 'BAD_REQUEST' });
+  }
+
+  const fragsDir = path.join(__dirname, '../../src/html/fragments');
+  const otherJsonPath = path.join(fragsDir, 'other-events.json');
+  const otherHtmlPath = path.join(fragsDir, 'other-events.html');
+  const pastJsonPath = path.join(fragsDir, 'past-events.json');
+  const pastHtmlPath = path.join(fragsDir, 'past-events.html');
+
+  try {
+    // 1. Read current other-events.json
+    if (!fs.existsSync(otherJsonPath)) {
+      throw new Error('other-events.json 파일이 존재하지 않습니다.');
+    }
+    const otherRaw = fs.readFileSync(otherJsonPath, 'utf8');
+    const otherData = JSON.parse(otherRaw);
+
+    // 2. Clone and write as archive-{semesterCode}.json
+    const archiveJson = JSON.parse(JSON.stringify(otherData));
+    archiveJson[0].title = `${semesterName} 활동 아카이브`;
+    archiveJson[0].desc = `${semesterName} 개강총회, 종강총회, 강연 등의 특별 활동 아카이브 기록입니다.`;
+
+    const archiveJsonPath = path.join(fragsDir, `archive-${semesterCode}.json`);
+    const archiveHtmlPath = path.join(fragsDir, `archive-${semesterCode}.html`);
+
+    fs.writeFileSync(archiveJsonPath, JSON.stringify(archiveJson, null, 2), 'utf8');
+
+    // 3. Compile archive-{semesterCode}.html and save to DB
+    const { compileJsonToHtml } = require('../helpers/template');
+    const archiveHtml = compileJsonToHtml(`archive-${semesterCode}`, archiveJson);
+    fs.writeFileSync(archiveHtmlPath, archiveHtml, 'utf8');
+
+    const timestamp = new Date().toISOString();
+    db.run(
+      `INSERT OR REPLACE INTO site_contents (section_id, content_md, content_html, updated_at) VALUES (?, ?, ?, ?)`,
+      [`archive-${semesterCode}`, JSON.stringify(archiveJson), archiveHtml, timestamp]
+    );
+
+    // 4. Update past-events.json with a new archive card
+    let pastData = [];
+    if (fs.existsSync(pastJsonPath)) {
+      pastData = JSON.parse(fs.readFileSync(pastJsonPath, 'utf8'));
+    } else {
+      pastData = [
+        {
+          "type": "header",
+          "title": "Activity Archive",
+          "desc": "지난 학기들의 동아리 학술 발표 자료 및 학습 세미나 타임라인 아카이브입니다."
+        },
+        {
+          "type": "features",
+          "items": []
+        }
+      ];
+    }
+
+    const newArchiveCard = {
+      tag: semesterCode,
+      title: `${semesterName} 활동 아카이브`,
+      desc: `${semesterName} 학기 중에 진행되었던 특별 강연, 학술 세션 및 동아리 총회 등의 활동 기록 모음입니다.`,
+      url: `#archive-${semesterCode}`
+    };
+
+    // Prepend new archive card to features items
+    if (pastData[1] && pastData[1].type === 'features') {
+      pastData[1].items.unshift(newArchiveCard);
+    } else {
+      pastData.push({
+        type: 'features',
+        items: [newArchiveCard]
+      });
+    }
+
+    fs.writeFileSync(pastJsonPath, JSON.stringify(pastData, null, 2), 'utf8');
+
+    // Compile past-events.html and save to DB
+    const pastHtml = compileJsonToHtml('past-events', pastData);
+    fs.writeFileSync(pastHtmlPath, pastHtml, 'utf8');
+    db.run(
+      `INSERT OR REPLACE INTO site_contents (section_id, content_md, content_html, updated_at) VALUES (?, ?, ?, ?)`,
+      ['past-events', JSON.stringify(pastData), pastHtml, timestamp]
+    );
+
+    // 5. Reset other-events.json for the next semester
+    const resetOtherData = [
+      {
+        "type": "header",
+        "title": "Special Events",
+        "desc": "정기 학술 세미나 외에 INHACK에서 주최 및 참여하는 특별 세션과 대내외 주요 활동 내역입니다."
+      },
+      {
+        "type": "features",
+        "items": [
+          {
+            "tag": "Assembly 01",
+            "title": "새 학기 개강총회 및 오리엔테이션",
+            "desc": "학기 시작을 알리는 개강총회 및 동아리 오리엔테이션 이벤트 세션입니다."
+          },
+          {
+            "tag": "Assembly 02",
+            "title": "새 학기 종강총회 & 성과 발표회",
+            "desc": "학기를 마무리하는 성과 공유회 및 종강총회 세션입니다."
+          }
+        ]
+      }
+    ];
+
+    fs.writeFileSync(otherJsonPath, JSON.stringify(resetOtherData, null, 2), 'utf8');
+
+    // Compile other-events.html and save to DB
+    const otherHtml = compileJsonToHtml('other-events', resetOtherData);
+    fs.writeFileSync(otherHtmlPath, otherHtml, 'utf8');
+    db.run(
+      `INSERT OR REPLACE INTO site_contents (section_id, content_md, content_html, updated_at) VALUES (?, ?, ?, ?)`,
+      ['other-events', JSON.stringify(resetOtherData), otherHtml, timestamp]
+    );
+
+    return sendJson(res, {
+      status: 200,
+      ok: true,
+      message: `'${semesterName}' 활동 내역이 성공적으로 아카이브에 보관되었으며, 특별 행사 페이지가 리셋되었습니다.`,
+      code: 'SUCCESS'
+    });
+  } catch (err) {
+    console.error('[Archive Error] Failed to archive semester:', err.message);
+    return sendJson(res, { status: 500, ok: false, message: `아카이브 처리 실패: ${err.message}`, code: 'SERVER_ERROR' });
+  }
+});
+
 module.exports = router;
