@@ -2634,27 +2634,27 @@ async function initializeAdminPanel() {
 
         const isAdmin = user.is_admin === 1;
         const isSuper = user.is_super_admin === 1;
-        const adminText = isAdmin ? '해임' : '임명';
+        const adminText = isAdmin ? '해제' : '지정';
         const adminClass = isAdmin ? 'btn-demote' : 'btn-promote';
         const currentUserIsSuperAdmin = window.__currentUser && window.__currentUser.isSuperAdmin;
 
         userRow.className = 'user-row' + (isBlocked ? ' blocked' : '');
         
-        let statusPrefix = '';
+        let tagsHtml = '';
         if (isSuper) {
-          statusPrefix = '<span title="최고 관리자(Super Admin)" style="font-size: 0.95rem; flex-shrink: 0; margin-right: 4px; display: inline-block; vertical-align: middle;">👑</span>';
+          tagsHtml = '<span style="font-size: 0.65rem; color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); padding: 1px 4px; border-radius: 2px; flex-shrink: 0; font-weight: 600;">최고</span>';
         } else if (isAdmin) {
-          statusPrefix = '<span title="관리자(Admin)" style="font-size: 0.95rem; flex-shrink: 0; margin-right: 4px; display: inline-block; vertical-align: middle;">🛡️</span>';
+          tagsHtml = '<span style="font-size: 0.65rem; color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.1); padding: 1px 4px; border-radius: 2px; flex-shrink: 0; font-weight: 600;">관리자</span>';
         }
         
         if (isBlocked) {
-          statusPrefix += '<span title="차단됨" style="font-size: 0.95rem; flex-shrink: 0; margin-right: 4px; display: inline-block; vertical-align: middle;">🔒</span>';
+          tagsHtml += '<span style="font-size: 0.65rem; color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1); padding: 1px 4px; border-radius: 2px; flex-shrink: 0; font-weight: 600; margin-left: 4px;">차단됨</span>';
         }
 
         userRow.innerHTML = `
-          <div class="user-col-username" style="display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px;">
-            ${statusPrefix}
+          <div class="user-col-username" style="display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px;">
             <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${user.username}</span>
+            ${tagsHtml}
           </div>
           <div class="user-col-name">
             <span class="user-name-text">${user.name}</span>
@@ -2682,7 +2682,7 @@ async function initializeAdminPanel() {
         const toggleAdminBtn = userRow.querySelector('.toggle-admin-btn');
         if (toggleAdminBtn) {
           toggleAdminBtn.addEventListener('click', async () => {
-            const actionWord = isAdmin ? '관리자 해임' : '관리자 임명';
+            const actionWord = isAdmin ? '관리자 해제' : '관리자 지정';
             if (user.username === 'developer') {
               showToast('시스템 개발자 계정의 권한은 변경할 수 없습니다.', 'error');
               return;
