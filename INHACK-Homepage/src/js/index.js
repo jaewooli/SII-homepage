@@ -2508,6 +2508,106 @@ async function initializeAdminPanel() {
       });
   }
 
+  function showAdminActionConfirmModal(username, name, actionWord, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.id = 'admin-action-confirm-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(8, 11, 18, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    `;
+
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      width: 100%;
+      max-width: 440px;
+      padding: 2rem;
+      background: #0d131f;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      color: #fff;
+      font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+    `;
+
+    const escHtml = (str) => {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+    };
+
+    modal.innerHTML = `
+      <h3 style="color: #ef4444; font-size: 1.15rem; margin-top: 0; margin-bottom: 1rem; font-weight: 700; letter-spacing: 0.03em;">보안 확인 및 권한 변경</h3>
+      <p style="font-size: 0.85rem; color: #e2e8f0; line-height: 1.6; margin-bottom: 1.2rem;">
+        사용자 <strong>'${escHtml(username)}' (${escHtml(name)})</strong>에게 <strong>${escHtml(actionWord)}</strong>를 진행합니다.<br>
+        이 작업을 승인하려면 본인(현재 로그인된 최고 관리자)의 비밀번호를 입력해 주세요.
+      </p>
+      
+      <div style="margin-bottom: 1.5rem;">
+        <label for="modal-admin-confirm-password" style="display: block; font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-bottom: 6px;">비밀번호 (Password)</label>
+        <input type="password" id="modal-admin-confirm-password" placeholder="비밀번호 입력" style="width: 100%; padding: 10px; background: #151b2d; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #fff; font-size: 0.85rem; outline: none; transition: border-color 0.2s;" required>
+      </div>
+      
+      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button id="modal-cancel-btn" style="padding: 10px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #94a3b8; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; outline: none;">취소</button>
+        <button id="modal-submit-btn" style="padding: 10px 20px; background: #ef4444; border: none; border-radius: 4px; color: #fff; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; outline: none;">승인 및 변경</button>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const passwordInput = modal.querySelector('#modal-admin-confirm-password');
+    const cancelBtn = modal.querySelector('#modal-cancel-btn');
+    const submitBtn = modal.querySelector('#modal-submit-btn');
+
+    passwordInput.focus();
+
+    passwordInput.addEventListener('focus', () => { passwordInput.style.borderColor = 'rgba(239, 68, 68, 0.5)'; });
+    passwordInput.addEventListener('blur', () => { passwordInput.style.borderColor = 'rgba(255,255,255,0.08)'; });
+
+    cancelBtn.addEventListener('mouseenter', () => { cancelBtn.style.background = 'rgba(255,255,255,0.1)'; cancelBtn.style.color = '#fff'; });
+    cancelBtn.addEventListener('mouseleave', () => { cancelBtn.style.background = 'rgba(255,255,255,0.05)'; cancelBtn.style.color = '#94a3b8'; });
+    submitBtn.addEventListener('mouseenter', () => { submitBtn.style.background = '#dc2626'; });
+    submitBtn.addEventListener('mouseleave', () => { submitBtn.style.background = '#ef4444'; });
+
+    const performSubmit = () => {
+      const password = passwordInput.value.trim();
+      if (!password) {
+        showToast('비밀번호를 입력해 주세요.', 'error');
+        return;
+      }
+      overlay.remove();
+      onConfirm(password);
+    };
+
+    passwordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        performSubmit();
+      }
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      overlay.remove();
+    });
+
+    submitBtn.addEventListener('click', () => {
+      performSubmit();
+    });
+  }
+
   async function loadUserList() {
     if (!userListContainer) return;
     try {
@@ -2574,31 +2674,26 @@ async function initializeAdminPanel() {
               return;
             }
             
-            const adminPassword = prompt(`사용자 '${user.username}' (${user.name})에게 ${actionWord}를 진행합니다.\n본인(현재 로그인된 관리자)의 비밀번호를 입력해 주세요:`);
-            if (adminPassword === null) return; // Cancelled
-            if (!adminPassword.trim()) {
-              showToast('비밀번호를 입력해야 권한을 변경할 수 있습니다.', 'error');
-              return;
-            }
-
-            showToast('권한 변경 처리 중...', 'info', 0);
-            try {
-              const toggleRes = await fetch('/admin/toggle-admin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: user.id, username: user.username, is_admin: !isAdmin, adminPassword })
-              });
-              const toggleData = await toggleRes.json();
-              if (toggleRes.ok && toggleData.ok) {
-                showToast(`사용자 권한이 성공적으로 변경되었습니다.`, 'success');
-                loadUserList();
-              } else {
-                showToast(toggleData.message || '처리 실패', 'error');
+            showAdminActionConfirmModal(user.username, user.name, actionWord, async (adminPassword) => {
+              showToast('권한 변경 처리 중...', 'info', 0);
+              try {
+                const toggleRes = await fetch('/admin/toggle-admin', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ id: user.id, username: user.username, is_admin: !isAdmin, adminPassword })
+                });
+                const toggleData = await toggleRes.json();
+                if (toggleRes.ok && toggleData.ok) {
+                  showToast(`사용자 권한이 성공적으로 변경되었습니다.`, 'success');
+                  loadUserList();
+                } else {
+                  showToast(toggleData.message || '처리 실패', 'error');
+                }
+              } catch (err) {
+                console.error(err);
+                showToast('서버 통신 오류', 'error');
               }
-            } catch (err) {
-              console.error(err);
-              showToast('서버 통신 오류', 'error');
-            }
+            });
           });
         }
 
