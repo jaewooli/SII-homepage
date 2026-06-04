@@ -5,6 +5,35 @@
     "url": "#curriculum",
     "external": false,
     "allowedRoles": ["guest", "member", "admin"],
+    "submenus": [
+      {
+        "title": "System",
+        "url": "#curriculum/system",
+        "allowedRoles": ["guest", "member", "admin"]
+      },
+      {
+        "title": "Web",
+        "url": "#curriculum/web",
+        "allowedRoles": ["guest", "member", "admin"]
+      },
+      {
+        "title": "Forensic",
+        "url": "#curriculum/forensic",
+        "allowedRoles": ["guest", "member", "admin"]
+      },
+      {
+        "title": "Cryptography",
+        "url": "#curriculum/cryptography",
+        "allowedRoles": ["guest", "member", "admin"]
+      }
+    ]
+  },
+  {
+    "type": "menu_item",
+    "title": "Projects",
+    "url": "#projects",
+    "external": false,
+    "allowedRoles": ["guest", "member", "admin"],
     "submenus": []
   },
   {

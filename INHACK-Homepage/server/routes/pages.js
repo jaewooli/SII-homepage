@@ -93,21 +93,7 @@ router.get('/frags/:id*', (req, res, next) => {
     fragmentID = fragmentID.substring(0, fragmentID.length - 5);
   }
   
-  // Admin fragment is always protected
-  if (fragmentID === 'admin' || fragmentID.startsWith('admin/')) {
-    if (!req.session.user || !req.session.user.isAdmin) {
-      return res.status(403).send('Forbidden');
-    }
-    // Serve from DB if it exists, otherwise fall through
-    db.get(`SELECT content_html FROM site_contents WHERE section_id = 'admin'`, [], (err, row) => {
-      if (!err && row && row.content_html) {
-        res.set('Content-Type', 'text/html');
-        return res.send(row.content_html);
-      }
-      return next();
-    });
-    return;
-  }
+
   
   const role = getUserRole(req);
   
@@ -169,7 +155,7 @@ router.get('/frags/:id*', (req, res, next) => {
       return res.status(403).send('Forbidden');
     }
     
-    const validSections = ['home', 'curriculum', 'seminar', 'ctf', 'navigation'];
+    const validSections = ['home', 'curriculum', 'seminar', 'ctf', 'navigation', 'projects', 'curriculum/system', 'curriculum/web', 'curriculum/forensic', 'curriculum/cryptography'];
     if (validSections.includes(fragmentID)) {
       db.get(`SELECT content_html FROM site_contents WHERE section_id = ?`, [fragmentID], (dbErr, contentRow) => {
         if (dbErr || !contentRow) {
@@ -187,6 +173,14 @@ router.get('/frags/:id*', (req, res, next) => {
 // /homepage/:url redirects to /:url (e.g. /homepage/login -> /login)
 router.get('/homepage/:url', (req, res) => {
   res.redirect(`/${req.params.url}`);
+});
+
+// Serve Admin Page Directly with Session Guard
+router.get('/admin', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return res.redirect('/login');
+  }
+  res.sendFile(path.join(__dirname, '../../src/html/admin.html'));
 });
 
 // Serve actual pages directly under /:url

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="INHACK - Security Study Group in Inha University - Admin Panel">
+    <title>INHACK - Admin Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fira+Code:wght@400;500;700&family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script type="module" src="/assets/js/admin.js?v=2026060201"></script>
+    <link rel="stylesheet" href="/assets/css/style.css?v=2026060201">
+    <link rel="stylesheet" href="/assets/css/toast.css?v=2026060201">
+</head>
+<body>
+
+    <header>
+        <a href="/homepage" style="text-decoration: none; color: inherit; display: flex; align-items: center;">
+            <div class="header-left">
+                <img src="/images/inhack-logo.png" alt="INHACK Logo">
+                <div class="logo-text">
+                    <span class="logo-main">INHACK</span>
+                    <span class="logo-sub">INHA SECURITY RESEARCH</span>
+                </div>
+            </div>
+        </a>
+        <nav></nav>
+    </header>
+
+    <main>
+        <aside>
+            <div class="sidebar-header">
+                Navigation
+            </div>
+            <ul id="sidebar-nav-list">
+                <!-- Navigation items loaded dynamically -->
+            </ul>
+            
+            <div class="sidebar-footer">
+                <span class="sidebar-desc">© 2026 INHACK</span>
+            </div>
+        </aside>
+
+        <section id="view" class="site-view" aria-live="polite">
+            <div class="page-admin">
+                <section class="admin-container animate-fade-in">
+                    <div class="terminal-banner admin-banner">
+                        <h2 class="hero-title">ADMIN CONTROL PANEL</h2>
+                        <p class="lead-text">인핵 포탈의 사용자 계정 및 사이트 섹션 컨텐츠를 실시간으로 제어합니다.</p>
+                    </div>
+
+                    <!-- Tab Navigation -->
+                    <div class="admin-tabs-nav">
+                        <button type="button" class="admin-tab-btn active" data-tab="users">👤 USER ACCOUNT MANAGEMENT</button>
+                        <button type="button" class="admin-tab-btn" data-tab="content">🖥️ CONTENT MANAGEMENT</button>
+                    </div>
+
+                    <!-- Tab Panes -->
+                    <!-- Pane 1: User Account Management -->
+                    <div id="admin-pane-users" class="admin-tab-pane active">
+                        <!-- User Management Section (2-Column Layout) -->
+                        <div class="logs-grid admin-grid">
+                            <!-- Left Column (Registration Forms) -->
+                            <div class="admin-col">
+                                <!-- Card 1: User Registration -->
+                                <div class="log-card card-red">
+                                    <div class="log-card-title">신규 사용자 계정 등록</div>
+                                    <form id="admin-register-form" class="admin-form">
+                                        <div class="admin-form-group">
+                                            <label for="admin-reg-username">아이디 (Username)</label>
+                                            <input type="text" id="admin-reg-username" placeholder="사용자 ID 입력" required>
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="admin-reg-name">성명/닉네임 (Name)</label>
+                                            <input type="text" id="admin-reg-name" placeholder="홍길동" required>
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="admin-reg-password">비밀번호 (Password)</label>
+                                            <input type="password" id="admin-reg-password" placeholder="비밀번호 입력" required>
+                                        </div>
+                                        <div class="admin-form-group" id="admin-reg-is-admin-wrapper" style="display: flex; align-items: center; gap: 8px; margin-top: 10px; margin-bottom: 10px;">
+                                            <input type="checkbox" id="admin-reg-is-admin" style="width: auto; height: auto; cursor: pointer; margin: 0;">
+                                            <label for="admin-reg-is-admin" style="margin: 0; cursor: pointer; font-size: 0.8rem; color: #fbbf24; font-weight: 500;">관리자(Admin) 권한 부여</label>
+                                        </div>
+                                        <div class="admin-form-group" id="admin-reg-admin-password-group" style="display: none;">
+                                            <label for="admin-reg-admin-password" style="color: #fbbf24;">현재 관리자 비밀번호 확인</label>
+                                            <input type="password" id="admin-reg-admin-password" placeholder="본인 비밀번호 입력">
+                                        </div>
+                                        <button type="submit" class="action-btn">계정 생성</button>
+                                    </form>
+                                </div>
+
+                                <!-- Card 2: CSV Batch Registration -->
+                                <div class="log-card card-blue">
+                                    <div class="log-card-title">CSV 사용자 일괄 등록</div>
+                                    <p>
+                                        CSV 파일을 사용하여 여러 명의 사용자를 한 번에 등록할 수 있습니다. 
+                                        파일 형식은 <strong>아이디,이름,비밀번호</strong> 순이어야 합니다.
+                                    </p>
+                                    <div class="download-wrapper">
+                                        <a href="/admin/sample-csv" class="action-btn download-btn" download="user_import_sample.csv">
+                                            📥 예시 CSV 다운로드
+                                        </a>
+                                    </div>
+                                    <form id="admin-csv-upload-form" class="admin-form">
+                                        <div class="admin-form-group">
+                                            <label for="admin-csv-file">CSV 파일 선택</label>
+                                            <input type="file" id="admin-csv-file" accept=".csv" required>
+                                        </div>
+                                        <button type="submit" class="action-btn" style="border-color: #3b82f6; color: #3b82f6;">일괄 계정 등록</button>
+                                    </form>
+                                    <div id="admin-csv-result" class="csv-result"></div>
+                                </div>
+                            </div>
+
+                            <!-- Card 3: User List and Deletion -->
+                            <div class="log-card card-purple">
+                                <div class="log-card-title">등록된 사용자 목록 및 관리</div>
+                                <div class="user-list-wrapper">
+                                    <div class="user-list-header">
+                                        <div class="header-col-username">아이디 (Username)</div>
+                                        <div class="header-col-name">이름 (Name)</div>
+                                        <div class="header-col-solved">푼 문제</div>
+                                        <div class="header-col-fixed">작업</div>
+                                    </div>
+                                    <div id="admin-user-list-container" class="user-list-container">
+                                        <div class="user-list-message">사용자 목록 불러오는 중...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pane 2: Content Management Launcher -->
+                    <div id="admin-pane-content" class="admin-tab-pane">
+                        <!-- Content Modification Dashboard Card -->
+                        <div class="content-launch-card">
+                            <div class="content-launch-icon">🖥️</div>
+                            <div class="content-launch-title">섹션 컨텐츠 및 메뉴 관리</div>
+                            <p class="content-launch-desc">
+                                동아리 소개(Home), Curriculum, Seminar, CTF 페이지의 카드 그리드, 로드맵, 세미나 일정 및 대시보드 데이터를 시각적으로 편집할 수 있는 비주얼 블록 에디터를 실행합니다.
+                            </p>
+                            <button type="button" id="admin-open-editor-btn" class="action-btn launch-btn">
+                                ⚙️ 비주얼 블록 에디터 실행 (Launch Editor)
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Fullscreen Overlay Visual Block Editor -->
+                <div id="admin-editor-overlay" class="admin-fullscreen-overlay">
+                    <!-- Overlay Header -->
+                    <div class="overlay-header">
+                        <div class="overlay-title-sec">
+                            <span class="pulse-dot"></span>
+                            <span class="title-text">INHACK VISUAL BLOCK EDITOR //</span>
+                        </div>
+                        
+                        <div class="overlay-controls">
+                            <!-- Section Selector -->
+                            <div class="control-group">
+                                <label for="admin-edit-section">EDIT SECTION</label>
+                                <select id="admin-edit-section">
+                                    <option value="home">동아리 소개 (Home)</option>
+                                    <option value="curriculum">Curriculum (전체 로드맵)</option>
+                                    <option value="curriculum/system">└ Curriculum - System</option>
+                                    <option value="curriculum/web">└ Curriculum - Web</option>
+                                    <option value="curriculum/forensic">└ Curriculum - Forensic</option>
+                                    <option value="curriculum/cryptography">└ Curriculum - Cryptography</option>
+                                    <option value="projects">Projects (프로젝트)</option>
+                                    <option value="seminar">Seminar</option>
+                                    <option value="ctf">CTF Challenge</option>
+                                    <option value="navigation">🧭 Navigation (메뉴)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="overlay-actions">
+                            <button type="button" id="admin-save-content-btn" class="action-btn save-btn">💾 SAVE CHANGES</button>
+                            <button type="button" id="admin-close-editor-btn" class="action-btn close-btn">❌ CLOSE EDITOR</button>
+                        </div>
+                    </div>
+
+                    <!-- Overlay Workspace Grid -->
+                    <div class="overlay-workspace">
+                        <!-- Pane 1: Block List -->
+                        <div class="workspace-pane block-list-pane">
+                            <div class="pane-header">BLOCK HIERARCHY LIST</div>
+                            <div id="admin-block-list" class="pane-content">
+                                <!-- Block list items generated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Resizer 1 -->
+                        <div class="workspace-resizer" id="admin-resizer-1"></div>
+
+                        <!-- Pane 2: Block Form Editor -->
+                        <div class="workspace-pane form-editor-pane">
+                            <div class="pane-header">VISUAL BLOCK FORM EDITOR</div>
+                            
+                            <!-- Block creation toolbar inside pane -->
+                            <div class="block-toolbar">
+                                <button type="button" class="tool-btn" data-block-type="banner">📢 Banner</button>
+                                <button type="button" class="tool-btn" data-block-type="header">🏷️ Header</button>
+                                <button type="button" class="tool-btn" data-block-type="spacer">↕️ Spacer</button>
+                                <button type="button" class="tool-btn" data-block-type="features">🎴 Features</button>
+                                <button type="button" class="tool-btn" data-block-type="phases">🗺️ Phases</button>
+                                <button type="button" class="tool-btn" data-block-type="timeline">📅 Timeline</button>
+                                <button type="button" class="tool-btn" data-block-type="ctf_dashboard">🏆 CTF</button>
+                                <button type="button" class="tool-btn" data-block-type="menu_item" style="border-color: rgba(251, 191, 36, 0.4); color: #fbbf24;">🧭 Menu Item</button>
+                            </div>
+
+                            <div id="admin-block-form-container" class="pane-content">
+                                <div style="color: #64748b; font-size: 0.85rem; text-align: center; margin-top: 100px;">
+                                    왼쪽 블록 리스트에서 수정할 블록을 클릭하거나 새로운 블록을 상단 툴바에서 생성해 주세요.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resizer 2 -->
+                        <div class="workspace-resizer" id="admin-resizer-2"></div>
+
+                        <!-- Pane 3: Live Preview -->
+                        <div class="workspace-pane preview-pane">
+                            <div class="pane-header">LIVE RENDERED PREVIEW</div>
+                            <div id="admin-html-preview" class="pane-content html-preview-box">
+                                <!-- Live HTML preview dynamically compiled -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+</body>
+</html>

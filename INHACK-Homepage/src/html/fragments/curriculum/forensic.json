@@ -1,0 +1,45 @@
+[
+  {
+    "type": "header",
+    "title": "Digital Forensics",
+    "desc": "파일 시스템 분석, 휘발성 메모리 포렌식 및 침해 사고 조사를 다루는 디지털 분석 과정입니다."
+  },
+  {
+    "type": "phases",
+    "items": [
+      {
+        "phase": "Week 01",
+        "title": "Artifacts & File System",
+        "desc": "운영체제에서 남기는 디지털 흔적(아티팩트)과 하드디스크 내부 파일 구조 분석 기술을 학습합니다.",
+        "topics": [
+          "Windows 레지스트리 / 이벤트 로그 분석",
+          "Prefetch / Link File / Jump List 흔적 분석",
+          "FAT32 / NTFS 파일 시스템 아키텍처",
+          "MFT (Master File Table) 정밀 분석 및 복구"
+        ]
+      },
+      {
+        "phase": "Week 02",
+        "title": "Memory & Network Forensics",
+        "desc": "휘발성 데이터인 시스템 램(RAM) 영역과 실시간 네트워크 트래픽 분석을 통해 침입 흔적을 실증 분석합니다.",
+        "topics": [
+          "Memory Dump 수집 및 Volatility 프레임워크 실습",
+          "메모리 내 실행 프로세스 및 커널 오브젝트 분석",
+          "PCAP 파일 패킷 분석 기초 (Wireshark 활용)",
+          "악성코드 네트워크 통신 흐름 역추적"
+        ]
+      },
+      {
+        "phase": "Week 03",
+        "title": "Incident Response & Malware",
+        "desc": "기업망 침해 사고 발생 시 시스템 로그를 복구하고 타임라인을 작성하여 공격자의 침투 경로를 조사하는 절차를 익힙니다.",
+        "topics": [
+          "정적 / 동적 악성코드 기본 분석",
+          "침해 사고 침투 경로 추적을 위한 타임라인 분석",
+          "삭제 파일 복구 및 카빙 (Carving) 기법",
+          "침해 사고 보고서 및 분석 증거 무결성 확보"
+        ]
+      }
+    ]
+  }
+]

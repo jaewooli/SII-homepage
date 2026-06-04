@@ -1,0 +1,29 @@
+[
+  {
+    "type": "header",
+    "title": "Projects",
+    "desc": "INHACK 동아리원들이 주도하여 개발 및 연구한 보안 아티팩트와 소프트웨어 프로젝트를 소개합니다."
+  },
+  {
+    "type": "features",
+    "items": [
+      {
+        "tag": "Project 01",
+        "title": "Wargame Solves Tracker (INHACK Extension)",
+        "desc": "드림핵(dreamhack.io) 포탈에서의 문제 풀이 현황을 몽키 패치 API 인터셉팅으로 감지하여 로컬 동아리 데이터베이스에 실시간 적재하는 브라우저 확장 프로그램입니다.",
+        "url": "/dreamhack"
+      },
+      {
+        "tag": "Research 02",
+        "title": "Visual Block Content Editor Engine",
+        "desc": "JSON 기반의 동적 템플릿 컴파일 기법을 활용하여 퍼블릭 페이지 요소를 데이터 코럽션 없이 안전하게 인라인 위지윅(WYSIWYG) 드래그 및 에디팅하는 포탈 코어 모듈입니다.",
+        "url": "/#admin"
+      },
+      {
+        "tag": "Tool 03",
+        "title": "Intrusion Detection System Mockup",
+        "desc": "네트워크 패킷 덤프 파싱을 기반으로 비정상 트래픽 및 포트 스캔 등의 정찰 징후를 탐지해 슬랙 웹훅으로 알리는 학술 연구용 소형 IDS 프로젝트입니다."
+      }
+    ]
+  }
+]

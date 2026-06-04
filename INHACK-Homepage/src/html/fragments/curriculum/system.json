@@ -1,0 +1,45 @@
+[
+  {
+    "type": "header",
+    "title": "System Hacking",
+    "desc": "컴퓨터 시스템 아키텍처, OS 메모리 보호기법 및 어셈블리 취약점 심화 학습 과정입니다."
+  },
+  {
+    "type": "phases",
+    "items": [
+      {
+        "phase": "Week 01",
+        "title": "Introduction to System Hacking",
+        "desc": "시스템 해킹의 기본 개념과 x86/x64 CPU 아키텍처, 메모리 구조(Stack, Heap, Data, Code)에 대해 학습합니다.",
+        "topics": [
+          "CPU 레지스터와 명령어 세트",
+          "어셈블리어 기초 분석 및 디스어셈블",
+          "프로세스 메모리 레이아웃 구조",
+          "함수 호출 규약 (Calling Convention)"
+        ]
+      },
+      {
+        "phase": "Week 02",
+        "title": "Stack Buffer Overflow",
+        "desc": "스택 버퍼 오버플로우의 원리를 파헤치고, 로컬 메모리를 덮어씌워 프로그램의 실행 흐름을 통제하는 공격 기법을 실습합니다.",
+        "topics": [
+          "Stack Buffer Overflow의 원리와 취약 함수",
+          "리턴 주소(Return Address) 변조 기법",
+          "셸코드(Shellcode) 작성 및 실행 방식",
+          "환경 변수를 활용한 익스플로잇"
+        ]
+      },
+      {
+        "phase": "Week 03",
+        "title": "Memory Protections & Bypass (ASLR, NX, Canary)",
+        "desc": "최신 운영체제에 탑재된 핵심 시스템 메모리 보호 기법과 이를 우회하기 위한 고급 공격 기법(ROP 등)을 익힙니다.",
+        "topics": [
+          "ASLR (Address Space Layout Randomization) 우회",
+          "NX / DEP (Data Execution Prevention) 보호 기법",
+          "스택 카나리 (Stack Canary) 탐지 및 릭(Leak) 우회",
+          "ROP (Return-Oriented Programming) 체인 설계"
+        ]
+      }
+    ]
+  }
+]
