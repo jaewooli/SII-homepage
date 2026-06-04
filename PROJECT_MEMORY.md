@@ -102,7 +102,20 @@ graph TD
 
 ---
 
-## 🚀 5. Quick Development Commands
+## 🧪 5. 필수 테스트 사항 (Required Testing)
+
+* **드림핵 문제 풀이 감지(Solve Interception) 동작 테스트**:
+  * **목적**: 크롬 확장 프로그램이 실제 `dreamhack.io` wargame 환경에서 동작하여 플래그 정답 제출 성공 시 풀이 데이터를 정상적으로 가로채 포탈 데이터베이스에 매핑 및 로깅하는지 전과정 검증.
+  * **수행 테스트 순서**:
+    1. 로컬 포탈 서버 기동 (`npm start` 또는 `npm run dev`).
+    2. 로컬 포탈 사이트에 로그인 후 드림핵 연동 페이지 방문.
+    3. 최신 크롬 확장 파일([INHACK-Extension.zip](file:///mnt/e/Programming/Projects/SII/SII-homepage/INHACK-Homepage/src/INHACK-Extension.zip))을 다운로드받아 압축 해제 후 크롬 `chrome://extensions/` 페이지에서 개발자 모드 로드로 수동 설치.
+    4. 드림핵(`dreamhack.io/wargame/challenges/`)에 접속해 워게임 문제를 임의로 해결하여 정답 플래그 제출.
+    5. 제출 성공 후 로컬 포탈의 로그 파일(`log/dreamhack_solves.log`)과 어드민 패널 내 사용자 목록의 `푼 문제` 개수 링크 모달 내에 해결한 챌린지 정보가 실시간으로 쌓이는지 확인.
+
+---
+
+## 🚀 6. Quick Development Commands
 
 * **의존성 설치**: `npm install`
 * **개발 서버 기동 (Nodemon 자동 재기동)**: `npm run dev`
