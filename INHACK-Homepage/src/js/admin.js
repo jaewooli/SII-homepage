@@ -497,7 +497,9 @@ async function initializeAdminPanel() {
             const isLocal = !/^https?:\/\//i.test(item.url);
             if (isLocal) {
               const mainVal = item.url.startsWith('#') ? item.url.substring(1) : item.url;
-              if (mainVal && !renderedSections.has(mainVal)) {
+              const cleanVal = mainVal.toLowerCase().replace(/^\//, '');
+              const isDreamhack = cleanVal === 'dreamhack' || cleanVal.startsWith('dreamhack/');
+              if (mainVal && !isDreamhack && !renderedSections.has(mainVal)) {
                 const option = document.createElement('option');
                 option.value = mainVal;
                 option.textContent = defaultPages[mainVal] || item.title;
@@ -514,7 +516,9 @@ async function initializeAdminPanel() {
                 const isLocalSub = !/^https?:\/\//i.test(sub.url);
                 if (isLocalSub) {
                   const subVal = sub.url.startsWith('#') ? sub.url.substring(1) : sub.url;
-                  if (subVal && !renderedSections.has(subVal)) {
+                  const cleanSubVal = subVal.toLowerCase().replace(/^\//, '');
+                  const isDreamhackSub = cleanSubVal === 'dreamhack' || cleanSubVal.startsWith('dreamhack/');
+                  if (subVal && !isDreamhackSub && !renderedSections.has(subVal)) {
                     const subOption = document.createElement('option');
                     subOption.value = subVal;
                     subOption.textContent = `  └ [서브메뉴] ${sub.title}`;

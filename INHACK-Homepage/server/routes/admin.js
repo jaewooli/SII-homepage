@@ -484,6 +484,13 @@ function isValidSectionId(sectionId) {
   if (!sectionRegex.test(sectionId)) return false;
   // Prevent directory traversal
   if (sectionId.includes('..') || sectionId.startsWith('/') || sectionId.endsWith('/')) return false;
+
+  // Explicitly block editing the dreamhack section
+  const cleanId = sectionId.toLowerCase().replace(/^\//, '');
+  if (cleanId === 'dreamhack' || cleanId.startsWith('dreamhack/')) {
+    return false;
+  }
+
   return true;
 }
 
