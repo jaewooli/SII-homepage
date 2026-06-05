@@ -2180,8 +2180,25 @@ async function initializeAdminPanel() {
     });
   }
 
+  let globalDropdown = null;
+  function prepareGlobalDropdown() {
+    globalDropdown = document.getElementById('global-user-actions-dropdown');
+    if (!globalDropdown) {
+      globalDropdown = document.createElement('div');
+      globalDropdown.id = 'global-user-actions-dropdown';
+      globalDropdown.className = 'user-actions-dropdown';
+      globalDropdown.innerHTML = `
+        <button class="user-actions-dropdown-item toggle-admin-option"></button>
+        <button class="user-actions-dropdown-item toggle-block-option"></button>
+        <button class="user-actions-dropdown-item delete-option danger">계정 삭제</button>
+      `;
+      document.body.appendChild(globalDropdown);
+    }
+  }
+
   async function loadUserList() {
     if (!userListContainer) return;
+    prepareGlobalDropdown();
     try {
       const res = await fetch('/admin/users');
       if (!res.ok) throw new Error('Failed to fetch users');
@@ -2196,6 +2213,89 @@ async function initializeAdminPanel() {
         userListContainer.innerHTML = `<div style="text-align: center; color: #64748b; padding: 20px; font-size: 0.8rem;">등록된 사용자가 없습니다.</div>`;
         return;
       }
+
+      // Action Handlers
+      const handleToggleAdmin = async (targetUser, currentlyAdmin) => {
+        const actionWord = currentlyAdmin ? '관리자 지정 해제' : '관리자 지정';
+        if (targetUser.username === 'developer') {
+          showToast('시스템 개발자 계정의 권한은 변경할 수 없습니다.', 'error');
+          return;
+        }
+        
+        showAdminActionConfirmModal(targetUser.username, targetUser.name, actionWord, async (adminPassword) => {
+          showToast('권한 변경 처리 중...', 'info', 0);
+          try {
+            const toggleRes = await fetch('/admin/toggle-admin', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: targetUser.id, username: targetUser.username, is_admin: !currentlyAdmin, adminPassword })
+            });
+            const toggleData = await toggleRes.json();
+            if (toggleRes.ok && toggleData.ok) {
+              showToast(`사용자 권한이 성공적으로 변경되었습니다.`, 'success');
+              loadUserList();
+            } else {
+              showToast(toggleData.message || '처리 실패', 'error');
+            }
+          } catch (err) {
+            console.error(err);
+            showToast('서버 통신 오류', 'error');
+          }
+        });
+      };
+
+      const handleToggleBlock = async (targetUser, currentlyBlocked) => {
+        const actionWord = currentlyBlocked ? '차단 해제' : '차단';
+        if (confirm(`정말로 사용자 '${targetUser.username}' (${targetUser.name}) 계정을 ${actionWord}하시겠습니까?`)) {
+          showToast(`${actionWord} 처리 중...`, 'info', 0);
+          try {
+            const blockRes = await fetch('/admin/block-user', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: targetUser.id, username: targetUser.username, is_blocked: !currentlyBlocked })
+            });
+            const blockData = await blockRes.json();
+            if (blockRes.ok && blockData.ok) {
+              showToast(`사용자 계정이 ${actionWord}되었습니다.`, 'success');
+              loadUserList();
+            } else {
+              showToast(blockData.message || '처리 실패', 'error');
+            }
+          } catch (err) {
+            console.error(err);
+            showToast('서버 통신 오류', 'error');
+          }
+        }
+      };
+
+      const handleDeleteUser = async (targetUser) => {
+        if (targetUser.username === 'developer') {
+          showToast('시스템 개발자 계정은 삭제할 수 없습니다.', 'error');
+          return;
+        }
+        
+        const actionWord = '계정 삭제';
+        showAdminActionConfirmModal(targetUser.username, targetUser.name, actionWord, async (adminPassword) => {
+          showToast('계정 삭제 처리 중...', 'info', 0);
+          try {
+            const delRes = await fetch('/admin/delete-user', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: targetUser.id, username: targetUser.username, adminPassword })
+            });
+            const delData = await delRes.json();
+            if (delRes.ok && delData.ok) {
+              showToast(`사용자 계정이 성공적으로 삭제되었습니다.`, 'success');
+              loadUserList();
+            } else {
+              showToast(delData.message || '삭제 실패', 'error');
+            }
+          } catch (err) {
+            console.error(err);
+            showToast('서버 통신 오류', 'error');
+          }
+        });
+      };
 
       userListContainer.innerHTML = '';
       users.forEach(user => {
@@ -2243,13 +2343,6 @@ async function initializeAdminPanel() {
           <div class="user-actions">
             ${canManage ? `
               <button class="action-btn manage-menu-btn" style="width: 100%; height: 26px; font-size: 0.75rem; padding: 0;">관리</button>
-              <div class="user-actions-dropdown">
-                ${isRequesterSuper ? `
-                  <button class="user-actions-dropdown-item toggle-admin-option">${isAdmin ? '관리자 해제' : '관리자 지정'}</button>
-                ` : ''}
-                <button class="user-actions-dropdown-item toggle-block-option">${isBlocked ? '차단 해제' : '계정 차단'}</button>
-                <button class="user-actions-dropdown-item delete-option danger">계정 삭제</button>
-              </div>
             ` : ''}
           </div>
         `;
@@ -2261,113 +2354,83 @@ async function initializeAdminPanel() {
         });
 
         const manageMenuBtn = userRow.querySelector('.manage-menu-btn');
-        const dropdown = userRow.querySelector('.user-actions-dropdown');
-        
-        if (manageMenuBtn && dropdown) {
+        if (manageMenuBtn) {
           manageMenuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            document.querySelectorAll('.user-actions-dropdown').forEach(d => {
-              if (d !== dropdown) d.classList.remove('show');
-            });
-            dropdown.classList.toggle('show');
-          });
-        }
-
-        const toggleAdminOption = userRow.querySelector('.toggle-admin-option');
-        if (toggleAdminOption) {
-          toggleAdminOption.addEventListener('click', async () => {
-            const actionWord = isAdmin ? '관리자 해제' : '관리자 지정';
-            if (user.username === 'developer') {
-              showToast('시스템 개발자 계정의 권한은 변경할 수 없습니다.', 'error');
+            
+            const isCurrentlyTarget = globalDropdown.dataset.targetUser === user.username && globalDropdown.classList.contains('show');
+            if (isCurrentlyTarget) {
+              globalDropdown.classList.remove('show');
               return;
             }
             
-            showAdminActionConfirmModal(user.username, user.name, actionWord, async (adminPassword) => {
-              showToast('권한 변경 처리 중...', 'info', 0);
-              try {
-                const toggleRes = await fetch('/admin/toggle-admin', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ id: user.id, username: user.username, is_admin: !isAdmin, adminPassword })
-                });
-                const toggleData = await toggleRes.json();
-                if (toggleRes.ok && toggleData.ok) {
-                  showToast(`사용자 권한이 성공적으로 변경되었습니다.`, 'success');
-                  loadUserList();
-                } else {
-                  showToast(toggleData.message || '처리 실패', 'error');
-                }
-              } catch (err) {
-                console.error(err);
-                showToast('서버 통신 오류', 'error');
-              }
-            });
-          });
-        }
-
-        const toggleBlockOption = userRow.querySelector('.toggle-block-option');
-        if (toggleBlockOption) {
-          toggleBlockOption.addEventListener('click', async () => {
-            const actionWord = isBlocked ? '차단 해제' : '차단';
-            if (confirm(`정말로 사용자 '${user.username}' (${user.name}) 계정을 ${actionWord}하시겠습니까?`)) {
-              showToast(`${actionWord} 처리 중...`, 'info', 0);
-              try {
-                const blockRes = await fetch('/admin/block-user', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ id: user.id, username: user.username, is_blocked: !isBlocked })
-                });
-                const blockData = await blockRes.json();
-                if (blockRes.ok && blockData.ok) {
-                  showToast(`사용자 계정이 ${actionWord}되었습니다.`, 'success');
-                  loadUserList();
-                } else {
-                  showToast(blockData.message || '처리 실패', 'error');
-                }
-              } catch (err) {
-                console.error(err);
-                showToast('서버 통신 오류', 'error');
+            globalDropdown.dataset.targetUser = user.username;
+            globalDropdown.classList.add('show');
+            
+            const adminOpt = globalDropdown.querySelector('.toggle-admin-option');
+            if (adminOpt) {
+              if (isRequesterSuper) {
+                adminOpt.style.display = 'block';
+                adminOpt.textContent = isAdmin ? '관리자 지정 해제' : '관리자 지정';
+              } else {
+                adminOpt.style.display = 'none';
               }
             }
-          });
-        }
-
-        const deleteOption = userRow.querySelector('.delete-option');
-        if (deleteOption) {
-          deleteOption.addEventListener('click', async () => {
-            if (user.username === 'developer') {
-              showToast('시스템 개발자 계정은 삭제할 수 없습니다.', 'error');
-              return;
+            
+            const blockOpt = globalDropdown.querySelector('.toggle-block-option');
+            if (blockOpt) {
+              blockOpt.textContent = isBlocked ? '차단 해제' : '계정 차단';
             }
-            if (confirm(`정말로 사용자 '${user.username}' (${user.name}) 계정을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없으며 문제 풀이 기록도 모두 삭제됩니다.`)) {
-              showToast('사용자 삭제 중...', 'info', 0);
-              try {
-                const delRes = await fetch('/admin/delete-user', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ id: user.id, username: user.username })
-                });
-                const delData = await delRes.json();
-                if (delRes.ok && delData.ok) {
-                  showToast('사용자 계정이 삭제되었습니다.', 'success');
-                  loadUserList();
-                } else {
-                  showToast(delData.message || '삭제 실패', 'error');
-                }
-              } catch (err) {
-                console.error(err);
-                showToast('서버 통신 오류', 'error');
-              }
+            
+            const clonedDropdown = globalDropdown.cloneNode(true);
+            globalDropdown.parentNode.replaceChild(clonedDropdown, globalDropdown);
+            globalDropdown = clonedDropdown;
+            
+            const newAdminOpt = globalDropdown.querySelector('.toggle-admin-option');
+            if (newAdminOpt && isRequesterSuper) {
+              newAdminOpt.addEventListener('click', () => {
+                globalDropdown.classList.remove('show');
+                handleToggleAdmin(user, isAdmin);
+              });
             }
+            
+            const newBlockOpt = globalDropdown.querySelector('.toggle-block-option');
+            if (newBlockOpt) {
+              newBlockOpt.addEventListener('click', () => {
+                globalDropdown.classList.remove('show');
+                handleToggleBlock(user, isBlocked);
+              });
+            }
+            
+            const newDelOpt = globalDropdown.querySelector('.delete-option');
+            if (newDelOpt) {
+              newDelOpt.addEventListener('click', () => {
+                globalDropdown.classList.remove('show');
+                handleDeleteUser(user);
+              });
+            }
+            
+            const rect = manageMenuBtn.getBoundingClientRect();
+            const dropdownWidth = globalDropdown.offsetWidth || 130;
+            globalDropdown.style.top = `${rect.bottom + 4}px`;
+            globalDropdown.style.left = `${rect.right - dropdownWidth}px`;
           });
         }
 
         if (!window.__hasDropdownHandler) {
-          document.addEventListener('click', () => {
-            document.querySelectorAll('.user-actions-dropdown').forEach(d => {
-              d.classList.remove('show');
-            });
+          document.addEventListener('click', (e) => {
+            if (globalDropdown && !e.target.closest('.manage-menu-btn') && !e.target.closest('.user-actions-dropdown')) {
+              globalDropdown.classList.remove('show');
+            }
           });
+          
+          const scrollContainer = document.getElementById('admin-user-list-container');
+          if (scrollContainer) {
+            scrollContainer.addEventListener('scroll', () => {
+              if (globalDropdown) globalDropdown.classList.remove('show');
+            }, { passive: true });
+          }
+          
           window.__hasDropdownHandler = true;
         }
 

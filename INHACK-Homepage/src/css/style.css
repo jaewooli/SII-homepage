@@ -2173,15 +2173,13 @@ body.resizing-active {
 }
 
 /* User Actions Dropdown Menu styling */
-.page-admin .user-actions-dropdown {
-    position: absolute;
-    right: 0;
-    top: calc(100% + 4px);
+.user-actions-dropdown {
+    position: fixed;
+    z-index: 9999;
     background: #151b2d;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 4px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
-    z-index: 100;
     min-width: 130px;
     display: none;
     flex-direction: column;
@@ -2189,11 +2187,11 @@ body.resizing-active {
     overflow: hidden;
 }
 
-.page-admin .user-actions-dropdown.show {
+.user-actions-dropdown.show {
     display: flex;
 }
 
-.page-admin .user-actions-dropdown-item {
+.user-actions-dropdown-item {
     padding: 10px 14px;
     font-size: 0.75rem;
     color: #e2e8f0;
@@ -2207,34 +2205,34 @@ body.resizing-active {
     transition: background 0.15s ease, color 0.15s ease;
 }
 
-.page-admin .user-actions-dropdown-item:last-child {
+.user-actions-dropdown-item:last-child {
     border-bottom: none;
 }
 
 /* Option Specific Colors & Hover States */
-.page-admin .user-actions-dropdown-item.toggle-admin-option {
+.user-actions-dropdown-item.toggle-admin-option {
     color: #60a5fa;
 }
 
-.page-admin .user-actions-dropdown-item.toggle-admin-option:hover {
+.user-actions-dropdown-item.toggle-admin-option:hover {
     background: rgba(59, 130, 246, 0.1);
     color: #93c5fd;
 }
 
-.page-admin .user-actions-dropdown-item.toggle-block-option {
+.user-actions-dropdown-item.toggle-block-option {
     color: #fbbf24;
 }
 
-.page-admin .user-actions-dropdown-item.toggle-block-option:hover {
+.user-actions-dropdown-item.toggle-block-option:hover {
     background: rgba(245, 158, 11, 0.1);
     color: #fde047;
 }
 
-.page-admin .user-actions-dropdown-item.danger {
+.user-actions-dropdown-item.danger {
     color: #f87171;
 }
 
-.page-admin .user-actions-dropdown-item.danger:hover {
+.user-actions-dropdown-item.danger:hover {
     background: rgba(239, 68, 68, 0.12);
     color: #fca5a5;
 }

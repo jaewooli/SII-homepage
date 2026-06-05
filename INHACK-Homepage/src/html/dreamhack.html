@@ -7,52 +7,14 @@
     <link rel="stylesheet" href="/assets/css/style.css?v=2026060402">
     <link rel="stylesheet" href="/assets/css/auth.css?v=2026060402">
     <link rel="stylesheet" href="/assets/css/toast.css?v=2026060402">
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: stretch;
-            padding: 0;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-        /* Override generic section styles from auth.css on parent view container */
-        section#view {
-            max-width: none;
-            box-shadow: none;
-            animation: none;
-        }
-        section#view::before {
-            display: none;
-        }
-        /* Style dreamhack page layout overrides */
-        #dreamhack {
-            max-width: none;
-            padding: 0;
-            background-color: transparent;
-            border: none;
-            box-shadow: none;
-        }
-        #dreamhack::before {
-            display: none;
-        }
-        .logs-container {
-            max-width: none;
-            padding: 0;
-            background-color: transparent;
-            border: none;
-            box-shadow: none;
-        }
-        .logs-container::before {
-            display: none;
-        }
-    </style>
+    <link rel="stylesheet" href="/assets/css/dreamhack.css?v=2026060402">
     <script type="module" src="/assets/js/header.js"></script>
     <script type="module" src="/assets/js/dreamhack.js?v=2026060402"></script>
 </head>
 <body>
-    <!-- INCLUDE: header.html -->
+    <header>
+        <!-- INCLUDE: header.html -->
+    </header>
 
     <main>
         <!-- INCLUDE: aside.html -->
