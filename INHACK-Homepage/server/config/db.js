@@ -41,6 +41,13 @@ db.serialize(() => {
             console.error('[Database Migration] Failed to add is_admin column:', err.message);
         }
     });
+
+    // Add created_as_admin column for enforcing initial admin password changes
+    db.run(`ALTER TABLE users ADD COLUMN created_as_admin INTEGER DEFAULT 0`, [], (err) => {
+        if (err && !err.message.includes('duplicate column name') && !err.message.includes('already exists')) {
+            console.error('[Database Migration] Failed to add created_as_admin column:', err.message);
+        }
+    });
     
     // Create dreamhack access tracking log table
     db.run(`CREATE TABLE IF NOT EXISTS dreamhack_access_logs (

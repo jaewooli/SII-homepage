@@ -46,7 +46,7 @@ router.post('/register-user', (req, res) => {
 
   function performRegister(adminFlag) {
     const hashedPassword = bcrypt.hashSync(password, 10);
-    db.run(`INSERT INTO users (username, password, name, is_admin) VALUES (?, ?, ?, ?)`, [username, hashedPassword, name, adminFlag], (err) => {
+    db.run(`INSERT INTO users (username, password, name, is_admin, created_as_admin) VALUES (?, ?, ?, ?, ?)`, [username, hashedPassword, name, adminFlag, adminFlag], (err) => {
       if (err) {
         if (err.message.includes('UNIQUE constraint failed')) {
           return sendJson(res, { status: 409, ok: false, message: '이미 존재하는 사용자 아이디입니다.', code: 'ALREADY_EXISTS' });

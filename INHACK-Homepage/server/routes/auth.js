@@ -56,7 +56,8 @@ router.post('/login', validateLogin, (req, res) => {
                 name: row.name, 
                 isAdmin, 
                 isSuperAdmin,
-                passwordChanged: row.password_changed || 0 
+                passwordChanged: row.password_changed || 0,
+                createdAsAdmin: row.created_as_admin || 0
             };
             req.session.save((saveErr) => {
                 if (saveErr) {

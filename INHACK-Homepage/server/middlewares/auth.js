@@ -23,12 +23,16 @@ function passwordEnforceMiddleware(req, res, next) {
                          req.path.startsWith('/images') ||
                          req.path === '/frags/home.html';
 
-  if (req.session && req.session.user && !req.session.user.isAdmin) {
-    if (req.session.user.passwordChanged === 0 && !isAuthOrStatic) {
+  if (req.session && req.session.user) {
+    const user = req.session.user;
+    const isEnforced = (!user.isAdmin) || (user.isAdmin && !user.isSuperAdmin && user.createdAsAdmin === 1);
+
+    if (isEnforced && user.passwordChanged === 0 && !isAuthOrStatic) {
       if (req.headers.accept && req.headers.accept.includes('text/html')) {
         if (req.path.startsWith('/frags/') && req.path !== '/frags/home.html') {
           return res.status(403).send('<div style="color:#ff4b4b;text-align:center;padding:20px;font-family:sans-serif;font-weight:bold;">비밀번호 변경이 필요합니다.</div>');
         }
+        return res.redirect('/');
       }
       return sendJson(res, {
         status: 403,

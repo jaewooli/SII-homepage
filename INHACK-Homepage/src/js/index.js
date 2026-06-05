@@ -342,8 +342,9 @@ document.addEventListener('DOMContentLoaded', async() => {
   // Load dynamic sidebar AFTER user is known (so admin link is re-added correctly)
   await loadSidebarNavigation();
 
-  // Force first-time users to change their password immediately
-  if (me && !me.isAdmin && me.passwordChanged === 0) {
+  // Force first-time users to change their password immediately (including newly created admins)
+  const isPasswordChangeEnforced = me && me.passwordChanged === 0 && (!me.isAdmin || (me.isAdmin && !me.isSuperAdmin && me.createdAsAdmin === 1));
+  if (isPasswordChangeEnforced) {
     showForcePasswordChangeModal();
   }
 
