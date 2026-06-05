@@ -338,6 +338,8 @@ if (isDreamhack) {
   const script = document.createElement('script');
   script.textContent = `
     (function() {
+      console.log('[INHACK Interceptor] Injected wargame patch into Main World successfully.');
+      
       // 1. Monkey-patch window.fetch
       const originalFetch = window.fetch;
       window.fetch = async function(...args) {
@@ -347,8 +349,11 @@ if (isDreamhack) {
           const urlStr = typeof url === 'string' ? url : (url && url.url) || '';
           const match = urlStr.match(/\/wargame\/challenges\/([^\/]+)\/auth/i);
           if (match) {
+            console.log('[INHACK Interceptor] Fetch wargame auth request detected:', urlStr);
+            console.log('[INHACK Interceptor] Fetch response status:', response.status);
             if (response.status >= 200 && response.status < 300) {
               const challengeId = match[1];
+              console.log('[INHACK Interceptor] Dispatching DREAMHACK_CHALLENGE_SOLVED_EVENT for ID:', challengeId);
               const event = new CustomEvent('DREAMHACK_CHALLENGE_SOLVED_EVENT', {
                 detail: {
                   challengeId: challengeId,
@@ -379,8 +384,11 @@ if (isDreamhack) {
             const urlStr = this._url || '';
             const match = urlStr.match(/\/wargame\/challenges\/([^\/]+)\/auth/i);
             if (match) {
+              console.log('[INHACK Interceptor] XHR wargame auth request detected:', urlStr);
+              console.log('[INHACK Interceptor] XHR response status:', this.status);
               if (this.status >= 200 && this.status < 300) {
                 const challengeId = match[1];
+                console.log('[INHACK Interceptor] Dispatching DREAMHACK_CHALLENGE_SOLVED_EVENT (XHR) for ID:', challengeId);
                 const event = new CustomEvent('DREAMHACK_CHALLENGE_SOLVED_EVENT', {
                   detail: {
                     challengeId: challengeId,
