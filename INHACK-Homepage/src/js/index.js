@@ -130,19 +130,17 @@ function updateActiveNavLink(fragmentID) {
     if (!mainLink) return;
     const hash = mainLink.getAttribute('href');
 
-    // Extract the fragment ID from the hash (supports "#fragment", "/#fragment", and "/homepage#fragment")
+    // Extract the fragment ID from the hash (supports "#fragment" and "/#fragment")
     let hashFragment = null;
     if (hash) {
       if (hash.startsWith('#')) {
         hashFragment = hash.substring(1);
       } else if (hash.startsWith('/#')) {
         hashFragment = hash.substring(2);
-      } else if (hash.startsWith('/homepage#')) {
-        hashFragment = hash.substring(10);
       }
     }
 
-    const isExactMatch = hashFragment === fragmentID || (!fragmentID && (hash === '#' || hash === '' || hash === '/homepage' || hash === '/'));
+    const isExactMatch = hashFragment === fragmentID || (!fragmentID && (hash === '#' || hash === '' || hash === '/'));
     const isParentMatch = hashFragment && hashFragment === topFragment && fragmentID !== topFragment;
 
     if (isExactMatch) {
@@ -164,8 +162,6 @@ function updateActiveNavLink(fragmentID) {
             subHashFragment = subHash.substring(1);
           } else if (subHash.startsWith('/#')) {
             subHashFragment = subHash.substring(2);
-          } else if (subHash.startsWith('/homepage#')) {
-            subHashFragment = subHash.substring(10);
           }
         }
         if (subHashFragment === fragmentID) {
@@ -183,8 +179,6 @@ function updateActiveNavLink(fragmentID) {
             subHashFragment = subHash.substring(1);
           } else if (subHash.startsWith('/#')) {
             subHashFragment = subHash.substring(2);
-          } else if (subHash.startsWith('/homepage#')) {
-            subHashFragment = subHash.substring(10);
           }
         }
         if (subHashFragment === fragmentID) {
@@ -255,7 +249,7 @@ function renderSidebarNav(menuItems) {
     if (hasSubmenu) li.classList.add('has-submenu');
 
     const a = document.createElement('a');
-    const isHomepage = window.location.pathname === '/' || window.location.pathname === '/homepage' || window.location.pathname === '/homepage/main';
+    const isHomepage = window.location.pathname === '/';
     let resolvedUrl = item.url || '#';
     if (resolvedUrl.startsWith('#') && resolvedUrl !== '#') {
       resolvedUrl = isHomepage ? resolvedUrl : `/${resolvedUrl}`;
@@ -289,7 +283,7 @@ function renderSidebarNav(menuItems) {
       item.submenus.forEach(sub => {
         const subLi = document.createElement('li');
         const subA = document.createElement('a');
-        const isHomepage = window.location.pathname === '/' || window.location.pathname === '/homepage' || window.location.pathname === '/homepage/main';
+        const isHomepage = window.location.pathname === '/';
         let resolvedSubUrl = sub.url || '#';
         if (resolvedSubUrl.startsWith('#') && resolvedSubUrl !== '#') {
           resolvedSubUrl = isHomepage ? resolvedSubUrl : `/${resolvedSubUrl}`;

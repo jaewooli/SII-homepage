@@ -296,7 +296,7 @@ function renderSidebarNav(menuItems) {
     if (hasSubmenu) li.classList.add('has-submenu');
 
     const a = document.createElement('a');
-    const isHomepage = window.location.pathname === '/' || window.location.pathname === '/homepage' || window.location.pathname === '/homepage/main';
+    const isHomepage = window.location.pathname === '/';
     let resolvedUrl = item.url || '#';
     if (resolvedUrl.startsWith('#') && resolvedUrl !== '#') {
       resolvedUrl = isHomepage ? resolvedUrl : `/${resolvedUrl}`;
@@ -335,7 +335,7 @@ function renderSidebarNav(menuItems) {
       item.submenus.forEach(sub => {
         const subLi = document.createElement('li');
         const subA = document.createElement('a');
-        const isHomepage = window.location.pathname === '/' || window.location.pathname === '/homepage' || window.location.pathname === '/homepage/main';
+        const isHomepage = window.location.pathname === '/';
         let resolvedSubUrl = sub.url || '#';
         if (resolvedSubUrl.startsWith('#') && resolvedSubUrl !== '#') {
           resolvedSubUrl = isHomepage ? resolvedSubUrl : `/${resolvedSubUrl}`;

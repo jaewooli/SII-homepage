@@ -26,7 +26,7 @@ The INHACK Homepage utilizes a formal, institutional portal aesthetic. The desig
 ## 🔬 2. Verification Flow
 Whenever modifying files or updating the application:
 1. **Dev Server Verification**: Ensure the server runs properly (`npm run dev`) and logs no errors.
-2. **Page Loading Checks**: Verify routes (e.g., `/homepage/main`, `/homepage/login`, `/homepage/dreamhack`) serve the corresponding files with correct content.
+2. **Page Loading Checks**: Verify routes (e.g., `/`, `/login`, `/dreamhack`) serve the corresponding files with correct content.
 3. **Responsive Checks**: Ensure layout behaves correctly under standard mobile viewports.
 
 ---
