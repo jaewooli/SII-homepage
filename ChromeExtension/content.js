@@ -345,14 +345,23 @@ if (isDreamhack) {
         const response = await originalFetch.apply(this, args);
         try {
           const urlStr = typeof url === 'string' ? url : (url && url.url) || '';
-          const match = urlStr.match(/\/wargame\/challenges\/([^\/]+)\/auth/i);
+          const match = urlStr.match(/\/challenges\/([^\/]+)\/auth/i);
           if (match) {
             if (response.status >= 200 && response.status < 300) {
               const challengeId = match[1];
+              const challengeName = document.title || challengeId;
+              
+              // Trigger solve alert directly in the page Main World context
+              try {
+                alert(`[INHACK] 드림핵 문제 풀이 성공이 감지되었습니다!\n문제 ID: ${challengeId}\n문제 이름: ${challengeName}`);
+              } catch (alertErr) {
+                console.error('[INHACK Alert Error]', alertErr);
+              }
+
               const event = new CustomEvent('DREAMHACK_CHALLENGE_SOLVED_EVENT', {
                 detail: {
                   challengeId: challengeId,
-                  challengeName: document.title || challengeId
+                  challengeName: challengeName
                 }
               });
               window.dispatchEvent(event);
@@ -377,14 +386,23 @@ if (isDreamhack) {
         this.addEventListener('load', async () => {
           try {
             const urlStr = this._url || '';
-            const match = urlStr.match(/\/wargame\/challenges\/([^\/]+)\/auth/i);
+            const match = urlStr.match(/\/challenges\/([^\/]+)\/auth/i);
             if (match) {
               if (this.status >= 200 && this.status < 300) {
                 const challengeId = match[1];
+                const challengeName = document.title || challengeId;
+                
+                // Trigger solve alert directly in the page Main World context
+                try {
+                  alert(`[INHACK] 드림핵 문제 풀이 성공이 감지되었습니다!\n문제 ID: ${challengeId}\n문제 이름: ${challengeName}`);
+                } catch (alertErr) {
+                  console.error('[INHACK Alert Error]', alertErr);
+                }
+
                 const event = new CustomEvent('DREAMHACK_CHALLENGE_SOLVED_EVENT', {
                   detail: {
                     challengeId: challengeId,
-                    challengeName: document.title || challengeId
+                    challengeName: challengeName
                   }
                 });
                 window.dispatchEvent(event);
@@ -414,9 +432,6 @@ if (isDreamhack) {
         resolvedChallengeName = titleEl.textContent.trim();
       }
     } catch (e) {}
-
-    // Show solve alert to the user
-    alert(`[INHACK] 드림핵 문제 풀이 성공이 감지되었습니다!\n문제 ID: ${challengeId}\n문제 이름: ${resolvedChallengeName}`);
     
     chrome.runtime.sendMessage({
       type: 'DREAMHACK_SOLVE_DETECTED',
