@@ -2196,6 +2196,8 @@ async function initializeAdminPanel() {
     }
   }
 
+
+
   async function loadUserList() {
     if (!userListContainer) return;
     prepareGlobalDropdown();
@@ -2208,11 +2210,31 @@ async function initializeAdminPanel() {
         return;
       }
 
-      const users = payload.data;
+      let users = payload.data;
       if (users.length === 0) {
         userListContainer.innerHTML = `<div style="text-align: center; color: #64748b; padding: 20px; font-size: 0.8rem;">등록된 사용자가 없습니다.</div>`;
         return;
       }
+
+      // Filter out other admins if the logged-in user is not a super admin
+      const currentUserIsSuperAdmin = window.__currentUser && window.__currentUser.isSuperAdmin;
+      if (!currentUserIsSuperAdmin) {
+        users = users.filter(user => {
+          const isSelf = window.__currentUser && user.username === window.__currentUser.username;
+          const isTargetAdmin = user.is_admin === 1 || user.is_super_admin === 1 || user.username === 'developer';
+          return !isTargetAdmin || isSelf;
+        });
+      }
+
+      // Sort users: Super Admin (2) > Admin (1) > Regular User (0), secondary by username ascending
+      users.sort((a, b) => {
+        const roleA = a.is_super_admin === 1 ? 2 : (a.is_admin === 1 ? 1 : 0);
+        const roleB = b.is_super_admin === 1 ? 2 : (b.is_admin === 1 ? 1 : 0);
+        if (roleA !== roleB) {
+          return roleB - roleA;
+        }
+        return (a.username || '').toLowerCase().localeCompare((b.username || '').toLowerCase());
+      });
 
       // Action Handlers
       const handleToggleAdmin = async (targetUser, currentlyAdmin) => {
@@ -2366,6 +2388,7 @@ async function initializeAdminPanel() {
             
             globalDropdown.dataset.targetUser = user.username;
             globalDropdown.classList.add('show');
+            globalDropdown.associatedButton = manageMenuBtn; // 기준 버튼 바인딩
             
             const adminOpt = globalDropdown.querySelector('.toggle-admin-option');
             if (adminOpt) {
@@ -2383,6 +2406,7 @@ async function initializeAdminPanel() {
             }
             
             const clonedDropdown = globalDropdown.cloneNode(true);
+            clonedDropdown.associatedButton = manageMenuBtn; // 클론된 인스턴스에도 바인딩 복사
             globalDropdown.parentNode.replaceChild(clonedDropdown, globalDropdown);
             globalDropdown = clonedDropdown;
             
@@ -2424,11 +2448,15 @@ async function initializeAdminPanel() {
             }
           });
           
+          // 스크롤이 시작되면 드롭다운 오버레이를 즉시 감추어(닫음) 성능 딜레이 및 고정 이탈 현상 원천 방지
+          const closeDropdown = () => {
+            if (globalDropdown) globalDropdown.classList.remove('show');
+          };
+          window.addEventListener('scroll', closeDropdown, { passive: true });
+          
           const scrollContainer = document.getElementById('admin-user-list-container');
           if (scrollContainer) {
-            scrollContainer.addEventListener('scroll', () => {
-              if (globalDropdown) globalDropdown.classList.remove('show');
-            }, { passive: true });
+            scrollContainer.addEventListener('scroll', closeDropdown, { passive: true });
           }
           
           window.__hasDropdownHandler = true;

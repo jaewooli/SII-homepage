@@ -78,7 +78,7 @@ router.get('/users', (req, res) => {
         console.error('[Database Error] Failed to list users:', err.message);
         return sendJson(res, { status: 500, ok: false, message: '사용자 목록 조회 실패', code: 'DB_ERROR' });
       }
-      const mappedRows = rows.map(row => {
+      let mappedRows = rows.map(row => {
         const isSuper = (row.username === 'developer' || row.username === env.ADMIN_USERNAME) ? 1 : 0;
         return {
           ...row,
@@ -86,13 +86,24 @@ router.get('/users', (req, res) => {
           is_super_admin: isSuper
         };
       });
+
+      // Filter other admins if requester is not a super admin
+      const isRequesterSuper = (req.session.user.username === 'developer' || req.session.user.username === env.ADMIN_USERNAME || req.session.user.isSuperAdmin);
+      if (!isRequesterSuper) {
+        mappedRows = mappedRows.filter(row => {
+          const isTargetAdmin = row.is_admin === 1 || row.is_super_admin === 1;
+          const isSelf = row.username === req.session.user.username;
+          return !isTargetAdmin || isSelf;
+        });
+      }
+
       sendJson(res, {
         status: 200,
         ok: true,
-      data: mappedRows,
-      code: 'SUCCESS'
+        data: mappedRows,
+        code: 'SUCCESS'
+      });
     });
-  });
 });
 
 // Admin Route: Get list of solves for a specific user
@@ -101,22 +112,49 @@ router.get('/user-solves/:username', (req, res) => {
     return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
   }
   const targetUsername = req.params.username;
-  db.all(
-    `SELECT challenge_id, challenge_name, timestamp FROM dreamhack_solves WHERE username = ? ORDER BY timestamp DESC`,
-    [targetUsername],
-    (err, rows) => {
+  const env = require('../config/env');
+  const isRequesterSuper = (req.session.user.username === 'developer' || req.session.user.username === env.ADMIN_USERNAME || req.session.user.isSuperAdmin);
+  const isSelf = targetUsername === req.session.user.username;
+
+  if (!isRequesterSuper && !isSelf) {
+    // Check if target user is admin or super admin
+    db.get('SELECT is_admin, username FROM users WHERE username = ?', [targetUsername], (err, row) => {
       if (err) {
-        console.error('[Database Error] Failed to list user solves:', err.message);
-        return sendJson(res, { status: 500, ok: false, message: '사용자 풀이 기록 조회 실패', code: 'DB_ERROR' });
+        console.error('[Database Error] Failed to get user role for solves access validation:', err.message);
+        return sendJson(res, { status: 500, ok: false, message: '데이터베이스 에러', code: 'DB_ERROR' });
       }
-      sendJson(res, {
-        status: 200,
-        ok: true,
-        data: rows,
-        code: 'SUCCESS'
-      });
-    }
-  );
+      if (!row) {
+        return sendJson(res, { status: 404, ok: false, message: '해당 사용자를 찾을 수 없습니다.', code: 'NOT_FOUND' });
+      }
+      const isTargetSuper = (row.username === 'developer' || row.username === env.ADMIN_USERNAME);
+      const isTargetAdmin = (row.is_admin === 1 || isTargetSuper);
+      if (isTargetAdmin) {
+        return sendJson(res, { status: 403, ok: false, message: '다른 관리자 계정의 문제 풀이 기록은 열람할 수 없습니다.', code: 'FORBIDDEN' });
+      }
+      fetchSolves();
+    });
+  } else {
+    fetchSolves();
+  }
+
+  function fetchSolves() {
+    db.all(
+      `SELECT challenge_id, challenge_name, timestamp FROM dreamhack_solves WHERE username = ? ORDER BY timestamp DESC`,
+      [targetUsername],
+      (err, rows) => {
+        if (err) {
+          console.error('[Database Error] Failed to list user solves:', err.message);
+          return sendJson(res, { status: 500, ok: false, message: '사용자 풀이 기록 조회 실패', code: 'DB_ERROR' });
+        }
+        sendJson(res, {
+          status: 200,
+          ok: true,
+          data: rows,
+          code: 'SUCCESS'
+        });
+      }
+    );
+  }
 });
 
 // Admin Route: Block/Unblock a user
