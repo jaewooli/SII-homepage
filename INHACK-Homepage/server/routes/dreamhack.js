@@ -387,30 +387,49 @@ router.post('/solve-log', (req, res) => {
     });
   }
   
-  // 1. Log to SQLite database
-  db.run(`INSERT INTO dreamhack_solves (username, challenge_id, challenge_name, timestamp) VALUES (?, ?, ?, ?)`,
-    [username, challengeId, challengeName, timestamp], (err) => {
-      if (err) {
-        console.error('[Database Log Error] Failed to log dreamhack solve:', err.message);
-        return sendJson(res, {
-          status: 500, ok: false, action: 'create', resource: 'dreamhack_solves',
-          message: 'Database insertion failed', code: 'DATABASE_ERROR'
-        });
-      }
-      
-      // 2. Log to log file
-      const logMessage = `[${timestamp}] Operator '${username}' solved challenge '${challengeName}' (ID: ${challengeId})\n`;
-      const logFilePath = path.join(__dirname, '../../log/dreamhack_solves.log');
-      fs.appendFileSync(logFilePath, logMessage);
-      
-      console.log(`[INHACK Tracker] Solve recorded: User '${username}' solved '${challengeName}' (${challengeId})`);
-
-      sendJson(res, {
-        status: 200, ok: true, action: 'create', resource: 'dreamhack_solves',
-        message: 'Solve successfully logged', code: 'SUCCESS'
+  // Check if this solve was already logged to prevent duplicates
+  db.get(`SELECT id FROM dreamhack_solves WHERE username = ? AND challenge_id = ?`, [username, challengeId], (err, row) => {
+    if (err) {
+      console.error('[Database Error] Failed to check duplicate solve:', err.message);
+      return sendJson(res, {
+        status: 500, ok: false, action: 'create', resource: 'dreamhack_solves',
+        message: 'Database check failed', code: 'DATABASE_ERROR'
       });
     }
-  );
+
+    if (row) {
+      // Already recorded, return success silently
+      return sendJson(res, {
+        status: 200, ok: true, action: 'create', resource: 'dreamhack_solves',
+        message: 'Solve already logged previously', code: 'SUCCESS'
+      });
+    }
+
+    // 1. Log to SQLite database
+    db.run(`INSERT INTO dreamhack_solves (username, challenge_id, challenge_name, timestamp) VALUES (?, ?, ?, ?)`,
+      [username, challengeId, challengeName, timestamp], (insertErr) => {
+        if (insertErr) {
+          console.error('[Database Log Error] Failed to log dreamhack solve:', insertErr.message);
+          return sendJson(res, {
+            status: 500, ok: false, action: 'create', resource: 'dreamhack_solves',
+            message: 'Database insertion failed', code: 'DATABASE_ERROR'
+          });
+        }
+        
+        // 2. Log to log file
+        const logMessage = `[${timestamp}] Operator '${username}' solved challenge '${challengeName}' (ID: ${challengeId})\n`;
+        const logFilePath = path.join(__dirname, '../../log/dreamhack_solves.log');
+        fs.appendFileSync(logFilePath, logMessage);
+        
+        console.log(`[INHACK Tracker] Solve recorded: User '${username}' solved '${challengeName}' (${challengeId})`);
+
+        sendJson(res, {
+          status: 200, ok: true, action: 'create', resource: 'dreamhack_solves',
+          message: 'Solve successfully logged', code: 'SUCCESS'
+        });
+      }
+    );
+  });
 });
 
 module.exports = router;
