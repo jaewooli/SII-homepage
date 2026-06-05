@@ -353,7 +353,7 @@ if (isDreamhack) {
               
               // Trigger solve alert directly in the page Main World context
               try {
-                alert(`[INHACK] 드림핵 문제 풀이 성공이 감지되었습니다!\n문제 ID: ${challengeId}\n문제 이름: ${challengeName}`);
+                alert('[INHACK] 드림핵 문제 풀이 성공이 감지되었습니다!\n문제 ID: ' + challengeId + '\n문제 이름: ' + challengeName);
               } catch (alertErr) {
                 console.error('[INHACK Alert Error]', alertErr);
               }
@@ -394,7 +394,7 @@ if (isDreamhack) {
                 
                 // Trigger solve alert directly in the page Main World context
                 try {
-                  alert(`[INHACK] 드림핵 문제 풀이 성공이 감지되었습니다!\n문제 ID: ${challengeId}\n문제 이름: ${challengeName}`);
+                  alert('[INHACK] 드림핵 문제 풀이 성공이 감지되었습니다!\n문제 ID: ' + challengeId + '\n문제 이름: ' + challengeName);
                 } catch (alertErr) {
                   console.error('[INHACK Alert Error]', alertErr);
                 }
