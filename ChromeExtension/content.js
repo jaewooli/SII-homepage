@@ -345,12 +345,10 @@ if (isDreamhack) {
         const response = await originalFetch.apply(this, args);
         try {
           const urlStr = typeof url === 'string' ? url : (url && url.url) || '';
-          if (urlStr.includes('/wargame/challenges/') && urlStr.includes('/auth/')) {
-            if (response.status === 201) {
-              const parts = urlStr.split('/');
-              const authIndex = parts.indexOf('auth');
-              const challengeId = (authIndex > 0) ? parts[authIndex - 1] : 'unknown';
-              
+          const match = urlStr.match(/\/wargame\/challenges\/([^\/]+)\/auth/i);
+          if (match) {
+            if (response.status >= 200 && response.status < 300) {
+              const challengeId = match[1];
               const event = new CustomEvent('DREAMHACK_CHALLENGE_SOLVED_EVENT', {
                 detail: {
                   challengeId: challengeId,
@@ -379,11 +377,10 @@ if (isDreamhack) {
         this.addEventListener('load', async () => {
           try {
             const urlStr = this._url || '';
-            if (urlStr.includes('/wargame/challenges/') && urlStr.includes('/auth/')) {
-              if (this.status === 201) {
-                const parts = urlStr.split('/');
-                const authIndex = parts.indexOf('auth');
-                const challengeId = (authIndex > 0) ? parts[authIndex - 1] : 'unknown';
+            const match = urlStr.match(/\/wargame\/challenges\/([^\/]+)\/auth/i);
+            if (match) {
+              if (this.status >= 200 && this.status < 300) {
+                const challengeId = match[1];
                 const event = new CustomEvent('DREAMHACK_CHALLENGE_SOLVED_EVENT', {
                   detail: {
                     challengeId: challengeId,
