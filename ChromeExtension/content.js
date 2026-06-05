@@ -345,13 +345,11 @@ if (isDreamhack) {
         const response = await originalFetch.apply(this, args);
         try {
           const urlStr = typeof url === 'string' ? url : (url && url.url) || '';
-          if (urlStr.includes('/wargame/challenges/') && urlStr.includes('/submit/')) {
-            const clone = response.clone();
-            const data = await clone.json();
-            if (data && data.correct === true) {
+          if (urlStr.includes('/wargame/challenges/') && urlStr.includes('/auth/')) {
+            if (response.status === 201) {
               const parts = urlStr.split('/');
-              const submitIndex = parts.indexOf('submit');
-              const challengeId = (submitIndex > 0) ? parts[submitIndex - 1] : 'unknown';
+              const authIndex = parts.indexOf('auth');
+              const challengeId = (authIndex > 0) ? parts[authIndex - 1] : 'unknown';
               
               const event = new CustomEvent('DREAMHACK_CHALLENGE_SOLVED_EVENT', {
                 detail: {
@@ -381,12 +379,11 @@ if (isDreamhack) {
         this.addEventListener('load', async () => {
           try {
             const urlStr = this._url || '';
-            if (urlStr.includes('/wargame/challenges/') && urlStr.includes('/submit/')) {
-              const data = JSON.parse(this.responseText);
-              if (data && data.correct === true) {
+            if (urlStr.includes('/wargame/challenges/') && urlStr.includes('/auth/')) {
+              if (this.status === 201) {
                 const parts = urlStr.split('/');
-                const submitIndex = parts.indexOf('submit');
-                const challengeId = (submitIndex > 0) ? parts[submitIndex - 1] : 'unknown';
+                const authIndex = parts.indexOf('auth');
+                const challengeId = (authIndex > 0) ? parts[authIndex - 1] : 'unknown';
                 const event = new CustomEvent('DREAMHACK_CHALLENGE_SOLVED_EVENT', {
                   detail: {
                     challengeId: challengeId,

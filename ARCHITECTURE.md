@@ -26,9 +26,9 @@ sequenceDiagram
     participant DB as SQLite Database (users.db)
 
     Note over DH: User inputs FLAG and clicks Submit
-    DH->>DH: AJAX POST to /api/v1/wargame/challenges/{id}/submit/
+    DH->>DH: AJAX POST to /api/v1/wargame/challenges/{id}/auth/
     Note over DH: Intercepted via Monkey-Patched window.fetch / XHR
-    DH->>DH: Response returns { correct: true }
+    DH->>DH: Response returns HTTP Status 201
     DH-->>CS: Dispatch CustomEvent('DREAMHACK_CHALLENGE_SOLVED_EVENT')
     CS->>BG: chrome.runtime.sendMessage({ type: 'DREAMHACK_SOLVE_DETECTED', ... })
     BG->>SRV: Fetch http://localhost:8080/me (Get Active Operator Session)
@@ -44,8 +44,8 @@ sequenceDiagram
 Content scripts in Manifest V3 are executed in isolated worlds. They share the page DOM but have separate JavaScript heaps. Thus, a content script cannot directly access or override variables (like `window.fetch`) defined by the page scripts.
 * **Mechanism**: `dreamhack_content.js` creates a `<script>` tag dynamically and injects it into the DOM header. This forces the script to execute in the page's **Main World**.
 * **Interception**: The injected script overrides `window.fetch` and `XMLHttpRequest.prototype.send` with wrappers.
-* **Filter**: It filters requests containing `/wargame/challenges/` and `/submit/`. When a response returns, it clones it and parses the JSON.
-* **Signal**: If `correct === true` is found, it dispatches a `CustomEvent` named `DREAMHACK_CHALLENGE_SOLVED_EVENT` with the challenge name and ID.
+* **Filter**: It filters requests containing `/wargame/challenges/` and `/auth/`. When a response returns, it checks if the HTTP status code is `201` (indicating successful authentication).
+* **Signal**: If status code is `201`, it dispatches a `CustomEvent` named `DREAMHACK_CHALLENGE_SOLVED_EVENT` with the challenge name and ID.
 
 #### 2. Event Routing (Content Script World)
 * **Bridge**: `dreamhack_content.js` listens on the `window` object for `DREAMHACK_CHALLENGE_SOLVED_EVENT`.
