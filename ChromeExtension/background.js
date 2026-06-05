@@ -139,7 +139,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         // Fetch shared session cookies from OCI server
         console.log('[INHACK Background] Fetching shared session from:', origin);
-        const res = await fetch(`${origin}/dreamhack/shared-session`);
+        const res = await fetch(`${origin}/dreamhack/shared-session`, {
+          credentials: 'include'
+        });
         if (!res.ok) {
           throw new Error("Failed to fetch shared session from portal (make sure admin has registered it)");
         }
@@ -207,6 +209,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             headers: {
               'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({ sessionid })
           }).catch(e => console.warn('[INHACK Background] Invalidation request failed:', e.message));
 
@@ -270,7 +273,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const storageData = await chrome.storage.local.get('portalOrigin');
         const portalOrigin = storageData.portalOrigin || 'http://localhost:8080';
         fetch(`${portalOrigin}/dreamhack/intercept-logout`, {
-          method: 'POST'
+          method: 'POST',
+          credentials: 'include'
         }).catch(e => console.warn('[INHACK Background] Failed to log intercept:', e));
 
         sendResponse({ ok: true });
@@ -344,18 +348,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const storageData = await chrome.storage.local.get('portalOrigin');
         const portalOrigin = storageData.portalOrigin || 'http://localhost:8080';
         
-        console.log('[INHACK Background] Solve detected! Fetching user identity from:', portalOrigin);
-        const meRes = await fetch(`${portalOrigin}/me`);
-        if (!meRes.ok) {
-          throw new Error(`Failed to query session identity: status ${meRes.status}`);
+        // Retrieve username from local storage cache first
+        const userData = await chrome.storage.local.get('INHACKuser');
+        let username = userData && userData.INHACKuser && userData.INHACKuser.username;
+        
+        if (!username) {
+          console.log('[INHACK Background] Storage empty. Fetching user identity from:', portalOrigin);
+          const meRes = await fetch(`${portalOrigin}/me`, { credentials: 'include' });
+          if (!meRes.ok) {
+            throw new Error(`Failed to query session identity: status ${meRes.status}`);
+          }
+          const meData = await meRes.json();
+          if (!meData.ok || !meData.data || !meData.data.username) {
+            throw new Error('User is not logged into INHACK Portal');
+          }
+          username = meData.data.username;
         }
         
-        const meData = await meRes.json();
-        if (!meData.ok || !meData.data || !meData.data.username) {
-          throw new Error('User is not logged into INHACK Portal');
-        }
-        
-        const username = meData.data.username;
         console.log(`[INHACK Background] Solve identified. Logged user: ${username}. Logging challenge:`, msg.challengeName);
         
         const logRes = await fetch(`${portalOrigin}/dreamhack/solve-log`, {
@@ -363,6 +372,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           headers: {
             'Content-Type': 'application/json'
           },
+          credentials: 'include',
           body: JSON.stringify({
             username,
             challengeId: msg.challengeId,
@@ -536,6 +546,7 @@ async function loginToDreamhackAndSync(email, password, origin) {
     headers: {
       'Content-Type': 'application/json'
     },
+    credentials: 'include',
     body: JSON.stringify({ sessions })
   });
 
@@ -718,7 +729,8 @@ chrome.webRequest.onBeforeRequest.addListener(
       chrome.storage.local.get('portalOrigin').then(res => {
         const portalOrigin = res.portalOrigin || 'http://localhost:8080';
         fetch(`${portalOrigin}/dreamhack/clear-shared-session`, {
-          method: 'POST'
+          method: 'POST',
+          credentials: 'include'
         }).catch(e => console.warn('[INHACK Background] Failed to clear shared sessions on admin logout:', e));
       });
       return; // Let them logout on the server
@@ -742,7 +754,8 @@ chrome.webRequest.onBeforeRequest.addListener(
       const portalOrigin = res.portalOrigin || 'http://localhost:8080';
       console.log('[INHACK Background] Logging logout interception to portal:', portalOrigin);
       fetch(`${portalOrigin}/dreamhack/intercept-logout`, {
-        method: 'POST'
+        method: 'POST',
+        credentials: 'include'
       }).catch(e => console.warn('[INHACK Background] Failed to log intercept:', e));
     });
 
