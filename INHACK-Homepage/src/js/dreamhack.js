@@ -147,11 +147,17 @@ async function executeSpecificFeature(userdata) {
 }
 
 async function loadActivityLogs(userdata) {
+  const currentUser = userdata || window.__currentUser;
+
   // Hide intercept log card for non-admins
   const interceptCard = document.getElementById('intercept-log-card');
   if (interceptCard) {
-    interceptCard.style.display = (userdata && userdata.isAdmin) ? '' : 'none';
+    interceptCard.style.display = (currentUser && currentUser.isAdmin) ? '' : 'none';
   }
+
+  const accessBody = document.querySelector('#access-log-table tbody');
+  const solveBody = document.querySelector('#solve-log-table tbody');
+  const interceptBody = document.querySelector('#intercept-log-table tbody');
 
   try {
     const res = await apiRequest('/dreamhack/logs', 'GET');
@@ -159,7 +165,6 @@ async function loadActivityLogs(userdata) {
       const { accessLogs, solveLogs, interceptLogs } = res.data;
       
       // Render access logs
-      const accessBody = document.querySelector('#access-log-table tbody');
       if (accessBody) {
         if (accessLogs && accessLogs.length > 0) {
           accessBody.innerHTML = accessLogs.map(log => {
@@ -178,7 +183,6 @@ async function loadActivityLogs(userdata) {
       }
 
       // Render solve logs
-      const solveBody = document.querySelector('#solve-log-table tbody');
       if (solveBody) {
         if (solveLogs && solveLogs.length > 0) {
           solveBody.innerHTML = solveLogs.map(log => {
@@ -197,8 +201,7 @@ async function loadActivityLogs(userdata) {
       }
 
       // Render logout interception logs (admin only)
-      if (userdata && userdata.isAdmin) {
-        const interceptBody = document.querySelector('#intercept-log-table tbody');
+      if (currentUser && currentUser.isAdmin) {
         if (interceptBody) {
           if (interceptLogs && interceptLogs.length > 0) {
             interceptBody.innerHTML = interceptLogs.map(log => {
@@ -216,9 +219,18 @@ async function loadActivityLogs(userdata) {
           }
         }
       }
+    } else {
+      const errMsg = res.message || '알 수 없는 서버 오류';
+      if (accessBody) accessBody.innerHTML = `<tr><td colspan="3" class="log-empty" style="color: #ff3366;">로그 로드 실패 (${escapeHtml(errMsg)})</td></tr>`;
+      if (solveBody) solveBody.innerHTML = `<tr><td colspan="3" class="log-empty" style="color: #ff3366;">로그 로드 실패 (${escapeHtml(errMsg)})</td></tr>`;
+      if (interceptBody) interceptBody.innerHTML = `<tr><td colspan="3" class="log-empty" style="color: #ff3366;">로그 로드 실패 (${escapeHtml(errMsg)})</td></tr>`;
     }
   } catch (err) {
     console.error('Failed to load activity logs:', err);
+    const errMsg = err.message || '네트워크 오류';
+    if (accessBody) accessBody.innerHTML = `<tr><td colspan="3" class="log-empty" style="color: #ff3366;">로드 오류 (${escapeHtml(errMsg)})</td></tr>`;
+    if (solveBody) solveBody.innerHTML = `<tr><td colspan="3" class="log-empty" style="color: #ff3366;">로드 오류 (${escapeHtml(errMsg)})</td></tr>`;
+    if (interceptBody) interceptBody.innerHTML = `<tr><td colspan="3" class="log-empty" style="color: #ff3366;">로드 오류 (${escapeHtml(errMsg)})</td></tr>`;
   }
 }
 

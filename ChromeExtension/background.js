@@ -107,6 +107,37 @@ function verifyMessageSender(sender) {
   return false;
 }
 
+function isValidPortalOrigin(originStr) {
+  if (!originStr) return false;
+  try {
+    const url = new URL(originStr);
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      return url.port === '8080' || url.port === '8081';
+    }
+    return url.hostname === 'ddyoru.duckdns.org';
+  } catch (e) {
+    return false;
+  }
+}
+
+async function getValidPortalOrigin() {
+  try {
+    const res = await chrome.storage.local.get('portalOrigin');
+    if (res && isValidPortalOrigin(res.portalOrigin)) {
+      return res.portalOrigin;
+    }
+  } catch (e) {}
+  return 'http://localhost:8080';
+}
+
+// Startup cleanup of any contaminated portalOrigin values
+chrome.storage.local.get('portalOrigin').then(res => {
+  if (res && res.portalOrigin && !isValidPortalOrigin(res.portalOrigin)) {
+    console.log('[INHACK Background] Cleaning up invalid portalOrigin from storage:', res.portalOrigin);
+    chrome.storage.local.remove('portalOrigin');
+  }
+});
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!verifyMessageSender(sender)) {
     console.warn("[INHACK Security] Blocked message from untrusted sender:", sender.tab ? sender.tab.url : "unknown");
@@ -117,7 +148,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (sender.tab && sender.tab.url) {
     try {
       const url = new URL(sender.tab.url);
-      chrome.storage.local.set({ 'portalOrigin': url.origin });
+      if (isValidPortalOrigin(url.origin)) {
+        chrome.storage.local.set({ 'portalOrigin': url.origin });
+      }
     } catch (e) {}
   }
 
@@ -270,8 +303,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         await clearDreamhackCookiesLocally();
 
         // Notify portal for logs
-        const storageData = await chrome.storage.local.get('portalOrigin');
-        const portalOrigin = storageData.portalOrigin || 'http://localhost:8080';
+        const portalOrigin = await getValidPortalOrigin();
         fetch(`${portalOrigin}/dreamhack/intercept-logout`, {
           method: 'POST',
           credentials: 'include'
@@ -345,8 +377,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   } else if (msg.type === "DREAMHACK_SOLVE_DETECTED") {
     (async () => {
       try {
-        const storageData = await chrome.storage.local.get('portalOrigin');
-        const portalOrigin = storageData.portalOrigin || 'http://localhost:8080';
+        const portalOrigin = await getValidPortalOrigin();
         
         // Retrieve username from local storage cache first
         const userData = await chrome.storage.local.get('INHACKuser');
@@ -726,8 +757,7 @@ chrome.webRequest.onBeforeRequest.addListener(
     const isAdmin = await isCurrentUserAdmin();
     if (isAdmin) {
       console.log('[INHACK Background] Admin logged out of Dreamhack. Clearing shared sessions on portal...');
-      chrome.storage.local.get('portalOrigin').then(res => {
-        const portalOrigin = res.portalOrigin || 'http://localhost:8080';
+      getValidPortalOrigin().then(portalOrigin => {
         fetch(`${portalOrigin}/dreamhack/clear-shared-session`, {
           method: 'POST',
           credentials: 'include'
@@ -750,8 +780,7 @@ chrome.webRequest.onBeforeRequest.addListener(
     clearDreamhackCookiesLocally();
 
     // Notify portal about interception for debugging logs
-    chrome.storage.local.get('portalOrigin').then(res => {
-      const portalOrigin = res.portalOrigin || 'http://localhost:8080';
+    getValidPortalOrigin().then(portalOrigin => {
       console.log('[INHACK Background] Logging logout interception to portal:', portalOrigin);
       fetch(`${portalOrigin}/dreamhack/intercept-logout`, {
         method: 'POST',

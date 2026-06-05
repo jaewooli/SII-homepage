@@ -65,6 +65,17 @@
       ],
       "js": ["content.js"],
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "http://dreamhack.io/*",
+        "https://dreamhack.io/*",
+        "http://*.dreamhack.io/*",
+        "https://*.dreamhack.io/*"
+      ],
+      "js": ["interceptor.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ]
 }

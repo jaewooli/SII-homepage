@@ -1,18 +1,33 @@
 let SERVER_BASE = 'http://localhost:8080';
 
+function isValidPortalOrigin(originStr) {
+  if (!originStr) return false;
+  try {
+    const url = new URL(originStr);
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      return url.port === '8080' || url.port === '8081';
+    }
+    return url.hostname === 'ddyoru.duckdns.org';
+  } catch (e) {
+    return false;
+  }
+}
+
 async function detectServerBase() {
   try {
     const storageData = await chrome.storage.local.get('portalOrigin');
-    if (storageData && storageData.portalOrigin) {
+    if (storageData && storageData.portalOrigin && isValidPortalOrigin(storageData.portalOrigin)) {
       SERVER_BASE = storageData.portalOrigin;
       console.log('[INHACK Extension] Loaded Server Base from storage:', SERVER_BASE);
+    } else {
+      SERVER_BASE = 'http://localhost:8080';
+      await chrome.storage.local.remove('portalOrigin');
     }
 
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tabs && tabs.length > 0 && tabs[0].url) {
       const url = new URL(tabs[0].url);
-      const allowedHosts = ['localhost', '127.0.0.1', 'ddyoru.duckdns.org'];
-      if (allowedHosts.includes(url.hostname)) {
+      if (isValidPortalOrigin(url.origin)) {
         SERVER_BASE = url.origin;
         console.log('[INHACK Extension] Detected Server Base from active tab:', SERVER_BASE);
         await chrome.storage.local.set({ 'portalOrigin': SERVER_BASE });
