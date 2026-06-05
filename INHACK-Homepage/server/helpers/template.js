@@ -220,4 +220,41 @@ ${chalsHtml}</div>
   return htmlResult;
 }
 
-module.exports = { compileJsonToHtml };
+function compilePageHtml(filePath) {
+  const fs = require('fs');
+  const path = require('path');
+  
+  let content = fs.readFileSync(filePath, 'utf8');
+  
+  let depth = 0;
+  const maxDepth = 5;
+  
+  while (depth < maxDepth) {
+    const includeRegex = /<!--\s*INCLUDE:\s*([^\s]+)\s*-->/g;
+    if (!includeRegex.test(content)) {
+      break;
+    }
+    // Reset lastIndex for safety
+    includeRegex.lastIndex = 0;
+    
+    content = content.replace(includeRegex, (m, filename) => {
+      const fragmentPath = path.join(__dirname, '../../src/html/fragments', filename);
+      try {
+        if (fs.existsSync(fragmentPath)) {
+          return fs.readFileSync(fragmentPath, 'utf8');
+        } else {
+          console.warn(`[Template compile] Include file not found: ${fragmentPath}`);
+          return `<!-- ERROR: Include file ${filename} not found -->`;
+        }
+      } catch (err) {
+        console.error(`[Template compile] Error reading include file ${filename}:`, err);
+        return `<!-- ERROR: Failed to include ${filename} -->`;
+      }
+    });
+    depth++;
+  }
+  
+  return content;
+}
+
+module.exports = { compileJsonToHtml, compilePageHtml };

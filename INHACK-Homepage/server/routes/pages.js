@@ -4,13 +4,19 @@ const path = require('path');
 const db = require('../config/db');
 const { sendJson } = require('../helpers/response');
 
+const { compilePageHtml } = require('../helpers/template');
+const fs = require('fs');
+
 // / serves index.html (the SPA) directly
 router.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../src/html/index.html'), (err) => {
-    if (err) {
-      res.status(404).send('<h1>404 Not Found</h1>');
-    }
-  });
+  try {
+    const html = compilePageHtml(path.join(__dirname, '../../src/html/index.html'));
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch (err) {
+    console.error('[Page routing] Error serving index.html:', err);
+    res.status(500).send('<h1>500 Internal Server Error</h1>');
+  }
 });
 
 // Redirect legacy /homepage requests to root /
@@ -22,8 +28,6 @@ router.get('/homepage', (req, res) => {
 router.get('/homepage/main', (req, res) => {
   res.redirect('/');
 });
-
-const fs = require('fs');
 
 // Helper to resolve current user's role
 function getUserRole(req) {
@@ -180,7 +184,14 @@ router.get('/admin', (req, res) => {
   if (!req.session.user || !req.session.user.isAdmin) {
     return res.redirect('/login');
   }
-  res.sendFile(path.join(__dirname, '../../src/html/admin.html'));
+  try {
+    const html = compilePageHtml(path.join(__dirname, '../../src/html/admin.html'));
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch (err) {
+    console.error('[Page routing] Error serving admin.html:', err);
+    res.status(500).send('<h1>500 Internal Server Error</h1>');
+  }
 });
 
 // Serve actual pages directly under /:url
@@ -205,16 +216,18 @@ router.get('/:url', (req, res) => {
     return res.redirect('/login');
   }
 
-  
-  res.sendFile(path.join(__dirname, `../../src/html/${fileName}.html`), (err) => {
-    if (err) {
-      if (err.code === 'ENOENT') {
-        res.status(404).send('<h1>404 Not Found</h1><p>요청하신 페이지를 찾을 수 없습니다.</p>');
-      } else {
-        res.status(500).send('<h1>500 Internal Server Error</h1>');
-      }
+  const filePath = path.join(__dirname, `../../src/html/${fileName}.html`);
+  try {
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send('<h1>404 Not Found</h1><p>요청하신 페이지를 찾을 수 없습니다.</p>');
     }
-  });
+    const html = compilePageHtml(filePath);
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch (err) {
+    console.error(`[Page routing] Error serving ${fileName}.html:`, err);
+    res.status(500).send('<h1>500 Internal Server Error</h1>');
+  }
 });
 
 module.exports = router;
