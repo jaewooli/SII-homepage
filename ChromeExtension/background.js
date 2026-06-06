@@ -260,7 +260,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         chrome.tabs.create({ url: 'https://dreamhack.io/', active: true });
         sendResponse({ ok: true });
       } catch (err) {
-        sendResponse({ ok: false, message: err.message });
+        console.error('[INHACK Background] LOAD_SHARED_SESSION error:', err);
+        const errMsg = err.message || (typeof err === 'string' ? err : String(err));
+        sendResponse({ ok: false, message: errMsg || 'Unknown background error', error: errMsg || 'Unknown background error' });
       }
     })();
     return true; // Keep message channel open for async response
@@ -298,8 +300,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         await clearDreamhackCookiesLocally();
         sendResponse({ ok: true });
       } catch (err) {
-
-        sendResponse({ ok: false, error: err.message });
+        const errMsg = err.message || (typeof err === 'string' ? err : String(err));
+        sendResponse({ ok: false, message: errMsg, error: errMsg });
       }
     })();
     return true; // Keep message channel open for async response
@@ -312,14 +314,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const csrftoken = csrfCookie ? csrfCookie.value : '';
 
       if (!sessionid) {
-        sendResponse({ ok: false, message: "드림핵 로그인 세션이 발견되지 않았습니다. 드림핵(dreamhack.io)에 먼저 로그인해주세요." });
+        const errMsg = "드림핵 로그인 세션이 발견되지 않았습니다. 드림핵(dreamhack.io)에 먼저 로그인해주세요.";
+        sendResponse({ ok: false, message: errMsg, error: errMsg });
         return;
       }
 
       sendResponse({ ok: true, sessionid, csrftoken });
     }).catch(err => {
-
-      sendResponse({ ok: false, message: err.message });
+      const errMsg = err.message || (typeof err === 'string' ? err : String(err));
+      sendResponse({ ok: false, message: errMsg, error: errMsg });
     });
     return true; // Keep message channel open for async response
   } else if (msg.type === "SAVE_MASTER_KEY") {
@@ -348,7 +351,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const result = await loginToDreamhack(msg.email, plainPassword);
         sendResponse({ ok: true, sessions: result.sessions });
       } catch (err) {
-        sendResponse({ ok: false, message: err.message });
+        console.error('[INHACK Background] ADMIN_AUTO_LOGIN_E2E error:', err);
+        const errMsg = err.message || (typeof err === 'string' ? err : String(err));
+        sendResponse({ ok: false, message: errMsg || 'Unknown background error', error: errMsg || 'Unknown background error' });
       }
     })();
     return true; // Keep message channel open for async response
@@ -386,7 +391,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           throw new Error(logData.message || 'Server log failed');
         }
       } catch (err) {
-        sendResponse({ ok: false, error: err.message });
+        const errMsg = err.message || (typeof err === 'string' ? err : String(err));
+        sendResponse({ ok: false, message: errMsg, error: errMsg });
       }
     })();
     return true; // Keep message channel open for async response

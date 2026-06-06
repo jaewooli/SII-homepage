@@ -134,7 +134,7 @@ window.addEventListener('INHACK_DREAMHACK_LOAD_TRIGGER', async () => {
           detail: { ok: true }
         }));
       } else {
-        const errMsg = response?.message || 'unknown error';
+        const errMsg = response?.message || response?.error || 'unknown error';
         
         // Invalidate on portal if verification failed and background requests it
         if (response && response.needsInvalidate) {
@@ -390,7 +390,7 @@ window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', (event) => {
         }));
       }
     } else {
-      const errMsg = response?.message || 'unknown error';
+      const errMsg = response?.message || response?.error || 'unknown error';
       window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', {
         detail: { ok: false, message: errMsg }
       }));
