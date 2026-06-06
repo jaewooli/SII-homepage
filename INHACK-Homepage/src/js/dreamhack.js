@@ -450,8 +450,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         <button id="dh-admin-save-btn" class="action-btn" style="background: #ff4b4b; width: 100%;" type="button">비밀번호 저장 (E2E)</button>
         
         <div class="admin-actions" style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed rgba(255, 75, 75, 0.2); display: flex; flex-direction: column; gap: 10px;">
-            <button id="dh-admin-renew-btn" class="action-btn" style="margin: 0; border-color: var(--color-green); color: var(--color-green);" type="button">세션 재발급 (Renew)</button>
-            <button id="dh-admin-logout-shared-btn" class="action-btn" style="margin: 0; border-color: var(--color-red); color: var(--color-red);" type="button">세션 일괄 파기 (Logout Shared)</button>
+            <button id="dh-admin-renew-btn" class="action-btn" style="margin: 0 auto; width: 100%; border-color: var(--color-green); color: var(--color-green);" type="button">세션 재발급 (Renew)</button>
+            <button id="dh-admin-logout-shared-btn" class="action-btn" style="margin: 0 auto; width: 100%; border-color: var(--color-red); color: var(--color-red);" type="button">세션 일괄 파기 (Logout Shared)</button>
         </div>
       `;
       container.appendChild(adminCard);
