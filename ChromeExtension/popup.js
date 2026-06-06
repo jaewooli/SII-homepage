@@ -18,7 +18,12 @@ function isValidPortalOrigin(originStr) {
   try {
     const url = new URL(originStr);
     const origins = typeof ALLOWED_ORIGINS !== 'undefined' ? ALLOWED_ORIGINS : ["http://localhost:8080", "http://127.0.0.1:8080", "https://localhost:8080", "https://127.0.0.1:8080"];
-    return origins.includes(url.origin);
+    if (!origins.includes(url.origin)) {
+      return false;
+    }
+    const targetPathname = typeof PORTAL_URL !== 'undefined' ? new URL(PORTAL_URL).pathname.replace(/\/$/, '') : '/homepage';
+    const currentPathname = url.pathname.replace(/\/$/, '');
+    return currentPathname === targetPathname;
   } catch (e) {
     return false;
   }

@@ -153,6 +153,7 @@ homepageRouter.use('/images', express.static(path.join(__dirname, '../images')))
 // Mount Homepage Router to basePath
 app.use(env.BASE_PATH || '/homepage', homepageRouter);
 
+
 // Redirect / to basePath for convenience
 app.get('/', (req, res) => {
   res.redirect(env.BASE_PATH || '/homepage');
