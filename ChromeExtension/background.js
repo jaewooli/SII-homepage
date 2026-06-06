@@ -254,6 +254,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     })();
     return true; // Keep message channel open for async response
   } else if (msg.type === "ADMIN_LOGOUT_SHARED") {
+    // Immediately respond to content script to prevent message port timeout
+    sendResponse({ ok: true });
+
     (async () => {
       try {
         if (msg.sessions && msg.sessions.length > 0) {
@@ -266,12 +269,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         } else if (msg.sessionid) {
           await logoutDreamhackSharedSession(msg.sessionid, msg.csrftoken);
         }
-        sendResponse({ ok: true });
       } catch (err) {
-        sendResponse({ ok: false, message: err.message });
+        console.warn('[INHACK Background] Background logout task failed:', err.message);
       }
     })();
-    return true; // Keep message channel open for async response
+    return false; // Already sent response synchronously
   } else if (msg.type === "SET_USER") {
     chrome.storage.local.set({ INHACKuser: { username: msg.username, isAdmin: msg.isAdmin || false } });
     sendResponse({ ok: true });
