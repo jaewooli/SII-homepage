@@ -8,7 +8,6 @@
     "dev": "nodemon INHACK-Homepage/server/app.js"
   },
   "dependencies": {
-    "adm-zip": "^0.5.10",
     "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",
     "connect-sqlite3": "^0.9.16",

@@ -90,13 +90,20 @@ function verifyMessageSender(sender) {
     try {
       const url = new URL(sender.tab.url);
       const origins = typeof ALLOWED_ORIGINS !== 'undefined' ? ALLOWED_ORIGINS : ["http://localhost:8080", "http://127.0.0.1:8080", "https://localhost:8080", "https://127.0.0.1:8080"];
-      if (origins.includes(url.origin)) {
-        return true;
-      }
-      if (url.hostname === 'dreamhack.io' || url.hostname.endsWith('.dreamhack.io')) {
+      const isAllowed = origins.includes(url.origin);
+      const isDreamhack = url.hostname === 'dreamhack.io' || url.hostname.endsWith('.dreamhack.io');
+      console.log('[INHACK Background] verifyMessageSender details:', {
+        url: sender.tab.url,
+        origin: url.origin,
+        isAllowedOrigin: isAllowed,
+        isDreamhackOrigin: isDreamhack,
+        allowedOrigins: origins
+      });
+      if (isAllowed || isDreamhack) {
         return true;
       }
     } catch (e) {
+      console.error('[INHACK Background] verifyMessageSender exception:', e);
       return false;
     }
   }
@@ -158,16 +165,20 @@ chrome.storage.local.get('portalOrigin').then(res => {
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  console.log('[INHACK Background] onMessage received type:', msg.type, 'from sender:', sender.tab ? sender.tab.url : 'no tab');
+
   if (msg.type === "CHECK_PORTAL_ORIGIN") {
     const isValid = sender.tab && sender.tab.url ? isValidPortalOrigin(extractPortalBase(sender.tab.url)) : false;
     const basePath = typeof PORTAL_URL !== 'undefined' ? new URL(PORTAL_URL).pathname.replace(/\/$/, '') : '/homepage';
+    console.log('[INHACK Background] CHECK_PORTAL_ORIGIN result:', isValid, 'basePath:', basePath);
     sendResponse({ isValid, basePath });
     return true;
   }
 
   if (!verifyMessageSender(sender)) {
-
-    return;
+    console.warn('[INHACK Background] Message sender verification failed for url:', sender.tab ? sender.tab.url : 'no tab');
+    sendResponse({ ok: false, message: "익스텐션 보안 정책에 의해 이 도메인에서의 요청이 차단되었습니다. 허용된 도메인인지 확인해 주세요. (Origin: " + (sender.tab ? sender.tab.url : 'Unknown') + ")" });
+    return false;
   }
 
   // Cache portal origin in local storage when message is received from portal

@@ -49,22 +49,6 @@ const ALLOWED_ORIGINS = ${JSON.stringify(allowedOrigins)};
 `;
   fs.writeFileSync(extensionConfigPath, configContent, 'utf8');
 
-  // Auto-package ChromeExtension zip file using adm-zip (cross-platform, no zip dependency)
-  const AdmZip = require('adm-zip');
-  const zip = new AdmZip();
-  const extensionDir = path.join(__dirname, '../../ChromeExtension');
-  
-  const filesToZip = [
-    'background.js', 'button.css', 'content.js', 'interceptor.js',
-    'manifest.json', 'popup.css', 'popup.html', 'popup.js', 'config.js'
-  ];
-  filesToZip.forEach(file => {
-    zip.addLocalFile(path.join(extensionDir, file));
-  });
-  
-  zip.addLocalFolder(path.join(extensionDir, 'images'), 'images');
-  zip.writeZip(path.join(__dirname, '../src/INHACK-Extension.zip'));
-  console.log('[Extension Packager] Extension successfully packaged with current configuration.');
 } catch (e) {
   console.error('[Extension Config Gen Error] Failed to generate extension config:', e.message);
 }
