@@ -1,6 +1,6 @@
-import { showToast } from "/assets/js/toast.js";
-import { apiRequest } from "/assets/js/api.js";
-import { triggerAdminSessionRenewal } from "/assets/js/header.js";
+import { showToast } from "./toast.js";
+import { apiRequest } from "./api.js";
+import { triggerAdminSessionRenewal } from "./header.js";
 
 function safeBtoa(uint8Array) {
   let binary = '';
@@ -12,7 +12,7 @@ function safeBtoa(uint8Array) {
 }
 
 async function isLoggedIn() {
-  const r = await apiRequest('/me', 'GET');
+  const r = await apiRequest(window.__BASE_PATH__ + '/me', 'GET');
   if (!r.ok) return null;
   
   return r.data;
@@ -61,7 +61,7 @@ async function autoSeedE2ECredentials(plainEmail, plainPassword) {
     await new Promise(resolve => setTimeout(resolve, 600));
 
     // 4. Save encrypted credentials to server
-    const saveRes = await apiRequest('/dreamhack/encrypted-credentials', 'POST', {
+    const saveRes = await apiRequest(window.__BASE_PATH__ + '/dreamhack/encrypted-credentials', 'POST', {
       encryptedPassword: ciphertextBase64,
       iv: ivBase64
     });
@@ -117,7 +117,7 @@ async function updateSharedSessionStatus() {
   if (!badge) return;
 
   try {
-    const res = await apiRequest('/dreamhack/shared-session', 'GET');
+    const res = await apiRequest(window.__BASE_PATH__ + '/dreamhack/shared-session', 'GET');
     if (res.ok && res.data && res.data.sessionid) {
       const timeStr = res.data.updated_at ? new Date(res.data.updated_at).toLocaleString() : 'N/A';
       badge.className = 'status-badge status-connected';
@@ -160,7 +160,7 @@ async function loadActivityLogs(userdata) {
   const interceptBody = document.querySelector('#intercept-log-table tbody');
 
   try {
-    const res = await apiRequest('/dreamhack/logs', 'GET');
+    const res = await apiRequest(window.__BASE_PATH__ + '/dreamhack/logs', 'GET');
     if (res.ok && res.data) {
       const { accessLogs, solveLogs, interceptLogs } = res.data;
       
@@ -259,7 +259,7 @@ async function executeLoadSharedSession(userdata) {
 
 async function loadSidebarNavigation() {
   try {
-    const res = await fetch(`/navigation`);
+    const res = await fetch(window.__BASE_PATH__ + '/navigation');
     if (res.ok) {
       const payload = await res.json();
       if (payload.ok && payload.data) {
@@ -268,7 +268,7 @@ async function loadSidebarNavigation() {
       }
     }
     // Fallback
-    const fallback = await fetch('/frags/navigation.json');
+    const fallback = await fetch(window.__BASE_PATH__ + '/frags/navigation.json');
     if (fallback.ok) {
       const menuItems = await fallback.json();
       const user = window.__currentUser;
@@ -308,10 +308,11 @@ function renderSidebarNav(menuItems) {
     if (hasSubmenu) li.classList.add('has-submenu');
 
     const a = document.createElement('a');
-    const isHomepage = window.location.pathname === '/';
+    const isHomepage = window.location.pathname === window.__BASE_PATH__ || window.location.pathname === window.__BASE_PATH__ + '/';
     let resolvedUrl = item.url || '#';
+    resolvedUrl = resolvedUrl.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
     if (resolvedUrl.startsWith('#') && resolvedUrl !== '#') {
-      resolvedUrl = isHomepage ? resolvedUrl : `/${resolvedUrl}`;
+      resolvedUrl = isHomepage ? resolvedUrl : `${window.__BASE_PATH__}/${resolvedUrl}`;
     }
     a.href = resolvedUrl;
     a.className = 'nav-item-link';
@@ -347,10 +348,11 @@ function renderSidebarNav(menuItems) {
       item.submenus.forEach(sub => {
         const subLi = document.createElement('li');
         const subA = document.createElement('a');
-        const isHomepage = window.location.pathname === '/';
+        const isHomepage = window.location.pathname === window.__BASE_PATH__ || window.location.pathname === window.__BASE_PATH__ + '/';
         let resolvedSubUrl = sub.url || '#';
+        resolvedSubUrl = resolvedSubUrl.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
         if (resolvedSubUrl.startsWith('#') && resolvedSubUrl !== '#') {
-          resolvedSubUrl = isHomepage ? resolvedSubUrl : `/${resolvedSubUrl}`;
+          resolvedSubUrl = isHomepage ? resolvedSubUrl : `${window.__BASE_PATH__}/${resolvedSubUrl}`;
         }
         subA.href = resolvedSubUrl;
         subA.className = 'nav-item-link';
@@ -381,7 +383,7 @@ function renderSidebarNav(menuItems) {
   // Re-append admin link if the current user is admin
   if (window.__currentUser && window.__currentUser.isAdmin && !document.getElementById('nav-admin-link')) {
     const adminLi = document.createElement('li');
-    adminLi.innerHTML = `<a href="/admin" id="nav-admin-link" class="nav-item-link" style="color: #ff4b4b; border-left: 2px solid #ff4b4b; font-weight: 700;">Admin Panel</a>`;
+    adminLi.innerHTML = `<a href="${window.__BASE_PATH__}/admin" id="nav-admin-link" class="nav-item-link" style="color: #ff4b4b; border-left: 2px solid #ff4b4b; font-weight: 700;">Admin Panel</a>`;
     navList.appendChild(adminLi);
   }
 }
@@ -422,7 +424,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (userdata && userdata.isAdmin) {
     // E2E Auto-seeding check
     try {
-      const credRes = await apiRequest('/dreamhack/encrypted-credentials', 'GET');
+      const credRes = await apiRequest(window.__BASE_PATH__ + '/dreamhack/encrypted-credentials', 'GET');
       if (credRes.ok && credRes.data && credRes.data.isPlain) {
         await autoSeedE2ECredentials(credRes.data.email, credRes.data.plainPassword);
       }
@@ -494,7 +496,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             await new Promise(resolve => setTimeout(resolve, 600));
 
             // 4. Save encrypted credentials to server (email bound server-side from env)
-            const saveRes = await apiRequest('/dreamhack/encrypted-credentials', 'POST', {
+            const saveRes = await apiRequest(window.__BASE_PATH__ + '/dreamhack/encrypted-credentials', 'POST', {
               encryptedPassword: ciphertextBase64,
               iv: ivBase64
             });
@@ -556,7 +558,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       showToast('드림핵 세션 정보 획득 완료. 서버 연동 중...', 'info', 0);
 
       try {
-        const syncRes = await apiRequest('/dreamhack/login', 'POST', { sessionid, csrftoken });
+        const syncRes = await apiRequest(window.__BASE_PATH__ + '/dreamhack/login', 'POST', { sessionid, csrftoken });
         if (syncRes.ok) {
           showToast('드림핵 세션 동기화 성공!', 'success');
           // Reload the logs panel to display the new sync attempt immediately
@@ -596,12 +598,12 @@ function triggerAdminSessionTermination(silent = false) {
     }
 
     try {
-      const sharedRes = await apiRequest('/dreamhack/shared-session', 'GET');
+      const sharedRes = await apiRequest(window.__BASE_PATH__ + '/dreamhack/shared-session', 'GET');
       if (!sharedRes.ok) {
         return reject(new Error('서버에서 공용 세션 정보를 가져오는데 실패했습니다.'));
       }
       if (!sharedRes.data || !sharedRes.data.sessionid) {
-        await apiRequest('/dreamhack/clear-shared-session', 'POST');
+        await apiRequest(window.__BASE_PATH__ + '/dreamhack/clear-shared-session', 'POST');
         if (!silent) showToast('이미 등록된 공용 세션이 없습니다. 서버 데이터를 초기화했습니다.', 'success');
         return resolve();
       }
@@ -610,7 +612,7 @@ function triggerAdminSessionTermination(silent = false) {
         const { ok, message } = event.detail;
         window.removeEventListener('INHACK_ADMIN_LOGOUT_SHARED_RESPONSE', handleResponse);
         if (ok) {
-          const clearRes = await apiRequest('/dreamhack/clear-shared-session', 'POST');
+          const clearRes = await apiRequest(window.__BASE_PATH__ + '/dreamhack/clear-shared-session', 'POST');
           if (clearRes.ok) {
             if (!silent) {
               showToast('드림핵 공용 계정 세션 파기 및 일괄 로그아웃 완료!', 'success');

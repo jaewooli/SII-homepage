@@ -4,16 +4,16 @@
     <!-- INCLUDE: head.html -->
     <meta name="description" content="INHACK - Gateway Authorization">
     <title>INHACK Gateway Auth</title>
-    <link rel="stylesheet" href="/assets/css/auth.css">
-    <link rel="stylesheet" href="/assets/css/toast.css">
-    <script type="module" src="/assets/js/auth.js"></script>
+    <link rel="stylesheet" href="{{BASE_PATH}}/assets/css/auth.css">
+    <link rel="stylesheet" href="{{BASE_PATH}}/assets/css/toast.css">
+    <script type="module" src="{{BASE_PATH}}/assets/js/auth.js"></script>
 </head>
 <body>
-    <h1>Portal Login // <a href="/">INHACK</a></h1>
+    <h1>Portal Login // <a href="{{BASE_PATH}}">INHACK</a></h1>
 
     <section id="login"> 
         <h2>Sign In</h2>
-        <form id="login-form" action="/login" method="POST">
+        <form id="login-form" action="{{BASE_PATH}}/login" method="POST">
             <label for="login-username">Username:</label>
             <input type="text" id="login-username" name="username" placeholder="Enter username" required>
 

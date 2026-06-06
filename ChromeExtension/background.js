@@ -1,3 +1,4 @@
+importScripts('config.js');
 // Helper to thoroughly clear all dreamhack-related local authorization cookies
 async function clearDreamhackCookiesLocally() {
   try {
@@ -24,7 +25,7 @@ async function clearDreamhackCookiesLocally() {
         }
       }
     } catch (err) {
-      console.warn('[INHACK Background] Failed to query tabs for URLs:', err);
+
     }
 
     // Add URLs resolved from actual existing cookies
@@ -38,7 +39,7 @@ async function clearDreamhackCookiesLocally() {
         urlsToTry.add(prefix + domainStr);
       }
     } catch (err) {
-      console.warn('[INHACK Background] Failed to fetch cookies for dynamic URLs:', err);
+
     }
 
     const targetNames = ['sessionid', 'csrf_token', 'csrftoken'];
@@ -49,52 +50,47 @@ async function clearDreamhackCookiesLocally() {
         try {
           // Attempt standard removal
           await chrome.cookies.remove({ url: url, name: name });
-          console.log(`[INHACK Background] Cleared cookie: ${name} from url: ${url}`);
+
         } catch (e) {
           // Ignore failure
         }
       }
     }
   } catch (err) {
-    console.warn('[INHACK Background] Fatal error in cookie clearing:', err);
+
   }
 }
 
 async function isHomepageTabOpen() {
   try {
-    const tabs = await chrome.tabs.query({
-      url: [
-        "http://localhost:8080/*",
-        "https://localhost:8080/*",
-        "http://127.0.0.1:8080/*",
-        "https://127.0.0.1:8080/*",
-        "http://localhost:8081/*",
-        "https://localhost:8081/*",
-        "http://127.0.0.1:8081/*",
-        "https://127.0.0.1:8081/*",
-        "http://ddyoru.duckdns.org/*",
-        "https://ddyoru.duckdns.org/*"
-      ]
-    });
-    return tabs && tabs.length > 0;
+    const tabs = await chrome.tabs.query({});
+    if (!tabs) return false;
+    const origins = typeof ALLOWED_ORIGINS !== 'undefined' ? ALLOWED_ORIGINS : ["http://localhost:8080", "http://127.0.0.1:8080", "https://localhost:8080", "https://127.0.0.1:8080"];
+    for (const tab of tabs) {
+      if (tab.url) {
+        try {
+          const url = new URL(tab.url);
+          if (origins.includes(url.origin)) {
+            return true;
+          }
+        } catch (e) {}
+      }
+    }
+    return false;
   } catch (err) {
-    console.error('[INHACK Background] Error querying tabs:', err);
     return false;
   }
 }
 
 function verifyMessageSender(sender) {
-  // Allow messages from the extension popup itself
   if (!sender.tab) {
     return true;
   }
   if (sender.tab && sender.tab.url) {
     try {
       const url = new URL(sender.tab.url);
-      if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-        return url.port === '8080' || url.port === '8081';
-      }
-      if (url.hostname === 'ddyoru.duckdns.org') {
+      const origins = typeof ALLOWED_ORIGINS !== 'undefined' ? ALLOWED_ORIGINS : ["http://localhost:8080", "http://127.0.0.1:8080", "https://localhost:8080", "https://127.0.0.1:8080"];
+      if (origins.includes(url.origin)) {
         return true;
       }
       if (url.hostname === 'dreamhack.io' || url.hostname.endsWith('.dreamhack.io')) {
@@ -107,14 +103,24 @@ function verifyMessageSender(sender) {
   return false;
 }
 
+function extractPortalBase(urlStr) {
+  if (!urlStr) return 'http://localhost:8080/homepage';
+  try {
+    let portalBase = urlStr.split('?')[0].split('#')[0];
+    portalBase = portalBase.replace(/\/(dreamhack|admin|mypage|login|index\.html|dreamhack\.html|admin\.html|mypage\.html|login\.html)\/?$/, '');
+    portalBase = portalBase.replace(/\/$/, '');
+    return portalBase;
+  } catch (e) {
+    return 'http://localhost:8080/homepage';
+  }
+}
+
 function isValidPortalOrigin(originStr) {
   if (!originStr) return false;
   try {
     const url = new URL(originStr);
-    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-      return url.port === '8080' || url.port === '8081';
-    }
-    return url.hostname === 'ddyoru.duckdns.org';
+    const origins = typeof ALLOWED_ORIGINS !== 'undefined' ? ALLOWED_ORIGINS : ["http://localhost:8080", "http://127.0.0.1:8080", "https://localhost:8080", "https://127.0.0.1:8080"];
+    return origins.includes(url.origin);
   } catch (e) {
     return false;
   }
@@ -127,29 +133,35 @@ async function getValidPortalOrigin() {
       return res.portalOrigin;
     }
   } catch (e) {}
-  return 'http://localhost:8080';
+  return typeof PORTAL_URL !== 'undefined' ? PORTAL_URL : 'http://localhost:8080/homepage';
 }
 
 // Startup cleanup of any contaminated portalOrigin values
 chrome.storage.local.get('portalOrigin').then(res => {
   if (res && res.portalOrigin && !isValidPortalOrigin(res.portalOrigin)) {
-    console.log('[INHACK Background] Cleaning up invalid portalOrigin from storage:', res.portalOrigin);
+
     chrome.storage.local.remove('portalOrigin');
   }
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === "CHECK_PORTAL_ORIGIN") {
+    const isValid = sender.tab && sender.tab.url ? isValidPortalOrigin(extractPortalBase(sender.tab.url)) : false;
+    sendResponse({ isValid });
+    return true;
+  }
+
   if (!verifyMessageSender(sender)) {
-    console.warn("[INHACK Security] Blocked message from untrusted sender:", sender.tab ? sender.tab.url : "unknown");
+
     return;
   }
 
   // Cache portal origin in local storage when message is received from portal
   if (sender.tab && sender.tab.url) {
     try {
-      const url = new URL(sender.tab.url);
-      if (isValidPortalOrigin(url.origin)) {
-        chrome.storage.local.set({ 'portalOrigin': url.origin });
+      const portalBase = extractPortalBase(sender.tab.url);
+      if (isValidPortalOrigin(portalBase)) {
+        chrome.storage.local.set({ 'portalOrigin': portalBase });
       }
     } catch (e) {}
   }
@@ -167,12 +179,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (!sender.tab || !sender.tab.url) {
           throw new Error("Message sender tab not resolved");
         }
-        const url = new URL(sender.tab.url);
-        const origin = url.origin;
+        const portalBase = extractPortalBase(sender.tab.url);
 
         // Fetch shared session cookies from OCI server
-        console.log('[INHACK Background] Fetching shared session from:', origin);
-        const res = await fetch(`${origin}/dreamhack/shared-session`, {
+
+        const res = await fetch(`${portalBase}/dreamhack/shared-session`, {
           credentials: 'include'
         });
         if (!res.ok) {
@@ -186,7 +197,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const { sessionid, csrftoken } = resData.data;
 
         // Set cookies in the user's browser for dreamhack.io
-        console.log('[INHACK Background] Setting shared session cookies in user browser...');
+
         await chrome.cookies.set({
           url: 'https://dreamhack.io',
           domain: '.dreamhack.io',
@@ -212,10 +223,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           });
         }
 
-        console.log('[INHACK Background] Shared session cookies set successfully.');
-
         // Verify session validity from the client-side browser context (bypasses Cloudflare block on OCI)
-        console.log('[INHACK Background] Verifying session validity from client browser...');
+
         let isValid = false;
         try {
           const verifyRes = await fetch('https://dreamhack.io/', {
@@ -229,15 +238,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             isValid = html.includes('/users/logout');
           }
         } catch (verifyErr) {
-          console.warn('[INHACK Background] Client-side verification fetch failed:', verifyErr.message);
+
           // If the network request itself fails in the client browser, assume valid to avoid false deletion
           isValid = true;
         }
 
         if (!isValid) {
-          console.warn('[INHACK Background] Loaded session is inactive. Invalidating on server...');
+
           // Delete from portal database
-          await fetch(`${origin}/dreamhack/invalidate-session`, {
+          await fetch(`${portalBase}/dreamhack/invalidate-session`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -257,7 +266,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         sendResponse({ ok: true });
       } catch (err) {
-        console.error('[INHACK Background] Failed to load shared session:', err.message);
+
         sendResponse({ ok: false, message: err.message });
       }
     })();
@@ -266,14 +275,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
       try {
         if (msg.sessions && msg.sessions.length > 0) {
-          console.log(`[INHACK Background] Logging out ${msg.sessions.length} sessions...`);
+
           for (let i = 0; i < msg.sessions.length; i++) {
             const s = msg.sessions[i];
             try {
               await logoutDreamhackSharedSession(s.sessionid, s.csrftoken);
-              console.log(`[INHACK Background] Invalidation successful for session ${i + 1}/${msg.sessions.length}`);
+
             } catch (err) {
-              console.warn(`[INHACK Background] Failed to invalidate session ${i + 1}/${msg.sessions.length}:`, err.message);
+
             }
           }
         } else if (msg.sessionid) {
@@ -281,24 +290,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
         sendResponse({ ok: true });
       } catch (err) {
-        console.error('[INHACK Background] Invalidation failed:', err.message);
+
         sendResponse({ ok: false, message: err.message });
       }
     })();
     return true; // Keep message channel open for async response
   } else if (msg.type === "SET_USER") {
     chrome.storage.local.set({ INHACKuser: { username: msg.username, isAdmin: msg.isAdmin || false } });
-    console.log('[INHACK Background] Logged-in user set to:', msg.username, 'isAdmin:', msg.isAdmin);
+
     sendResponse({ ok: true });
   } else if (msg.type === "CLEAR_USER") {
     chrome.storage.local.remove('INHACKuser');
-    console.log('[INHACK Background] Logged-in user cleared.');
+
     sendResponse({ ok: true });
   } else if (msg.type === "STUDENT_LOGOUT_INTERCEPT") {
     (async () => {
       try {
-        console.log('[INHACK Background] Intercepted student logout via client-side trigger. Discarding cookies locally...');
-        
+
         // Clear cookies locally
         await clearDreamhackCookiesLocally();
 
@@ -311,7 +319,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         sendResponse({ ok: true });
       } catch (err) {
-        console.error('[INHACK Background] Error handling client logout intercept:', err);
+
         sendResponse({ ok: false, error: err.message });
       }
     })();
@@ -329,16 +337,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         return;
       }
 
-      console.log('[INHACK Background] Cookie sync successful.');
       sendResponse({ ok: true, sessionid, csrftoken });
     }).catch(err => {
-      console.error('[INHACK Background] Failed to query cookies:', err);
+
       sendResponse({ ok: false, message: err.message });
     });
     return true; // Keep message channel open for async response
   } else if (msg.type === "SAVE_MASTER_KEY") {
     chrome.storage.local.set({ 'inhack_master_key': msg.jwk }, () => {
-      console.log('[INHACK Background] E2E Master Key saved to local storage.');
+
       sendResponse({ ok: true });
     });
     return true;
@@ -348,8 +355,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (!sender.tab || !sender.tab.url) {
           throw new Error("Message sender tab not resolved");
         }
-        const url = new URL(sender.tab.url);
-        const origin = url.origin;
+        const portalBase = extractPortalBase(sender.tab.url);
 
         // 1. Get Master Key from local storage
         const storageData = await chrome.storage.local.get('inhack_master_key');
@@ -358,7 +364,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
 
         // 2. Decrypt Password E2E
-        console.log('[INHACK Background] Decrypting E2E password locally...');
+
         const plainPassword = await decryptPasswordE2E(
           msg.encryptedPassword,
           msg.iv,
@@ -366,10 +372,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         );
 
         // 3. Perform login to Dreamhack and sync back to the portal
-        const result = await loginToDreamhackAndSync(msg.email, plainPassword, origin);
+        const result = await loginToDreamhackAndSync(msg.email, plainPassword, portalBase);
         sendResponse({ ok: true, sessionid: result.sessionid, csrftoken: result.csrftoken });
       } catch (err) {
-        console.error('[INHACK Background] Admin E2E login/sync failed:', err.message);
+
         sendResponse({ ok: false, message: err.message });
       }
     })();
@@ -384,7 +390,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         let username = userData && userData.INHACKuser && userData.INHACKuser.username;
         
         if (!username) {
-          console.log('[INHACK Background] Storage empty. Fetching user identity from:', portalOrigin);
+
           const meRes = await fetch(`${portalOrigin}/me`, { credentials: 'include' });
           if (!meRes.ok) {
             throw new Error(`Failed to query session identity: status ${meRes.status}`);
@@ -395,9 +401,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           }
           username = meData.data.username;
         }
-        
-        console.log(`[INHACK Background] Solve identified. Logged user: ${username}. Logging challenge:`, msg.challengeName);
-        
+
         const logRes = await fetch(`${portalOrigin}/dreamhack/solve-log`, {
           method: 'POST',
           headers: {
@@ -414,13 +418,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         
         const logData = await logRes.json();
         if (logRes.ok && logData.ok) {
-          console.log('[INHACK Background] Solve successfully logged on server.');
+
           sendResponse({ ok: true });
         } else {
           throw new Error(logData.message || 'Server log failed');
         }
       } catch (err) {
-        console.error('[INHACK Background] Solve log failed:', err.message);
+
         sendResponse({ ok: false, error: err.message });
       }
     })();
@@ -458,7 +462,7 @@ async function decryptPasswordE2E(encryptedBase64, ivBase64, jwk) {
     encrypted
   );
   const decryptedText = enc.decode(decrypted);
-  console.log(`[INHACK Background] E2E Decrypted password length: ${decryptedText.length}`);
+
   return decryptedText;
 }
 
@@ -476,7 +480,7 @@ async function pollForLoggedInCookies(sessionNum) {
         };
       }
     } catch (e) {
-      console.warn('[INHACK Background] Error polling cookies:', e);
+
     }
     await new Promise(resolve => setTimeout(resolve, 200));
   }
@@ -485,11 +489,10 @@ async function pollForLoggedInCookies(sessionNum) {
 
 async function loginToDreamhackAndSync(email, password, origin) {
   const cleanEmail = email ? email.trim() : '';
-  console.log(`[INHACK Background] Attempting login. Email: "${cleanEmail}" (length: ${cleanEmail.length})`);
+
   const sessions = [];
 
   for (let i = 0; i < 3; i++) {
-    console.log(`[INHACK Background] Generating session ${i + 1}/3...`);
 
     // Clear existing cookies locally to force Django to generate a fresh session ID
     await clearDreamhackCookiesLocally();
@@ -562,7 +565,7 @@ async function loginToDreamhackAndSync(email, password, origin) {
       sessions.push(sessionData);
 
     } finally {
-      console.log(`[INHACK Background] Cleaning up background tab for session ${i + 1}...`);
+
       try {
         await chrome.tabs.remove(tab.id);
       } catch (e) {}
@@ -571,7 +574,6 @@ async function loginToDreamhackAndSync(email, password, origin) {
     }
   }
 
-  console.log('[INHACK Background] Generated 3 sessions. Synchronizing sessions back to portal...');
   const syncRes = await fetch(`${origin}/dreamhack/login`, {
     method: 'POST',
     headers: {
@@ -595,14 +597,14 @@ async function loginToDreamhackAndSync(email, password, origin) {
 }
 
 async function logoutDreamhackSharedSession(sessionid, csrftoken) {
-  console.log('[INHACK Background] Invalidate session: Creating background tab for Dreamhack first-party logout...');
+
   const tab = await chrome.tabs.create({
     url: 'https://dreamhack.io/login/',
     active: false
   });
 
   try {
-    console.log('[INHACK Background] Waiting for tab to load:', tab.id);
+
     await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         chrome.tabs.onUpdated.removeListener(listener);
@@ -619,7 +621,6 @@ async function logoutDreamhackSharedSession(sessionid, csrftoken) {
       chrome.tabs.onUpdated.addListener(listener);
     });
 
-    console.log('[INHACK Background] Injecting logout execution script inside tab...');
     const injectionResults = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: async (sessVal, csrfVal) => {
@@ -663,14 +664,12 @@ async function logoutDreamhackSharedSession(sessionid, csrftoken) {
       throw new Error(runResult?.error || 'First-party logout script execution failed.');
     }
 
-    console.log('[INHACK Background] Invalidation completed successfully.');
-
   } finally {
-    console.log('[INHACK Background] Cleaning up background tab...');
+
     try {
       await chrome.tabs.remove(tab.id);
     } catch (e) {
-      console.warn('[INHACK Background] Failed to remove background tab:', e);
+
     }
   }
 }
@@ -682,7 +681,7 @@ async function updateLogoutBlockRule() {
   const isAdmin = await isCurrentUserAdmin();
   
   if (isAdmin) {
-    console.log('[INHACK Background] Current user is Admin. Disabling logout block rule.');
+
     try {
       await chrome.declarativeNetRequest.updateSessionRules({
         removeRuleIds: [LOGOUT_BLOCK_RULE_ID]
@@ -691,10 +690,10 @@ async function updateLogoutBlockRule() {
         removeRuleIds: [LOGOUT_BLOCK_RULE_ID]
       });
     } catch (e) {
-      console.warn('[INHACK Background] Failed to remove DNR session rules:', e);
+
     }
   } else {
-    console.log('[INHACK Background] Current user is Student. Enabling logout block rule.');
+
     try {
       // Ensure we clean up session rules first to avoid conflicts
       await chrome.declarativeNetRequest.updateSessionRules({
@@ -719,7 +718,7 @@ async function updateLogoutBlockRule() {
         ]
       });
     } catch (e) {
-      console.warn('[INHACK Background] Failed to setup DNR dynamic rules:', e);
+
     }
   }
 }
@@ -756,7 +755,7 @@ chrome.webRequest.onBeforeRequest.addListener(
   async (details) => {
     const isAdmin = await isCurrentUserAdmin();
     if (isAdmin) {
-      console.log('[INHACK Background] Admin logged out of Dreamhack. Clearing shared sessions on portal...');
+
       getValidPortalOrigin().then(portalOrigin => {
         fetch(`${portalOrigin}/dreamhack/clear-shared-session`, {
           method: 'POST',
@@ -766,14 +765,12 @@ chrome.webRequest.onBeforeRequest.addListener(
       return; // Let them logout on the server
     }
 
-    console.log('[INHACK Background] Intercepted student logout request. Setting alert flag first...');
-    
     // Set storage flag immediately to minimize race conditions with content.js
     try {
       await chrome.storage.local.set({ 'showLogoutBlockedAlert': true });
-      console.log('[INHACK Background] showLogoutBlockedAlert flag set successfully.');
+
     } catch (err) {
-      console.warn('[INHACK Background] Failed to set showLogoutBlockedAlert flag:', err);
+
     }
 
     // Clear cookies locally in parallel (do not block flow)
@@ -781,7 +778,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 
     // Notify portal about interception for debugging logs
     getValidPortalOrigin().then(portalOrigin => {
-      console.log('[INHACK Background] Logging logout interception to portal:', portalOrigin);
+
       fetch(`${portalOrigin}/dreamhack/intercept-logout`, {
         method: 'POST',
         credentials: 'include'
@@ -792,9 +789,9 @@ chrome.webRequest.onBeforeRequest.addListener(
     if (details.type !== 'main_frame' && details.tabId && details.tabId !== chrome.tabs.TAB_ID_NONE) {
       try {
         await chrome.tabs.update(details.tabId, { url: 'https://dreamhack.io/' });
-        console.log('[INHACK Background] Non-navigation logout request. Redirecting tab programmatically.');
+
       } catch (err) {
-        console.warn('[INHACK Background] Failed to redirect tab:', err);
+
       }
     }
   },

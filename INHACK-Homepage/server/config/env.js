@@ -16,5 +16,6 @@ module.exports = {
   ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'developer',
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
   PORT: process.env.PORT || 8080,
-  NODE_ENV: process.env.NODE_ENV
+  NODE_ENV: process.env.NODE_ENV,
+  BASE_PATH: process.env.BASE_PATH || '/homepage'
 };

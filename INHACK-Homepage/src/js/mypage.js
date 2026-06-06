@@ -1,5 +1,5 @@
-import { showToast } from "/assets/js/toast.js";
-import { apiRequest } from "/assets/js/api.js";
+import { showToast } from "./toast.js";
+import { apiRequest } from "./api.js";
 
 // ── Sidebar navigation (shared with dreamhack.js pattern) ──────────────────
 
@@ -16,9 +16,11 @@ function renderSidebarNav(menuItems) {
     if (hasSubmenu) li.classList.add('has-submenu');
 
     const a = document.createElement('a');
+    const isHomepage = window.location.pathname === window.__BASE_PATH__ || window.location.pathname === window.__BASE_PATH__ + '/';
     let resolvedUrl = item.url || '#';
+    resolvedUrl = resolvedUrl.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
     if (resolvedUrl.startsWith('#') && resolvedUrl !== '#') {
-      resolvedUrl = `/${resolvedUrl.replace(/^#/, '')}`;
+      resolvedUrl = isHomepage ? resolvedUrl : `${window.__BASE_PATH__}/${resolvedUrl}`;
     }
     a.href = resolvedUrl;
     a.className = 'nav-item-link';
@@ -46,7 +48,10 @@ function renderSidebarNav(menuItems) {
         const subLi = document.createElement('li');
         const subA = document.createElement('a');
         let resolvedSub = sub.url || '#';
-        if (resolvedSub.startsWith('#') && resolvedSub !== '#') resolvedSub = `/${resolvedSub.replace(/^#/, '')}`;
+        resolvedSub = resolvedSub.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
+        if (resolvedSub.startsWith('#') && resolvedSub !== '#') {
+          resolvedSub = isHomepage ? resolvedSub : `${window.__BASE_PATH__}/${resolvedSub}`;
+        }
         subA.href = resolvedSub;
         subA.className = 'nav-item-link';
         subA.textContent = sub.title;
@@ -76,19 +81,19 @@ function renderSidebarNav(menuItems) {
   // Admin panel link
   if (window.__currentUser && window.__currentUser.isAdmin && !document.getElementById('nav-admin-link')) {
     const adminLi = document.createElement('li');
-    adminLi.innerHTML = `<a href="/admin" id="nav-admin-link" class="nav-item-link" style="color:#ff4b4b;border-left:2px solid #ff4b4b;font-weight:700;">Admin Panel</a>`;
+    adminLi.innerHTML = `<a href="${window.__BASE_PATH__}/admin" id="nav-admin-link" class="nav-item-link" style="color:#ff4b4b;border-left:2px solid #ff4b4b;font-weight:700;">Admin Panel</a>`;
     navList.appendChild(adminLi);
   }
 }
 
 async function loadSidebarNavigation() {
   try {
-    const res = await fetch('/navigation');
+    const res = await fetch(window.__BASE_PATH__ + '/navigation');
     if (res.ok) {
       const payload = await res.json();
       if (payload.ok && payload.data) { renderSidebarNav(payload.data); return; }
     }
-    const fallback = await fetch('/frags/navigation.json');
+    const fallback = await fetch(window.__BASE_PATH__ + '/frags/navigation.json');
     if (fallback.ok) {
       const menuItems = await fallback.json();
       const user = window.__currentUser;
@@ -221,7 +226,7 @@ function initPasswordForm() {
     btn.textContent = '변경 중...';
 
     try {
-      const res = await apiRequest('/change-password', 'POST', { currentPassword, newPassword });
+      const res = await apiRequest(window.__BASE_PATH__ + '/change-password', 'POST', { currentPassword, newPassword });
       if (res.ok) {
         showToast('비밀번호가 성공적으로 변경되었습니다!', 'success');
         form.reset();
@@ -239,12 +244,12 @@ function initPasswordForm() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const res = await apiRequest('/me', 'GET');
+  const res = await apiRequest(window.__BASE_PATH__ + '/me', 'GET');
   const user = res.ok ? res.data : null;
 
   if (!user) {
     // Not logged in → redirect to login
-    location.href = '/login';
+    location.href = window.__BASE_PATH__ + '/login';
     return;
   }
 

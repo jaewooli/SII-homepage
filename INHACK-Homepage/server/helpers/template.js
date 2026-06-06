@@ -223,6 +223,8 @@ ${chalsHtml}</div>
 function compilePageHtml(filePath) {
   const fs = require('fs');
   const path = require('path');
+  const env = require('../config/env');
+  const basePath = env.BASE_PATH || '/homepage';
   
   let content = fs.readFileSync(filePath, 'utf8');
   
@@ -253,6 +255,12 @@ function compilePageHtml(filePath) {
     });
     depth++;
   }
+  
+  // Replace template variables
+  content = content.replace(/\{\{BASE_PATH\}\}/g, basePath);
+  
+  // Inject global window.__BASE_PATH__ variable
+  content = content.replace('</head>', `<script>window.__BASE_PATH__ = "${basePath}";</script></head>`);
   
   return content;
 }

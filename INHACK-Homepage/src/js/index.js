@@ -1,5 +1,5 @@
-import { showToast } from '/assets/js/toast.js';
-import { fetchMe } from '/assets/js/auth.js';
+import { showToast } from './toast.js';
+import { fetchMe } from './auth.js';
 
 // Disable bold and italic markdown rendering on the client side
 if (window.marked && window.marked.use) {
@@ -44,7 +44,7 @@ async function loadContent(fragmentID){
 
   // 2. Explicit admin panel redirect
   if (topFragment === 'admin') {
-    window.location.href = '/admin';
+    window.location.href = window.__BASE_PATH__ + '/admin';
     return;
   }
 
@@ -52,7 +52,7 @@ async function loadContent(fragmentID){
   if (fragmentID) {
     let allowed = true;
     try {
-      const res = await fetch('/navigation');
+      const res = await fetch(window.__BASE_PATH__ + '/navigation');
       if (res.ok) {
         const payload = await res.json();
         if (payload.ok && payload.data) {
@@ -63,7 +63,7 @@ async function loadContent(fragmentID){
           
           if (!isAllowedInNav) {
             // If it's not in the filtered menus, check if it actually exists in the global menu
-            const fallback = await fetch('/frags/navigation.json');
+            const fallback = await fetch(window.__BASE_PATH__ + '/frags/navigation.json');
             if (fallback.ok) {
               const allMenus = await fallback.json();
               const isActuallyAMenuItem = checkIfMenuExists(allMenus, fragmentID);
@@ -89,9 +89,9 @@ async function loadContent(fragmentID){
   // fragmentID can be a nested path like 'curriculum/week1'
   let url = '';
   if (fragmentID){
-    url = `/frags/${fragmentID}.html`;
+    url = `${window.__BASE_PATH__}/frags/${fragmentID}.html`;
   }else{
-    url = `/frags/home.html`;
+    url = `${window.__BASE_PATH__}/frags/home.html`;
   }
   try{
     const response = await fetch(url);
@@ -200,7 +200,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 async function loadSidebarNavigation() {
   try {
-    const res = await fetch(`/navigation`);
+    const res = await fetch(window.__BASE_PATH__ + '/navigation');
     if (res.ok) {
       const payload = await res.json();
       if (payload.ok && payload.data) {
@@ -209,7 +209,7 @@ async function loadSidebarNavigation() {
       }
     }
     // Fallback: fetch raw JSON from static file and filter manually if API fails
-    const fallback = await fetch('/frags/navigation.json');
+    const fallback = await fetch(window.__BASE_PATH__ + '/frags/navigation.json');
     if (fallback.ok) {
       const menuItems = await fallback.json();
       const user = await fetchMe();
@@ -249,10 +249,11 @@ function renderSidebarNav(menuItems) {
     if (hasSubmenu) li.classList.add('has-submenu');
 
     const a = document.createElement('a');
-    const isHomepage = window.location.pathname === '/';
+    const isHomepage = window.location.pathname === window.__BASE_PATH__ || window.location.pathname === window.__BASE_PATH__ + '/';
     let resolvedUrl = item.url || '#';
+    resolvedUrl = resolvedUrl.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
     if (resolvedUrl.startsWith('#') && resolvedUrl !== '#') {
-      resolvedUrl = isHomepage ? resolvedUrl : `/${resolvedUrl}`;
+      resolvedUrl = isHomepage ? resolvedUrl : `${window.__BASE_PATH__}/${resolvedUrl}`;
     }
     a.href = resolvedUrl;
     a.className = 'nav-item-link';
@@ -283,10 +284,11 @@ function renderSidebarNav(menuItems) {
       item.submenus.forEach(sub => {
         const subLi = document.createElement('li');
         const subA = document.createElement('a');
-        const isHomepage = window.location.pathname === '/';
+        const isHomepage = window.location.pathname === window.__BASE_PATH__ || window.location.pathname === window.__BASE_PATH__ + '/';
         let resolvedSubUrl = sub.url || '#';
+        resolvedSubUrl = resolvedSubUrl.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
         if (resolvedSubUrl.startsWith('#') && resolvedSubUrl !== '#') {
-          resolvedSubUrl = isHomepage ? resolvedSubUrl : `/${resolvedSubUrl}`;
+          resolvedSubUrl = isHomepage ? resolvedSubUrl : `${window.__BASE_PATH__}/${resolvedSubUrl}`;
         }
         subA.href = resolvedSubUrl;
         subA.className = 'nav-item-link';
@@ -317,7 +319,7 @@ function renderSidebarNav(menuItems) {
   // Re-append admin link if the current user is admin (it gets wiped by innerHTML = '')
   if (window.__currentUser && window.__currentUser.isAdmin && !document.getElementById('nav-admin-link')) {
     const adminLi = document.createElement('li');
-    adminLi.innerHTML = `<a href="/admin" id="nav-admin-link" class="nav-item-link" style="color: #ff4b4b; border-left: 2px solid #ff4b4b; font-weight: 700;">Admin Panel</a>`;
+    adminLi.innerHTML = `<a href="${window.__BASE_PATH__}/admin" id="nav-admin-link" class="nav-item-link" style="color: #ff4b4b; border-left: 2px solid #ff4b4b; font-weight: 700;">Admin Panel</a>`;
     navList.appendChild(adminLi);
   }
 }
@@ -434,7 +436,7 @@ function showForcePasswordChangeModal() {
       }
 
       showToast('비밀번호 변경 처리 중...', 'info', 0);
-      const res = await fetch('/change-password', {
+      const res = await fetch(window.__BASE_PATH__ + '/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword, newPassword })

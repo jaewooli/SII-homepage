@@ -1,10 +1,10 @@
-import { fetchMe } from '/assets/js/auth.js';
-import { apiRequest } from '/assets/js/api.js';
-import { showToast } from '/assets/js/toast.js';
+import { fetchMe } from './auth.js';
+import { apiRequest } from './api.js';
+import { showToast } from './toast.js';
 
 export async function triggerAdminSessionRenewal() {
   try {
-    const credRes = await apiRequest('/admin/dreamhack-credentials', 'GET');
+    const credRes = await apiRequest(window.__BASE_PATH__ + '/dreamhack/encrypted-credentials', 'GET');
     if (!credRes.ok || !credRes.data) {
       throw new Error(credRes.message || '자격 증명 데이터 오류');
     }
@@ -58,7 +58,7 @@ export async function loadHeader() {
   if (!header) return;
 
   try {
-    const res = await fetch('/frags/header.html');
+    const res = await fetch(window.__BASE_PATH__ + '/frags/header.html');
     if (res.ok) {
       const html = await res.text();
       header.innerHTML = html;
@@ -88,18 +88,18 @@ export function renderHeaderUI(user) {
       const sidebarList = document.querySelector('aside ul');
       if (sidebarList && !document.getElementById('nav-admin-link')) {
         const adminLi = document.createElement('li');
-        adminLi.innerHTML = `<a href="/admin" id="nav-admin-link" class="nav-item-link" style="color: #ff4b4b; border-left: 2px solid #ff4b4b; font-weight: 700;">Admin Panel</a>`;
+        adminLi.innerHTML = `<a href="${window.__BASE_PATH__}/admin" id="nav-admin-link" class="nav-item-link" style="color: #ff4b4b; border-left: 2px solid #ff4b4b; font-weight: 700;">Admin Panel</a>`;
         sidebarList.appendChild(adminLi);
       }
     }
 
     // My Page link (render if not currently on mypage)
-    const isMyPage = window.location.pathname === '/mypage' || window.location.pathname === '/mypage.html';
+    const isMyPage = window.location.pathname === window.__BASE_PATH__ + '/mypage' || window.location.pathname === window.__BASE_PATH__ + '/mypage.html';
     if (!isMyPage) {
       const mypageBtn = document.createElement('button');
       mypageBtn.id = 'mypage-btn';
       mypageBtn.textContent = '마이페이지';
-      mypageBtn.addEventListener('click', () => { location.href = '/mypage'; });
+      mypageBtn.addEventListener('click', () => { location.href = window.__BASE_PATH__ + '/mypage'; });
       nav.appendChild(mypageBtn);
     } else {
       // Username chip on mypage
@@ -116,8 +116,8 @@ export function renderHeaderUI(user) {
     logoutbtn.textContent = 'Logout';
     nav.appendChild(logoutbtn);
     logoutbtn.addEventListener('click', async () => {
-      const res = await fetch('/logout', { method: 'POST' });
-      if (res.ok) location.href = '/';
+      const res = await fetch(window.__BASE_PATH__ + '/logout', { method: 'POST' });
+      if (res.ok) location.href = window.__BASE_PATH__;
       else showToast('Logout failed', 'error');
     });
   } else {
@@ -125,7 +125,7 @@ export function renderHeaderUI(user) {
     const loginbtn = document.createElement('button');
     loginbtn.id = 'login-btn';
     loginbtn.textContent = 'Login';
-    loginbtn.addEventListener('click', () => { location.href = '/login'; });
+    loginbtn.addEventListener('click', () => { location.href = window.__BASE_PATH__ + '/login'; });
     nav.appendChild(loginbtn);
 
     const supportbtn = document.createElement('button');

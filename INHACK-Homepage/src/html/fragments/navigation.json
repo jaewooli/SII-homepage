@@ -63,7 +63,7 @@
   {
     "type": "menu_item",
     "title": "Dreamhack",
-    "url": "/dreamhack",
+    "url": "{{BASE_PATH}}/dreamhack",
     "external": false,
     "deleteLocked": true,
     "allowedRoles": ["member", "admin"],

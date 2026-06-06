@@ -1,40 +1,50 @@
-let SERVER_BASE = 'http://localhost:8080';
+let SERVER_BASE = typeof PORTAL_URL !== 'undefined' ? PORTAL_URL : 'http://localhost:8080/homepage';
+
+function extractPortalBase(urlStr) {
+  const fallback = typeof PORTAL_URL !== 'undefined' ? PORTAL_URL : 'http://localhost:8080/homepage';
+  if (!urlStr) return fallback;
+  try {
+    let portalBase = urlStr.split('?')[0].split('#')[0];
+    portalBase = portalBase.replace(/\/(dreamhack|admin|mypage|login|index\.html|dreamhack\.html|admin\.html|mypage\.html|login\.html)\/?$/, '');
+    portalBase = portalBase.replace(/\/$/, '');
+    return portalBase;
+  } catch (e) {
+    return fallback;
+  }
+}
 
 function isValidPortalOrigin(originStr) {
   if (!originStr) return false;
   try {
     const url = new URL(originStr);
-    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-      return url.port === '8080' || url.port === '8081';
-    }
-    return url.hostname === 'ddyoru.duckdns.org';
+    const origins = typeof ALLOWED_ORIGINS !== 'undefined' ? ALLOWED_ORIGINS : ["http://localhost:8080", "http://127.0.0.1:8080", "https://localhost:8080", "https://127.0.0.1:8080"];
+    return origins.includes(url.origin);
   } catch (e) {
     return false;
   }
 }
 
 async function detectServerBase() {
+  const fallback = typeof PORTAL_URL !== 'undefined' ? PORTAL_URL : 'http://localhost:8080/homepage';
   try {
     const storageData = await chrome.storage.local.get('portalOrigin');
     if (storageData && storageData.portalOrigin && isValidPortalOrigin(storageData.portalOrigin)) {
       SERVER_BASE = storageData.portalOrigin;
-      console.log('[INHACK Extension] Loaded Server Base from storage:', SERVER_BASE);
     } else {
-      SERVER_BASE = 'http://localhost:8080';
+      SERVER_BASE = fallback;
       await chrome.storage.local.remove('portalOrigin');
     }
 
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tabs && tabs.length > 0 && tabs[0].url) {
-      const url = new URL(tabs[0].url);
-      if (isValidPortalOrigin(url.origin)) {
-        SERVER_BASE = url.origin;
-        console.log('[INHACK Extension] Detected Server Base from active tab:', SERVER_BASE);
+      const portalBase = extractPortalBase(tabs[0].url);
+      if (isValidPortalOrigin(portalBase)) {
+        SERVER_BASE = portalBase;
         await chrome.storage.local.set({ 'portalOrigin': SERVER_BASE });
       }
     }
   } catch (err) {
-    console.error('[INHACK Extension] Failed to query active tab for server base:', err);
+    // Silent fail
   }
 }
 
@@ -102,7 +112,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('loggedin').classList.add('hidden');
     await chrome.storage.local.remove('INHACKuser');
   } catch (err) {
-    console.error(err);
     showMsg('세션 조회 오류', false);
   }
 });
@@ -162,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
       await chrome.storage.local.remove('INHACKuser');
       setTimeout(() => location.reload(), 800);
     } catch (err) {
-      console.error(err);
       showMsg('로그아웃 실패', false);
     }
   });

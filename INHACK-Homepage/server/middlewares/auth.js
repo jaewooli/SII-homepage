@@ -1,3 +1,4 @@
+const env = require('../config/env');
 const { sendJson } = require('../helpers/response');
 
 function validateLogin(req, res, next) {
@@ -32,7 +33,7 @@ function passwordEnforceMiddleware(req, res, next) {
         if (req.path.startsWith('/frags/') && req.path !== '/frags/home.html') {
           return res.status(403).send('<div style="color:#ff4b4b;text-align:center;padding:20px;font-family:sans-serif;font-weight:bold;">비밀번호 변경이 필요합니다.</div>');
         }
-        return res.redirect('/');
+        return res.redirect(env.BASE_PATH || '/homepage');
       }
       return sendJson(res, {
         status: 403,

@@ -1,5 +1,5 @@
-import { showToast } from '/assets/js/toast.js';
-import { fetchMe } from '/assets/js/auth.js';
+import { showToast } from './toast.js';
+import { fetchMe } from './auth.js';
 
 // Disable bold and italic markdown rendering on the client side
 if (window.marked && window.marked.use) {
@@ -21,7 +21,7 @@ if (window.marked && window.marked.use) {
 
 async function loadSidebarNavigation() {
   try {
-    const res = await fetch(`/navigation`);
+    const res = await fetch(window.__BASE_PATH__ + '/navigation');
     if (res.ok) {
       const payload = await res.json();
       if (payload.ok && payload.data) {
@@ -30,7 +30,7 @@ async function loadSidebarNavigation() {
       }
     }
     // Fallback: fetch raw JSON from static file and filter manually if API fails
-    const fallback = await fetch('/frags/navigation.json');
+    const fallback = await fetch(window.__BASE_PATH__ + '/frags/navigation.json');
     if (fallback.ok) {
       const menuItems = await fallback.json();
       const user = window.__currentUser;
@@ -70,10 +70,11 @@ function renderSidebarNav(menuItems) {
     if (hasSubmenu) li.classList.add('has-submenu');
 
     const a = document.createElement('a');
-    const isHomepage = window.location.pathname === '/';
+    const isHomepage = window.location.pathname === window.__BASE_PATH__ || window.location.pathname === window.__BASE_PATH__ + '/';
     let resolvedUrl = item.url || '#';
+    resolvedUrl = resolvedUrl.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
     if (resolvedUrl.startsWith('#') && resolvedUrl !== '#') {
-      resolvedUrl = isHomepage ? resolvedUrl : `/${resolvedUrl}`;
+      resolvedUrl = isHomepage ? resolvedUrl : `${window.__BASE_PATH__}/${resolvedUrl}`;
     }
     a.href = resolvedUrl;
     a.className = 'nav-item-link';
@@ -104,10 +105,11 @@ function renderSidebarNav(menuItems) {
       item.submenus.forEach(sub => {
         const subLi = document.createElement('li');
         const subA = document.createElement('a');
-        const isHomepage = window.location.pathname === '/';
+        const isHomepage = window.location.pathname === window.__BASE_PATH__ || window.location.pathname === window.__BASE_PATH__ + '/';
         let resolvedSubUrl = sub.url || '#';
+        resolvedSubUrl = resolvedSubUrl.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
         if (resolvedSubUrl.startsWith('#') && resolvedSubUrl !== '#') {
-          resolvedSubUrl = isHomepage ? resolvedSubUrl : `/${resolvedSubUrl}`;
+          resolvedSubUrl = isHomepage ? resolvedSubUrl : `${window.__BASE_PATH__}/${resolvedSubUrl}`;
         }
         subA.href = resolvedSubUrl;
         subA.className = 'nav-item-link';
@@ -138,7 +140,7 @@ function renderSidebarNav(menuItems) {
   // Re-append admin link if the current user is admin (it gets wiped by innerHTML = '')
   if (window.__currentUser && window.__currentUser.isAdmin && !document.getElementById('nav-admin-link')) {
     const adminLi = document.createElement('li');
-    adminLi.innerHTML = `<a href="/admin" id="nav-admin-link" class="nav-item-link" style="color: #ff4b4b; border-left: 2px solid #ff4b4b; font-weight: 700;">Admin Panel</a>`;
+    adminLi.innerHTML = `<a href="${window.__BASE_PATH__}/admin" id="nav-admin-link" class="nav-item-link" style="color: #ff4b4b; border-left: 2px solid #ff4b4b; font-weight: 700;">Admin Panel</a>`;
     navList.appendChild(adminLi);
     adminLi.querySelector('a').classList.add('active'); // active on /admin page
   }
@@ -451,7 +453,7 @@ async function initializeAdminPanel() {
     async function updateEditSectionOptions() {
       let menuItems = null;
       try {
-        const res = await fetch(`/admin/content/navigation?_t=${Date.now()}`);
+        const res = await fetch(window.__BASE_PATH__ + `/admin/content/navigation?_t=${Date.now()}`);
         if (res.ok) {
           const payload = await res.json();
           if (payload.ok && payload.data && payload.data.content) {
@@ -464,7 +466,7 @@ async function initializeAdminPanel() {
       
       if (!menuItems) {
         try {
-          const fallback = await fetch('/frags/navigation.json');
+          const fallback = await fetch(window.__BASE_PATH__ + '/frags/navigation.json');
           if (fallback.ok) menuItems = await fallback.json();
         } catch(e) {}
       }
@@ -608,7 +610,7 @@ async function initializeAdminPanel() {
 
         try {
           showToast('학기 아카이브 전환 및 리셋 작업 처리 중...', 'info', 0);
-          const res = await fetch('/admin/archive-semester', {
+          const res = await fetch(window.__BASE_PATH__ + '/admin/archive-semester', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -1652,7 +1654,7 @@ async function initializeAdminPanel() {
 
     async function loadSectionMarkdown(sectionId) {
       try {
-        const response = await fetch(`/admin/content/${sectionId}?_t=${Date.now()}`);
+        const response = await fetch(window.__BASE_PATH__ + `/admin/content/${sectionId}?_t=${Date.now()}`);
         if (response.ok) {
           const payload = await response.json();
           if (payload.ok && payload.data) {
@@ -1899,7 +1901,7 @@ async function initializeAdminPanel() {
         showSaveConfirmationModal(sectionId, async () => {
           showToast('저장 중...', 'info', 0);
           try {
-            const res = await fetch('/admin/update-content', {
+            const res = await fetch(window.__BASE_PATH__ + '/admin/update-content', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ sectionId, content_md })
@@ -1960,7 +1962,7 @@ async function initializeAdminPanel() {
 
       showToast('사용자 등록 중...', 'info', 0);
       try {
-        const res = await fetch('/admin/register-user', {
+        const res = await fetch(window.__BASE_PATH__ + '/admin/register-user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password, name, is_admin, adminPassword })
@@ -2049,7 +2051,7 @@ async function initializeAdminPanel() {
       overlay.remove();
     });
 
-    fetch(`/admin/user-solves/${encodeURIComponent(username)}`)
+    fetch(window.__BASE_PATH__ + `/admin/user-solves/${encodeURIComponent(username)}`)
       .then(res => res.json())
       .then(payload => {
         const container = modal.querySelector('#solves-list-container');
@@ -2206,7 +2208,7 @@ async function initializeAdminPanel() {
     if (!userListContainer) return;
     prepareGlobalDropdown();
     try {
-      const res = await fetch('/admin/users');
+      const res = await fetch(window.__BASE_PATH__ + '/admin/users');
       if (!res.ok) throw new Error('Failed to fetch users');
       const payload = await res.json();
       if (!payload.ok || !payload.data) {
@@ -2251,7 +2253,7 @@ async function initializeAdminPanel() {
         showAdminActionConfirmModal(targetUser.username, targetUser.name, actionWord, async (adminPassword) => {
           showToast('권한 변경 처리 중...', 'info', 0);
           try {
-            const toggleRes = await fetch('/admin/toggle-admin', {
+            const toggleRes = await fetch(window.__BASE_PATH__ + '/admin/toggle-admin', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ id: targetUser.id, username: targetUser.username, is_admin: !currentlyAdmin, adminPassword })
@@ -2275,7 +2277,7 @@ async function initializeAdminPanel() {
         if (confirm(`정말로 사용자 '${targetUser.username}' (${targetUser.name}) 계정을 ${actionWord}하시겠습니까?`)) {
           showToast(`${actionWord} 처리 중...`, 'info', 0);
           try {
-            const blockRes = await fetch('/admin/block-user', {
+            const blockRes = await fetch(window.__BASE_PATH__ + '/admin/block-user', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ id: targetUser.id, username: targetUser.username, is_blocked: !currentlyBlocked })
@@ -2304,7 +2306,7 @@ async function initializeAdminPanel() {
         showAdminActionConfirmModal(targetUser.username, targetUser.name, actionWord, async (adminPassword) => {
           showToast('계정 삭제 처리 중...', 'info', 0);
           try {
-            const delRes = await fetch('/admin/delete-user', {
+            const delRes = await fetch(window.__BASE_PATH__ + '/admin/delete-user', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ id: targetUser.id, username: targetUser.username, adminPassword })
@@ -2556,7 +2558,7 @@ async function initializeAdminPanel() {
 
           showToast(`${parsedUsers.length}명의 사용자 업로드 중...`, 'info', 0);
 
-          const res = await fetch('/admin/register-users-bulk', {
+          const res = await fetch(window.__BASE_PATH__ + '/admin/register-users-bulk', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ users: parsedUsers })
@@ -2928,7 +2930,7 @@ async function initializeAdminPanel() {
         const reader = new FileReader();
         reader.onload = async (event) => {
           try {
-            const res = await fetch('/admin/upload-image', {
+            const res = await fetch(window.__BASE_PATH__ + '/admin/upload-image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -3109,7 +3111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!me || !me.isAdmin) {
     showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
     setTimeout(() => {
-      window.location.href = '/login';
+      window.location.href = window.__BASE_PATH__ + '/login';
     }, 1000);
     return;
   }

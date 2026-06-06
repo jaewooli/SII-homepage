@@ -1,8 +1,8 @@
-import { apiRequest } from '/assets/js/api.js';
-import { showToast } from '/assets/js/toast.js';
+import { apiRequest } from './api.js';
+import { showToast } from './toast.js';
 
 export async function fetchMe(){
-  const r = await apiRequest('/me', 'GET');
+  const r = await apiRequest(window.__BASE_PATH__ + '/me', 'GET');
   if (!r.ok) return null;
   return r.data;
 }
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         password: loginForm.password.value.trim(),
       };
 
-      const r = await apiRequest('/login', 'POST', body);
+      const r = await apiRequest(window.__BASE_PATH__ + '/login', 'POST', body);
       const msg = r.message =='Success' ? 'Login Success': r.message;
       const type = r.ok ? 'success' : 'error';
       showToast(msg, type);
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sessionStorage.setItem('toastMessage', msg);
       sessionStorage.setItem('toastType', type);
       if (r.ok) {
-        location.href = '/';
+        location.href = window.__BASE_PATH__;
       }
       else{
         location.reload();

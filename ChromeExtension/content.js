@@ -3,17 +3,25 @@ function isContextValid() {
   return typeof chrome !== 'undefined' && chrome.runtime && !!chrome.runtime.id;
 }
 
+function getPortalBasePath() {
+  try {
+    let path = window.location.pathname.split('?')[0].split('#')[0];
+    path = path.replace(/\/(dreamhack|admin|mypage|login|index\.html|dreamhack\.html|admin\.html|mypage\.html|login\.html)\/?$/, '');
+    path = path.replace(/\/$/, '');
+    return path;
+  } catch (e) {
+    return '/homepage';
+  }
+}
+
 // Robust function to set the installed flag on document.documentElement
 function setInstalledFlag() {
   if (document.documentElement) {
     document.documentElement.dataset.inhackExtensionInstalled = "true";
-    console.log('[INHACK Extension] Extension active flag injected.');
   } else {
-    // If documentElement is not ready yet, observe document structure
     const observer = new MutationObserver(() => {
       if (document.documentElement) {
         document.documentElement.dataset.inhackExtensionInstalled = "true";
-        console.log('[INHACK Extension] Extension active flag injected via observer.');
         observer.disconnect();
       }
     });
@@ -45,17 +53,14 @@ if (isContextValid()) {
 // Listen for custom trigger events from the webpage
 window.addEventListener('INHACK_DREAMHACK_SYNC_TRIGGER', () => {
   if (!isContextValid()) {
-    console.warn('[INHACK Extension] Context invalidated. Reloading portal page...');
     window.location.reload();
     return;
   }
-  console.log('[INHACK Extension] Received cookie sync trigger from webpage. Querying background worker...');
   
   chrome.runtime.sendMessage({ 
     type: "GET_DREAMHACK_COOKIES"
   }, (response) => {
     if (response && response.ok) {
-      console.log('[INHACK Extension] Cookie retraction completed successfully.');
       window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_SYNC_RESPONSE', {
         detail: { 
           ok: true, 
@@ -65,7 +70,6 @@ window.addEventListener('INHACK_DREAMHACK_SYNC_TRIGGER', () => {
       }));
     } else {
       const errMsg = response?.message || 'unknown error';
-      console.error('[INHACK Extension] Cookie sync failed:', errMsg);
       window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_SYNC_RESPONSE', {
         detail: { ok: false, message: errMsg }
       }));
@@ -76,23 +80,19 @@ window.addEventListener('INHACK_DREAMHACK_SYNC_TRIGGER', () => {
 // Listen for shared session load trigger from the webpage
 window.addEventListener('INHACK_DREAMHACK_LOAD_TRIGGER', () => {
   if (!isContextValid()) {
-    console.warn('[INHACK Extension] Context invalidated. Reloading portal page...');
     window.location.reload();
     return;
   }
-  console.log('[INHACK Extension] Received load shared session trigger from webpage...');
   
   chrome.runtime.sendMessage({ 
     type: "LOAD_SHARED_SESSION"
   }, (response) => {
     if (response && response.ok) {
-      console.log('[INHACK Extension] Shared session cookies set successfully.');
       window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_RESPONSE', {
         detail: { ok: true }
       }));
     } else {
       const errMsg = response?.message || 'unknown error';
-      console.error('[INHACK Extension] Shared session load failed:', errMsg);
       window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_RESPONSE', {
         detail: { ok: false, message: errMsg }
       }));
@@ -100,16 +100,12 @@ window.addEventListener('INHACK_DREAMHACK_LOAD_TRIGGER', () => {
   });
 });
 
-
-
 // Listen for admin logout shared trigger from the webpage
 window.addEventListener('INHACK_ADMIN_LOGOUT_SHARED_TRIGGER', (event) => {
   if (!isContextValid()) {
-    console.warn('[INHACK Extension] Context invalidated. Reloading portal page...');
     window.location.reload();
     return;
   }
-  console.log('[INHACK Extension] Received admin logout shared trigger from webpage...');
   const { sessionid, csrftoken, sessions } = event.detail;
 
   chrome.runtime.sendMessage({ 
@@ -119,13 +115,11 @@ window.addEventListener('INHACK_ADMIN_LOGOUT_SHARED_TRIGGER', (event) => {
     sessions
   }, (response) => {
     if (response && response.ok) {
-      console.log('[INHACK Extension] Admin logout shared completed successfully.');
       window.dispatchEvent(new CustomEvent('INHACK_ADMIN_LOGOUT_SHARED_RESPONSE', {
         detail: { ok: true }
       }));
     } else {
       const errMsg = response?.message || 'unknown error';
-      console.error('[INHACK Extension] Admin logout shared failed:', errMsg);
       window.dispatchEvent(new CustomEvent('INHACK_ADMIN_LOGOUT_SHARED_RESPONSE', {
         detail: { ok: false, message: errMsg }
       }));
@@ -137,12 +131,11 @@ window.addEventListener('INHACK_ADMIN_LOGOUT_SHARED_TRIGGER', (event) => {
 async function syncUserSession() {
   if (!isContextValid()) return;
   try {
-    const res = await fetch('/me');
+    const res = await fetch(getPortalBasePath() + '/me');
     if (res.ok) {
       const payload = await res.json();
       if (payload && payload.ok && payload.data && payload.data.username) {
         if (!isContextValid()) return;
-        console.log('[INHACK Extension] Syncing logged-in user to background:', payload.data.username);
         chrome.runtime.sendMessage({
           type: "SET_USER",
           username: payload.data.username,
@@ -152,19 +145,19 @@ async function syncUserSession() {
       }
     }
     if (!isContextValid()) return;
-    console.log('[INHACK Extension] Syncing logged-out user to background.');
     chrome.runtime.sendMessage({ type: "CLEAR_USER" });
   } catch (e) {
-    console.warn('[INHACK Extension] Failed to sync user session:', e);
+    // Silent fail
   }
 }
 
-// Run session sync if we are on the portal origin
-const isPortalOrigin = window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1' || 
-                       window.location.hostname === 'ddyoru.duckdns.org';
-if (isPortalOrigin) {
-  syncUserSession();
+// Run session sync if we are on the portal origin (verified by background config)
+if (isContextValid()) {
+  chrome.runtime.sendMessage({ type: "CHECK_PORTAL_ORIGIN" }, (response) => {
+    if (response && response.isValid) {
+      syncUserSession();
+    }
+  });
 }
 
 // Check if we need to show the logout blocked alert on dreamhack.io
@@ -177,17 +170,12 @@ if (isDreamhackDomain) {
     alertTriggered = true;
 
     chrome.storage.local.remove('showLogoutBlockedAlert', () => {
-      console.log('[INHACK Extension] Dispensing showLogoutBlockedAlert. Displaying notice...');
-      
-      // Delay to let browser render the page completely first
       setTimeout(() => {
         alert('[INHACK] 드림핵 로그아웃 시도가 감지되어 차단되었습니다. 다른 사용자의 공용 세션을 보호하기 위해 서버 로그아웃을 방지하고 로컬 브라우저 쿠키만 삭제합니다.');
         
         if (forceRedirect) {
-          // If we had to catch the flag late (e.g. from listener), force reload & redraw the main page layout
           window.location.href = 'https://dreamhack.io/';
         } else {
-          // Normal flow: just reload current page
           window.location.reload();
         }
       }, 600);
@@ -201,17 +189,14 @@ if (isDreamhackDomain) {
       if (data && data.showLogoutBlockedAlert) {
         triggerAlertAndReload(false);
       } else {
-        // Fallback: if not set yet, listen for the changes dynamically for 2 seconds (in case background script was slow)
         const storageListener = (changes, namespace) => {
           if (!isContextValid()) return;
           if (namespace === 'local' && changes.showLogoutBlockedAlert && changes.showLogoutBlockedAlert.newValue === true) {
-            console.log('[INHACK Extension] Detected showLogoutBlockedAlert flag from dynamic listener.');
             chrome.storage.onChanged.removeListener(storageListener);
-            triggerAlertAndReload(true); // Force redirect to avoid blank page
+            triggerAlertAndReload(true);
           }
         };
         chrome.storage.onChanged.addListener(storageListener);
-        // Timeout after 2 seconds to avoid memory leaks
         setTimeout(() => {
           if (isContextValid()) {
             chrome.storage.onChanged.removeListener(storageListener);
@@ -224,7 +209,6 @@ if (isDreamhackDomain) {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', checkAlertFlag);
   } else {
-    // If DOM is already loaded, check with a slight delay
     setTimeout(checkAlertFlag, 400);
   }
 
@@ -235,16 +219,10 @@ if (isDreamhackDomain) {
       return;
     }
 
-    console.log('[INHACK Extension] Performing client-side logout interception...');
-    
-    // 1. Immediately alert the user on the current page before navigation starts
     alert('[INHACK] 드림핵 로그아웃 시도가 감지되어 차단되었습니다. 다른 사용자의 공용 세션을 보호하기 위해 서버 로그아웃을 방지하고 로컬 브라우저 쿠키만 삭제합니다.');
 
-    // 2. Tell background worker to discard cookies and log to portal
     chrome.runtime.sendMessage({ type: "STUDENT_LOGOUT_INTERCEPT" }, () => {
-      // 3. Clear storage flag just in case
       chrome.storage.local.remove('showLogoutBlockedAlert', () => {
-        // 4. Redirect to main page only after cookies are cleared
         window.location.href = 'https://dreamhack.io/';
       });
     });
@@ -259,7 +237,6 @@ if (isDreamhackDomain) {
         try {
           const url = new URL(target.href);
           if (url.pathname.includes('/users/logout')) {
-            // Stop the navigation
             e.preventDefault();
             e.stopPropagation();
             performClientSideLogoutBlock();
@@ -279,7 +256,6 @@ if (isDreamhackDomain) {
       try {
         const url = new URL(form.action);
         if (url.pathname.includes('/users/logout')) {
-          // Stop form submission
           e.preventDefault();
           e.stopPropagation();
           performClientSideLogoutBlock();
@@ -293,7 +269,6 @@ if (isDreamhackDomain) {
 window.addEventListener('INHACK_SAVE_MASTER_KEY', (event) => {
   if (!isContextValid()) return;
   const { jwk } = event.detail;
-  console.log('[INHACK Extension] Received E2E master key save request.');
   chrome.runtime.sendMessage({
     type: "SAVE_MASTER_KEY",
     jwk
@@ -303,11 +278,9 @@ window.addEventListener('INHACK_SAVE_MASTER_KEY', (event) => {
 // Listen for admin E2E auto login and session regeneration trigger from webpage
 window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', (event) => {
   if (!isContextValid()) {
-    console.warn('[INHACK Extension] Context invalidated. Reloading...');
     window.location.reload();
     return;
   }
-  console.log('[INHACK Extension] Received admin E2E auto login trigger from webpage...');
   const { email, encryptedPassword, iv } = event.detail;
 
   chrome.runtime.sendMessage({
@@ -317,13 +290,11 @@ window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', (event) => {
     iv
   }, (response) => {
     if (response && response.ok) {
-      console.log('[INHACK Extension] Admin E2E auto login completed successfully.');
       window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', {
         detail: { ok: true }
       }));
     } else {
       const errMsg = response?.message || 'unknown error';
-      console.error('[INHACK Extension] Admin E2E auto login failed:', errMsg);
       window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', {
         detail: { ok: false, message: errMsg }
       }));
@@ -334,12 +305,10 @@ window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', (event) => {
 // Intercept wargame challenge solves on dreamhack.io page
 const isDreamhack = window.location.hostname.endsWith('dreamhack.io');
 if (isDreamhack) {
-  // Listen for the custom DOM event and forward it to the background script
   window.addEventListener('DREAMHACK_CHALLENGE_SOLVED_EVENT', (event) => {
     if (!isContextValid()) return;
     const { challengeId, challengeName } = event.detail;
     
-    // Resolve challenge title from DOM elements if possible for readability
     let resolvedChallengeName = challengeName;
     try {
       const titleEl = document.querySelector('h1, h2, .challenge-title, [class*="title" i]');

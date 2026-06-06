@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const db = require('../config/db');
+const env = require('../config/env');
 const { sendJson } = require('../helpers/response');
+const basePath = env.BASE_PATH || '/homepage';
 
 const { compilePageHtml } = require('../helpers/template');
 const fs = require('fs');
@@ -19,15 +21,7 @@ router.get('/', (req, res) => {
   }
 });
 
-// Redirect legacy /homepage requests to root /
-router.get('/homepage', (req, res) => {
-  res.redirect('/');
-});
 
-// Redirect legacy /homepage/main requests to root /
-router.get('/homepage/main', (req, res) => {
-  res.redirect('/');
-});
 
 // Helper to resolve current user's role
 function getUserRole(req) {
@@ -67,7 +61,8 @@ router.get('/navigation', (req, res) => {
           return sendJson(res, { status: 500, ok: false, message: 'Failed to load navigation', code: 'SERVER_ERROR' });
         }
         try {
-          const menuItems = JSON.parse(data);
+          const resolvedData = data.replace(/\{\{BASE_PATH\}\}/g, basePath);
+          const menuItems = JSON.parse(resolvedData);
           const filtered = filterMenuItems(menuItems, role);
           return sendJson(res, { status: 200, ok: true, data: filtered, code: 'SUCCESS' });
         } catch (e) {
@@ -78,7 +73,8 @@ router.get('/navigation', (req, res) => {
     }
     
     try {
-      const menuItems = JSON.parse(row.content_md);
+      const resolvedContent = row.content_md.replace(/\{\{BASE_PATH\}\}/g, basePath);
+      const menuItems = JSON.parse(resolvedContent);
       const filtered = filterMenuItems(menuItems, role);
       return sendJson(res, { status: 200, ok: true, data: filtered, code: 'SUCCESS' });
     } catch (e) {
@@ -166,23 +162,35 @@ router.get('/frags/:id*', (req, res, next) => {
           return next();
         }
         res.set('Content-Type', 'text/html');
-        return res.send(contentRow.content_html);
+        const resolvedHtml = contentRow.content_html.replace(/\{\{BASE_PATH\}\}/g, basePath);
+        return res.send(resolvedHtml);
       });
     } else {
+      const fragmentPath = path.join(__dirname, '../../src/html/fragments', originalUrl);
+      if (fs.existsSync(fragmentPath)) {
+        try {
+          const fileContent = fs.readFileSync(fragmentPath, 'utf8');
+          const resolvedContent = fileContent.replace(/\{\{BASE_PATH\}\}/g, basePath);
+          if (originalUrl.endsWith('.json')) {
+            res.set('Content-Type', 'application/json');
+          } else {
+            res.set('Content-Type', 'text/html');
+          }
+          return res.send(resolvedContent);
+        } catch (readErr) {
+          console.error('[Fragment Router] Failed to read static fragment:', readErr);
+          return next();
+        }
+      }
       next();
     }
   });
 });
 
-// /homepage/:url redirects to /:url (e.g. /homepage/login -> /login)
-router.get('/homepage/:url', (req, res) => {
-  res.redirect(`/${req.params.url}`);
-});
-
 // Serve Admin Page Directly with Session Guard
 router.get('/admin', (req, res) => {
   if (!req.session.user || !req.session.user.isAdmin) {
-    return res.redirect('/login');
+    return res.redirect(basePath + '/login');
   }
   try {
     const html = compilePageHtml(path.join(__dirname, '../../src/html/admin.html'));
@@ -203,17 +211,17 @@ router.get('/:url', (req, res) => {
   
   // Guard: Redirect unauthenticated requests to Dreamhack to login page
   if (fileName === 'dreamhack' && !req.session.user) {
-    return res.redirect('/login');
+    return res.redirect(basePath + '/login');
   }
 
   // Guard: Redirect unauthenticated requests to My Page to login page
   if (fileName === 'mypage' && !req.session.user) {
-    return res.redirect('/login');
+    return res.redirect(basePath + '/login');
   }
 
   // Guard: Redirect unauthenticated/non-admin requests to Admin Panel to login page
   if (fileName === 'admin' && (!req.session.user || !req.session.user.isAdmin)) {
-    return res.redirect('/login');
+    return res.redirect(basePath + '/login');
   }
 
   const filePath = path.join(__dirname, `../../src/html/${fileName}.html`);
