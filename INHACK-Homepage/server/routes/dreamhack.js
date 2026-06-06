@@ -40,8 +40,9 @@ router.get('/encrypted-credentials', (req, res) => {
       }
 
       return sendJson(res, {
-        status: 404, ok: false, action: 'read', resource: 'dreamhack_credentials',
-        message: 'No credentials found in database or environment', code: 'NOT_FOUND'
+        status: 200, ok: true, action: 'read', resource: 'dreamhack_credentials',
+        message: 'No credentials found in database or environment', code: 'NOT_FOUND',
+        data: null
       });
     }
 
@@ -267,8 +268,9 @@ router.get('/shared-session', (req, res) => {
     }
     if (!rows || rows.length === 0) {
       return sendJson(res, {
-        status: 404, ok: false, action: 'read', resource: 'dreamhack',
-        message: 'Shared session not found', code: 'NOT_FOUND'
+        status: 200, ok: true, action: 'read', resource: 'dreamhack',
+        message: 'Shared session not found', code: 'NOT_FOUND',
+        data: null
       });
     }
 
