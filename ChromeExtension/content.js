@@ -97,32 +97,66 @@ window.addEventListener('INHACK_DREAMHACK_SYNC_TRIGGER', () => {
 });
 
 // Listen for shared session load trigger from the webpage
-window.addEventListener('INHACK_DREAMHACK_LOAD_TRIGGER', () => {
+window.addEventListener('INHACK_DREAMHACK_LOAD_TRIGGER', async () => {
   if (!isContextValid()) {
     window.location.reload();
     return;
   }
   
-  chrome.runtime.sendMessage({ 
-    type: "LOAD_SHARED_SESSION"
-  }, (response) => {
-    if (chrome.runtime.lastError) {
-      window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_RESPONSE', {
-        detail: { ok: false, message: `익스텐션 오류: ${chrome.runtime.lastError.message}` }
-      }));
-      return;
+  try {
+    // 1. Fetch shared session cookies same-origin from portal
+    const res = await fetch(getPortalBasePath() + '/dreamhack/shared-session');
+    if (!res.ok) {
+      throw new Error("Failed to fetch shared session from portal (make sure admin has registered it)");
     }
-    if (response && response.ok) {
-      window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_RESPONSE', {
-        detail: { ok: true }
-      }));
-    } else {
-      const errMsg = response?.message || 'unknown error';
-      window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_RESPONSE', {
-        detail: { ok: false, message: errMsg }
-      }));
+    const resData = await res.json();
+    if (!resData.ok || !resData.data || !resData.data.sessionid) {
+      throw new Error(resData.message || "Invalid shared session data");
     }
-  });
+
+    const { sessionid, csrftoken } = resData.data;
+
+    // 2. Delegate cookie writing and verification to background script
+    chrome.runtime.sendMessage({ 
+      type: "LOAD_SHARED_SESSION",
+      sessionid,
+      csrftoken
+    }, async (response) => {
+      if (chrome.runtime.lastError) {
+        window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_RESPONSE', {
+          detail: { ok: false, message: `익스텐션 오류: ${chrome.runtime.lastError.message}` }
+        }));
+        return;
+      }
+      
+      if (response && response.ok) {
+        window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_RESPONSE', {
+          detail: { ok: true }
+        }));
+      } else {
+        const errMsg = response?.message || 'unknown error';
+        
+        // Invalidate on portal if verification failed and background requests it
+        if (response && response.needsInvalidate) {
+          try {
+            await fetch(getPortalBasePath() + '/dreamhack/invalidate-session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionid: response.sessionid })
+            });
+          } catch (e) {}
+        }
+
+        window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_RESPONSE', {
+          detail: { ok: false, message: errMsg }
+        }));
+      }
+    });
+  } catch (err) {
+    window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_RESPONSE', {
+      detail: { ok: false, message: err.message }
+    }));
+  }
 });
 
 // Listen for admin logout shared trigger from the webpage
@@ -320,11 +354,41 @@ window.addEventListener('INHACK_ADMIN_AUTO_LOGIN_TRIGGER', (event) => {
     email,
     encryptedPassword,
     iv
-  }, (response) => {
-    if (response && response.ok) {
+  }, async (response) => {
+    if (chrome.runtime.lastError) {
       window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', {
-        detail: { ok: true }
+        detail: { ok: false, message: `익스텐션 오류: ${chrome.runtime.lastError.message}` }
       }));
+      return;
+    }
+
+    if (response && response.ok && response.sessions) {
+      try {
+        // Sync sessions to portal same-origin
+        const syncRes = await fetch(getPortalBasePath() + '/dreamhack/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessions: response.sessions })
+        });
+        
+        if (!syncRes.ok) {
+          const syncErr = await syncRes.text();
+          throw new Error(`포털 서버 동기화 실패: ${syncErr}`);
+        }
+
+        const syncData = await syncRes.json();
+        if (!syncData.ok) {
+          throw new Error(syncData.message || '포털 서버 동기화 응답 오류');
+        }
+
+        window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', {
+          detail: { ok: true }
+        }));
+      } catch (syncErr) {
+        window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', {
+          detail: { ok: false, message: syncErr.message }
+        }));
+      }
     } else {
       const errMsg = response?.message || 'unknown error';
       window.dispatchEvent(new CustomEvent('INHACK_ADMIN_AUTO_LOGIN_RESPONSE', {

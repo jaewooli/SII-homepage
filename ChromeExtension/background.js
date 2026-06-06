@@ -190,28 +190,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   } else if (msg.type === "LOAD_SHARED_SESSION") {
     (async () => {
       try {
-        if (!sender.tab || !sender.tab.url) {
-          throw new Error("Message sender tab not resolved");
+        const { sessionid, csrftoken } = msg;
+        if (!sessionid) {
+          throw new Error("Invalid session ID passed from content script");
         }
-        const portalBase = extractPortalBase(sender.tab.url);
-
-        // Fetch shared session cookies from OCI server
-
-        const res = await fetch(`${portalBase}/dreamhack/shared-session`, {
-          credentials: 'include'
-        });
-        if (!res.ok) {
-          throw new Error("Failed to fetch shared session from portal (make sure admin has registered it)");
-        }
-        const resData = await res.json();
-        if (!resData.ok || !resData.data || !resData.data.sessionid) {
-          throw new Error(resData.message || "Invalid shared session data");
-        }
-
-        const { sessionid, csrftoken } = resData.data;
 
         // Set cookies in the user's browser for dreamhack.io
-
         await chrome.cookies.set({
           url: 'https://dreamhack.io',
           domain: '.dreamhack.io',
@@ -237,8 +221,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           });
         }
 
-        // Verify session validity from the client-side browser context (bypasses Cloudflare block on OCI)
-
+        // Verify session validity from the client-side browser context
         let isValid = false;
         try {
           const verifyRes = await fetch('https://dreamhack.io/', {
@@ -252,35 +235,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             isValid = html.includes('/users/logout');
           }
         } catch (verifyErr) {
-
-          // If the network request itself fails in the client browser, assume valid to avoid false deletion
           isValid = true;
         }
 
         if (!isValid) {
-
-          // Delete from portal database
-          await fetch(`${portalBase}/dreamhack/invalidate-session`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ sessionid })
-          }).catch(e => console.warn('[INHACK Background] Invalidation request failed:', e.message));
-
           // Clear cookies locally so they don't linger
           await clearDreamhackCookiesLocally();
-
-          throw new Error('선택된 공유 세션이 만료되었습니다. 포털에서 자동 삭제 처리되었으니 세션 발급을 다시 시도해주세요.');
+          sendResponse({ ok: false, needsInvalidate: true, sessionid, message: '선택된 공유 세션이 만료되었습니다. 포털에서 자동 삭제 처리되었으니 세션 발급을 다시 시도해주세요.' });
+          return;
         }
 
         // Open Dreamhack in a new tab upon successful session load
         chrome.tabs.create({ url: 'https://dreamhack.io/', active: true });
-
         sendResponse({ ok: true });
       } catch (err) {
-
         sendResponse({ ok: false, message: err.message });
       }
     })();
@@ -289,48 +257,32 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
       try {
         if (msg.sessions && msg.sessions.length > 0) {
-
           for (let i = 0; i < msg.sessions.length; i++) {
             const s = msg.sessions[i];
             try {
               await logoutDreamhackSharedSession(s.sessionid, s.csrftoken);
-
-            } catch (err) {
-
-            }
+            } catch (err) {}
           }
         } else if (msg.sessionid) {
           await logoutDreamhackSharedSession(msg.sessionid, msg.csrftoken);
         }
         sendResponse({ ok: true });
       } catch (err) {
-
         sendResponse({ ok: false, message: err.message });
       }
     })();
     return true; // Keep message channel open for async response
   } else if (msg.type === "SET_USER") {
     chrome.storage.local.set({ INHACKuser: { username: msg.username, isAdmin: msg.isAdmin || false } });
-
     sendResponse({ ok: true });
   } else if (msg.type === "CLEAR_USER") {
     chrome.storage.local.remove('INHACKuser');
-
     sendResponse({ ok: true });
   } else if (msg.type === "STUDENT_LOGOUT_INTERCEPT") {
     (async () => {
       try {
-
         // Clear cookies locally
         await clearDreamhackCookiesLocally();
-
-        // Notify portal for logs
-        const portalOrigin = await getValidPortalOrigin();
-        fetch(`${portalOrigin}/dreamhack/intercept-logout`, {
-          method: 'POST',
-          credentials: 'include'
-        }).catch(e => console.warn('[INHACK Background] Failed to log intercept:', e));
-
         sendResponse({ ok: true });
       } catch (err) {
 
@@ -366,11 +318,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   } else if (msg.type === "ADMIN_AUTO_LOGIN_E2E") {
     (async () => {
       try {
-        if (!sender.tab || !sender.tab.url) {
-          throw new Error("Message sender tab not resolved");
-        }
-        const portalBase = extractPortalBase(sender.tab.url);
-
         // 1. Get Master Key from local storage
         const storageData = await chrome.storage.local.get('inhack_master_key');
         if (!storageData || !storageData.inhack_master_key) {
@@ -378,18 +325,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
 
         // 2. Decrypt Password E2E
-
         const plainPassword = await decryptPasswordE2E(
           msg.encryptedPassword,
           msg.iv,
           storageData.inhack_master_key
         );
 
-        // 3. Perform login to Dreamhack and sync back to the portal
-        const result = await loginToDreamhackAndSync(msg.email, plainPassword, portalBase);
-        sendResponse({ ok: true, sessionid: result.sessionid, csrftoken: result.csrftoken });
+        // 3. Perform login to Dreamhack
+        const result = await loginToDreamhack(msg.email, plainPassword);
+        sendResponse({ ok: true, sessions: result.sessions });
       } catch (err) {
-
         sendResponse({ ok: false, message: err.message });
       }
     })();
@@ -401,19 +346,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         
         // Retrieve username from local storage cache first
         const userData = await chrome.storage.local.get('INHACKuser');
-        let username = userData && userData.INHACKuser && userData.INHACKuser.username;
+        const username = userData && userData.INHACKuser && userData.INHACKuser.username;
         
         if (!username) {
-
-          const meRes = await fetch(`${portalOrigin}/me`, { credentials: 'include' });
-          if (!meRes.ok) {
-            throw new Error(`Failed to query session identity: status ${meRes.status}`);
-          }
-          const meData = await meRes.json();
-          if (!meData.ok || !meData.data || !meData.data.username) {
-            throw new Error('User is not logged into INHACK Portal');
-          }
-          username = meData.data.username;
+          throw new Error('User is not logged into INHACK Portal (Session cache missing)');
         }
 
         const logRes = await fetch(`${portalOrigin}/dreamhack/solve-log`, {
@@ -432,13 +368,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         
         const logData = await logRes.json();
         if (logRes.ok && logData.ok) {
-
           sendResponse({ ok: true });
         } else {
           throw new Error(logData.message || 'Server log failed');
         }
       } catch (err) {
-
         sendResponse({ ok: false, error: err.message });
       }
     })();
@@ -501,13 +435,12 @@ async function pollForLoggedInCookies(sessionNum) {
   throw new Error(`Session ${sessionNum} sessionid cookie not found after login.`);
 }
 
-async function loginToDreamhackAndSync(email, password, origin) {
+async function loginToDreamhack(email, password) {
   const cleanEmail = email ? email.trim() : '';
 
   const sessions = [];
 
   for (let i = 0; i < 3; i++) {
-
     // Clear existing cookies locally to force Django to generate a fresh session ID
     await clearDreamhackCookiesLocally();
 
@@ -579,7 +512,6 @@ async function loginToDreamhackAndSync(email, password, origin) {
       sessions.push(sessionData);
 
     } finally {
-
       try {
         await chrome.tabs.remove(tab.id);
       } catch (e) {}
@@ -588,26 +520,11 @@ async function loginToDreamhackAndSync(email, password, origin) {
     }
   }
 
-  const syncRes = await fetch(`${origin}/dreamhack/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    credentials: 'include',
-    body: JSON.stringify({ sessions })
-  });
-
-  if (!syncRes.ok) {
-    const syncErr = await syncRes.text();
-    throw new Error(`포털 서버 동기화 실패: ${syncErr}`);
+  if (sessions.length === 0) {
+    throw new Error("드림핵 세션 정보를 획득하는 데 실패했습니다.");
   }
 
-  const syncData = await syncRes.json();
-  if (!syncData.ok) {
-    throw new Error(syncData.message || '포털 서버 동기화 응답 오류');
-  }
-
-  return { sessionid: sessions[0].sessionid, csrftoken: sessions[0].csrftoken };
+  return { sessions };
 }
 
 async function logoutDreamhackSharedSession(sessionid, csrftoken) {
@@ -769,12 +686,21 @@ chrome.webRequest.onBeforeRequest.addListener(
   async (details) => {
     const isAdmin = await isCurrentUserAdmin();
     if (isAdmin) {
-
-      getValidPortalOrigin().then(portalOrigin => {
-        fetch(`${portalOrigin}/dreamhack/clear-shared-session`, {
-          method: 'POST',
-          credentials: 'include'
-        }).catch(e => console.warn('[INHACK Background] Failed to clear shared sessions on admin logout:', e));
+      // Find any active/open portal tab to execute same-origin fetch
+      chrome.tabs.query({}).then(tabs => {
+        const portalTab = tabs.find(t => t.url && isValidPortalOrigin(extractPortalBase(t.url)));
+        if (portalTab) {
+          const portalBase = extractPortalBase(portalTab.url);
+          chrome.scripting.executeScript({
+            target: { tabId: portalTab.id },
+            func: async (basePath) => {
+              try {
+                await fetch(basePath + '/dreamhack/clear-shared-session', { method: 'POST' });
+              } catch(e) {}
+            },
+            args: [portalBase]
+          });
+        }
       });
       return; // Let them logout on the server
     }
@@ -782,31 +708,33 @@ chrome.webRequest.onBeforeRequest.addListener(
     // Set storage flag immediately to minimize race conditions with content.js
     try {
       await chrome.storage.local.set({ 'showLogoutBlockedAlert': true });
-
-    } catch (err) {
-
-    }
+    } catch (err) {}
 
     // Clear cookies locally in parallel (do not block flow)
     clearDreamhackCookiesLocally();
 
-    // Notify portal about interception for debugging logs
-    getValidPortalOrigin().then(portalOrigin => {
-
-      fetch(`${portalOrigin}/dreamhack/intercept-logout`, {
-        method: 'POST',
-        credentials: 'include'
-      }).catch(e => console.warn('[INHACK Background] Failed to log intercept:', e));
+    // Find any active/open portal tab to execute same-origin fetch
+    chrome.tabs.query({}).then(tabs => {
+      const portalTab = tabs.find(t => t.url && isValidPortalOrigin(extractPortalBase(t.url)));
+      if (portalTab) {
+        const portalBase = extractPortalBase(portalTab.url);
+        chrome.scripting.executeScript({
+          target: { tabId: portalTab.id },
+          func: async (basePath) => {
+            try {
+              await fetch(basePath + '/dreamhack/intercept-logout', { method: 'POST' });
+            } catch(e) {}
+          },
+          args: [portalBase]
+        });
+      }
     });
 
     // Force the tab to redirect ONLY if it is not a main_frame navigation (which DNR redirects automatically)
     if (details.type !== 'main_frame' && details.tabId && details.tabId !== chrome.tabs.TAB_ID_NONE) {
       try {
         await chrome.tabs.update(details.tabId, { url: 'https://dreamhack.io/' });
-
-      } catch (err) {
-
-      }
+      } catch (err) {}
     }
   },
   { urls: ["https://dreamhack.io/users/logout", "https://dreamhack.io/users/logout/"] }
