@@ -60,6 +60,12 @@ window.addEventListener('INHACK_DREAMHACK_SYNC_TRIGGER', () => {
   chrome.runtime.sendMessage({ 
     type: "GET_DREAMHACK_COOKIES"
   }, (response) => {
+    if (chrome.runtime.lastError) {
+      window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_SYNC_RESPONSE', {
+        detail: { ok: false, message: `익스텐션 오류: ${chrome.runtime.lastError.message}` }
+      }));
+      return;
+    }
     if (response && response.ok) {
       window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_SYNC_RESPONSE', {
         detail: { 
@@ -87,6 +93,12 @@ window.addEventListener('INHACK_DREAMHACK_LOAD_TRIGGER', () => {
   chrome.runtime.sendMessage({ 
     type: "LOAD_SHARED_SESSION"
   }, (response) => {
+    if (chrome.runtime.lastError) {
+      window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_RESPONSE', {
+        detail: { ok: false, message: `익스텐션 오류: ${chrome.runtime.lastError.message}` }
+      }));
+      return;
+    }
     if (response && response.ok) {
       window.dispatchEvent(new CustomEvent('INHACK_DREAMHACK_LOAD_RESPONSE', {
         detail: { ok: true }
@@ -114,6 +126,12 @@ window.addEventListener('INHACK_ADMIN_LOGOUT_SHARED_TRIGGER', (event) => {
     csrftoken,
     sessions
   }, (response) => {
+    if (chrome.runtime.lastError) {
+      window.dispatchEvent(new CustomEvent('INHACK_ADMIN_LOGOUT_SHARED_RESPONSE', {
+        detail: { ok: false, message: `익스텐션 오류: ${chrome.runtime.lastError.message}` }
+      }));
+      return;
+    }
     if (response && response.ok) {
       window.dispatchEvent(new CustomEvent('INHACK_ADMIN_LOGOUT_SHARED_RESPONSE', {
         detail: { ok: true }
