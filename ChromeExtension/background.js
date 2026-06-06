@@ -104,14 +104,22 @@ function verifyMessageSender(sender) {
 }
 
 function extractPortalBase(urlStr) {
-  if (!urlStr) return 'http://localhost:8080/homepage';
+  const fallback = typeof PORTAL_URL !== 'undefined' ? PORTAL_URL : 'http://localhost:8080/homepage';
+  if (!urlStr) return fallback;
   try {
-    let portalBase = urlStr.split('?')[0].split('#')[0];
-    portalBase = portalBase.replace(/\/(dreamhack|admin|mypage|login|index\.html|dreamhack\.html|admin\.html|mypage\.html|login\.html)\/?$/, '');
-    portalBase = portalBase.replace(/\/$/, '');
-    return portalBase;
+    const url = new URL(urlStr);
+    const origins = typeof ALLOWED_ORIGINS !== 'undefined' ? ALLOWED_ORIGINS : ["http://localhost:8080", "http://127.0.0.1:8080", "https://localhost:8080", "https://127.0.0.1:8080"];
+    if (!origins.includes(url.origin)) {
+      return fallback;
+    }
+    const targetPathname = typeof PORTAL_URL !== 'undefined' ? new URL(PORTAL_URL).pathname.replace(/\/$/, '') : '/homepage';
+    const cleanPath = url.pathname.replace(/\/$/, '');
+    if (cleanPath === targetPathname || cleanPath.startsWith(targetPathname + '/')) {
+      return url.origin + targetPathname;
+    }
+    return fallback;
   } catch (e) {
-    return 'http://localhost:8080/homepage';
+    return fallback;
   }
 }
 
@@ -152,7 +160,8 @@ chrome.storage.local.get('portalOrigin').then(res => {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "CHECK_PORTAL_ORIGIN") {
     const isValid = sender.tab && sender.tab.url ? isValidPortalOrigin(extractPortalBase(sender.tab.url)) : false;
-    sendResponse({ isValid });
+    const basePath = typeof PORTAL_URL !== 'undefined' ? new URL(PORTAL_URL).pathname.replace(/\/$/, '') : '/homepage';
+    sendResponse({ isValid, basePath });
     return true;
   }
 

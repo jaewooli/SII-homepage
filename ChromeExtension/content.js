@@ -4,6 +4,19 @@ function isContextValid() {
 }
 
 function getPortalBasePath() {
+  // 1. Try to read window.__BASE_PATH__ injected by the server in the DOM script tags
+  try {
+    const scripts = document.getElementsByTagName('script');
+    for (let i = 0; i < scripts.length; i++) {
+      const content = scripts[i].textContent || '';
+      const match = content.match(/window\.__BASE_PATH__\s*=\s*['"]([^'"]+)['"]/);
+      if (match) {
+        return match[1].replace(/\/$/, '');
+      }
+    }
+  } catch (e) {}
+
+  // 2. Fallback to URL parsing
   try {
     let path = window.location.pathname.split('?')[0].split('#')[0];
     path = path.replace(/\/(dreamhack|admin|mypage|login|index\.html|dreamhack\.html|admin\.html|mypage\.html|login\.html)\/?$/, '');
@@ -146,10 +159,11 @@ window.addEventListener('INHACK_ADMIN_LOGOUT_SHARED_TRIGGER', (event) => {
 });
 
 // Automatically update user session state in the extension on page load
-async function syncUserSession() {
+async function syncUserSession(basePath) {
   if (!isContextValid()) return;
   try {
-    const res = await fetch(getPortalBasePath() + '/me');
+    const apiPath = (basePath || getPortalBasePath()) + '/me';
+    const res = await fetch(apiPath);
     if (res.ok) {
       const payload = await res.json();
       if (payload && payload.ok && payload.data && payload.data.username) {
@@ -173,7 +187,7 @@ async function syncUserSession() {
 if (isContextValid()) {
   chrome.runtime.sendMessage({ type: "CHECK_PORTAL_ORIGIN" }, (response) => {
     if (response && response.isValid) {
-      syncUserSession();
+      syncUserSession(response.basePath);
     }
   });
 }
