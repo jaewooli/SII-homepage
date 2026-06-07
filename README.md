@@ -45,7 +45,7 @@
 ```
 
 ### 1) Dreamhack Interception & Hooking Mechanism
-* **Main World Hooking**: [`ChromeExtension/content.js`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/ChromeExtension/content.js)는 보안 컨텍스트 격리를 우회하기 위해 `dreamhack.io` 메인 월드(Main World) 컨텍스트에 스크립트를 동적으로 주입하여 브라우저의 기본 `window.fetch` 및 `XMLHttpRequest` API를 후킹(Monkey-Patching)합니다.
+* **Main World Hooking**: [`ChromeExtension/content.js`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/ChromeExtension/content.js)는 보안 컨텍스트 격리를 우회하기 위해 `dreamhack.io` 메인 월드(Main World) 컨텍스트에 스크립트를 동적으로 주입하여 브라우저의 기본 `window.fetch` 및 `XMLHttpRequest` API를 후킹(Monkey-Patching)합니다.
 * **Event Bridging**: 정답 플래그 제출 API 호출 결과가 `{ correct: true }`일 시, 커스텀 DOM Event(`DREAMHACK_CHALLENGE_SOLVED_EVENT`)를 발송하여 격리된 콘텐츠 스크립트 영역으로 데이터를 전달합니다.
 * **SameSite Lax Bypass**: 크로스 오리진 요청 시 세션 쿠키 미전송 이슈를 예방하기 위해, 익스텐션 백그라운드가 직접 API를 호출하는 대신 포탈과 동일 오리진을 보장하는 콘텐츠 스크립트 측에서 `fetch` 통신을 처리하도록 설계하여 쿠키 전송의 안정성을 확보했습니다.
 
@@ -59,7 +59,7 @@
 * **CSV 일괄 등록**: 다수의 회원 정보를 **아이디,이름,비밀번호** 구조의 CSV 파일 업로드를 통해 단일 배치로 일괄 가입 처리하는 고속 회원 가입 인프라를 제공합니다.
 
 ### 2) Visual CMS Block Compiler (블록 기반 컨텐츠 관리 엔진)
-* **JSON-to-HTML Compilation Engine**: [`helpers/template.js`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/INHACK-Homepage/server/helpers/template.js)의 컴파일러가 JSON 블록 스키마(`header`, `features`, `timeline`, `ctf_dashboard` 등)를 해석하여 시각적인 정적 HTML 페이지로 변환해 서빙합니다.
+* **JSON-to-HTML Compilation Engine**: [`helpers/template.js`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/INHACK-Homepage/server/helpers/template.js)의 컴파일러가 JSON 블록 스키마(`header`, `features`, `timeline`, `ctf_dashboard` 등)를 해석하여 시각적인 정적 HTML 페이지로 변환해 서빙합니다.
 * **2단 분할 리사이저**: 관리자가 UI 상에서 트리 뷰와 에디팅 폼 사이의 경계를 드래그하여 실시간으로 리사이징(`workspace-resizer`)할 수 있는 UI 환경을 갖추고 있습니다.
 
 ### 3) Academic Semester Archiver (학기 전환 도구)
@@ -75,19 +75,19 @@
 
 ## 📂 3. Directory Map & Code References
 
-* **[`ChromeExtension/`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/ChromeExtension)**: Manifest V3 크롬 확장 애플리케이션
-  * [`manifest.json`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/ChromeExtension/manifest.json): 확장 앱 인프라 및 권한 선언
-  * [`content.js`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/ChromeExtension/content.js): Main World Fetch/XHR Hook 주입 및 SameSite Lax 우회 통신 처리
-  * [`background.js`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/ChromeExtension/background.js): 이벤트 중계 서비스 워커
-* **[`INHACK-Homepage/`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/INHACK-Homepage)**: 웹 포탈 메인 서비스 소스
-  * **[`server/`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/INHACK-Homepage/server)**: Node.js Express 백엔드 엔진
-    * [`app.js`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/INHACK-Homepage/server/app.js): Express 인스턴스 초기화 및 라우터 마운트 엔트리
-    * [`config/db.js`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/INHACK-Homepage/server/config/db.js): SQLite 마이그레이션 및 초기 사용자 시딩 스키마 정의
-    * [`routes/admin.js`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/INHACK-Homepage/server/routes/admin.js): 인가 정책 관리, 학기 전환 병합 알고리즘, 복원 파이프라인
-    * [`helpers/template.js`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/INHACK-Homepage/server/helpers/template.js): 정적 HTML 컴파일 렌더러
-  * **[`src/`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/INHACK-Homepage/src)**: 퍼블릭 자바스크립트 및 에디터 리소스
-    * [`css/style.css`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/INHACK-Homepage/src/css/style.css): 전역 스타일 토큰 정의 및 테이블 반응형 뷰 스크롤링 CSS
-    * [`js/admin.js`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/INHACK-Homepage/src/js/admin.js): CMS 에디터 상태 동기화 및 동적 복원 모달 UI 스크립트
+* **[`ChromeExtension/`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/ChromeExtension)**: Manifest V3 크롬 확장 애플리케이션
+  * [`manifest.json`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/ChromeExtension/manifest.json): 확장 앱 인프라 및 권한 선언
+  * [`content.js`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/ChromeExtension/content.js): Main World Fetch/XHR Hook 주입 및 SameSite Lax 우회 통신 처리
+  * [`background.js`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/ChromeExtension/background.js): 이벤트 중계 서비스 워커
+* **[`INHACK-Homepage/`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/INHACK-Homepage)**: 웹 포탈 메인 서비스 소스
+  * **[`server/`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/INHACK-Homepage/server)**: Node.js Express 백엔드 엔진
+    * [`app.js`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/INHACK-Homepage/server/app.js): Express 인스턴스 초기화 및 라우터 마운트 엔트리
+    * [`config/db.js`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/INHACK-Homepage/server/config/db.js): SQLite 마이그레이션 및 초기 사용자 시딩 스키마 정의
+    * [`routes/admin.js`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/INHACK-Homepage/server/routes/admin.js): 인가 정책 관리, 학기 전환 병합 알고리즘, 복원 파이프라인
+    * [`helpers/template.js`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/INHACK-Homepage/server/helpers/template.js): 정적 HTML 컴파일 렌더러
+  * **[`src/`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/INHACK-Homepage/src)**: 퍼블릭 자바스크립트 및 에디터 리소스
+    * [`css/style.css`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/INHACK-Homepage/src/css/style.css): 전역 스타일 토큰 정의 및 테이블 반응형 뷰 스크롤링 CSS
+    * [`js/admin.js`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/INHACK-Homepage/src/js/admin.js): CMS 에디터 상태 동기화 및 동적 복원 모달 UI 스크립트
 
 ---
 
@@ -96,17 +96,37 @@
 ### 1) Prerequisites
 프로젝트 루트 폴더 및 Express 포탈 루트(`/INHACK-Homepage`)에 동일하게 Node.js 런타임 환경이 요구됩니다.
 
-### 2) Install Dependencies
+### 2) Environment Variables Configuration (.env 설정)
+애플리케이션 구동을 위해 `INHACK-Homepage` 디렉토리 하위에 `.env` 파일을 작성해야 합니다. `INHACK-Homepage/.env.example` 파일을 복사하여 사용할 수 있습니다.
+
+| 환경 변수명 | 필수 여부 | 기본값 | 설명 |
+| :--- | :---: | :--- | :--- |
+| `DREAMHACKEMAIL` | **Yes** | - | 드림핵([dreamhack.io](https://dreamhack.io)) 문제 풀이 이력 크롤링/동기화 시 검증용 관리자 계정 이메일 |
+| `DREAMHACKPASSWORD` | **Yes** | - | 드림핵 관리자 계정 패스워드 |
+| `PORT` | No | `8080` | Express 웹 포탈 서버가 바인딩할 포트 번호 |
+| `SESSION_SECRET` | **Yes** | - | 익스프레스 세션 쿠키를 서명하기 위한 비밀 키 (운영 환경에서는 임의의 보안 문자열 적용 권장) |
+| `SESSION_NAME` | No | `sid` | 세션 ID 쿠키의 이름 |
+| `BASE_PATH` | No | `/homepage` | 서버 배포 시 포탈의 진입 경로가 되는 하위 경로(Subpath) 접두사. (예: `/homepage` 설정 시 모든 라우트가 `/homepage` 하위에서 작동) |
+| `ADMIN_USERNAME` | No | `developer` | 초기 생성될 최고 관리자(Super Admin) 아이디 |
+| `ADMIN_PASSWORD` | No | - | 최고 관리자 계정 초기 생성 시 사용할 패스워드 (미설정 시 내부 로직에 의해 생성) |
+
+#### 💡 `BASE_PATH`에 대한 고려 사항
+* **설정 방식 선택 (애플리케이션 설정 vs Nginx 프록시 설정)**:
+  * **애플리케이션 단 설정 (BASE_PATH 사용 - 권장)**: 애플리케이션 내의 템플릿 컴파일러가 모든 상대/절대 링크에 `{{BASE_PATH}}`를 인젝션하며, 세션 쿠키의 `path` 제한 및 리다이렉트 처리의 안정성을 완벽히 보장할 수 있습니다.
+  * **Nginx 단 설정 (단독)**: Nginx에서 `rewrite`나 `alias`만을 사용할 경우, HTML 내부의 절대 링크 수정(예: `<link href="/assets/...>` 등)과 세션 쿠키 Path 매칭이 수동으로 처리하기 까다로워질 수 있습니다.
+  * **결론**: Nginx를 리버스 프록시로 두고 애플리케이션 내에서도 `BASE_PATH`를 일치시키는 **하이브리드 구성**이 가장 안전합니다.
+
+### 3) Install Dependencies
 ```bash
 npm install
 ```
 
-### 3) Development Run (Nodemon Hot Reloading)
+### 4) Development Run (Nodemon Hot Reloading)
 ```bash
 npm run dev
 ```
 
-### 4) Production Startup
+### 5) Production Startup
 ```bash
 npm start
 ```
@@ -114,4 +134,4 @@ npm start
 ---
 
 > [!IMPORTANT]
-> 개발 및 배포 가이드라인에 대한 준수 사항은 [`DEVELOPMENT_GUIDELINES.md`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/DEVELOPMENT_GUIDELINES.md) 및 [`PROJECT_MEMORY.md`](file:///mnt/e/Programming/Projects/Hosting/SII-homepage/PROJECT_MEMORY.md)에서 더 상세히 추적 및 관리되고 있습니다.
+> 개발 및 배포 가이드라인에 대한 준수 사항은 [`DEVELOPMENT_GUIDELINES.md`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/DEVELOPMENT_GUIDELINES.md) 및 [`PROJECT_MEMORY.md`](file:///mnt/e/Programming/Projects/Hosting/INHACK-homepage/PROJECT_MEMORY.md)에서 더 상세히 추적 및 관리되고 있습니다.
