@@ -936,6 +936,7 @@ router.post('/archive-semester', (req, res) => {
     // 1-1. Gather Special Events (other-events.json)
     const otherData = readFragJson('other-events.json');
     if (otherData && Array.isArray(otherData)) {
+      archiveJson.push({ type: 'spacer', height: '1.75rem' });
       archiveJson.push({
         type: "header",
         title: "📢 특별 행사 및 세션 (Special Events)",
@@ -951,6 +952,7 @@ router.post('/archive-semester', (req, res) => {
     // 1-2. Gather Curriculum & Sub-tracks (curriculum.json & curriculum/*.json)
     const curData = readFragJson('curriculum.json');
     if (curData && Array.isArray(curData)) {
+      archiveJson.push({ type: 'spacer', height: '1.75rem' });
       archiveJson.push({
         type: "header",
         title: "🗺️ 학기 학습 커리큘럼 (Curriculum Roadmap)",
@@ -973,6 +975,7 @@ router.post('/archive-semester', (req, res) => {
       tracks.forEach(track => {
         const trackData = readFragJson(`${track.id}.json`);
         if (trackData && Array.isArray(trackData)) {
+          archiveJson.push({ type: 'spacer', height: '1.75rem' });
           archiveJson.push({
             type: "header",
             title: track.title,
@@ -990,6 +993,7 @@ router.post('/archive-semester', (req, res) => {
     // 1-3. Gather Club Projects (projects.json)
     const projData = readFragJson('projects.json');
     if (projData && Array.isArray(projData)) {
+      archiveJson.push({ type: 'spacer', height: '1.75rem' });
       archiveJson.push({
         type: "header",
         title: "🎴 학기 동아리 연구 프로젝트 (Projects)",
@@ -1005,6 +1009,7 @@ router.post('/archive-semester', (req, res) => {
     // 1-4. Gather CTF Dashboard (ctf.json)
     const ctfData = readFragJson('ctf.json');
     if (ctfData && Array.isArray(ctfData)) {
+      archiveJson.push({ type: 'spacer', height: '1.75rem' });
       archiveJson.push({
         type: "header",
         title: "🏆 CTF Challenge 최종 스코어보드",
