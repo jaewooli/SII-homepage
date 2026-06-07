@@ -532,7 +532,8 @@ router.post('/update-content', (req, res) => {
   if (!req.session.user || !req.session.user.isAdmin) {
     return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
   }
-  const { sectionId, content_md } = req.body; // content_md holds the JSON string
+  const { sectionId } = req.body;
+  let { content_md } = req.body; // content_md holds the JSON string
   if (!sectionId || content_md === undefined) {
     return sendJson(res, { status: 400, ok: false, message: '필수 필드가 누락되었습니다.', code: 'BAD_REQUEST' });
   }
@@ -548,19 +549,24 @@ router.post('/update-content', (req, res) => {
     return sendJson(res, { status: 400, ok: false, message: '올바르지 않은 JSON 형식입니다. 문법을 다시 확인해 주세요.', code: 'INVALID_JSON' });
   }
 
-  // Server-side validation: Navigation menu items must have title and URL
+  // Server-side validation & processing: Navigation menu items must have title and URL
   if (sectionId === 'navigation') {
     if (Array.isArray(jsonData)) {
       for (let i = 0; i < jsonData.length; i++) {
         const item = jsonData[i];
         if (item.type === 'menu_item') {
           const title = (item.title || '').trim();
-          const url = (item.url || '').trim();
+          let url = (item.url || '').trim();
           if (!title || title === '새 메뉴') {
             return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 제목(이름)이 누락되었거나 기본값('새 메뉴')입니다.`, code: 'VALIDATION_ERROR' });
           }
           if (!url || url === '#') {
             return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 URL이 누락되었거나 기본값('#')입니다.`, code: 'VALIDATION_ERROR' });
+          }
+
+          // Path Traversal Mitigation: Block traversal patterns
+          if (url.includes('..') || url.includes('\\')) {
+            return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 URL에 허용되지 않는 문자(.. 또는 \\)가 포함되어 있습니다.`, code: 'VALIDATION_ERROR' });
           }
 
           if (item.allowedRoles && !Array.isArray(item.allowedRoles)) {
@@ -576,19 +582,30 @@ router.post('/update-content', (req, res) => {
             if (!isLocked && !url.startsWith('#')) {
               return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 URL은 '#'으로 시작해야 합니다. ('메뉴 삭제 방지 보호(지울 수 없음)'를 체크하면 '#' 없이 입력할 수 있습니다.)`, code: 'VALIDATION_ERROR' });
             }
+
+            // Prepend BASE_PATH prefix on backend for local root links
+            if (url.startsWith('/')) {
+              url = '{{BASE_PATH}}' + url;
+            }
           }
+          item.url = url;
 
           // Server-side validation: Submenu items (fragments) must have customized title and URL
           if (item.submenus && Array.isArray(item.submenus)) {
             for (let j = 0; j < item.submenus.length; j++) {
               const sub = item.submenus[j];
               const subTitle = (sub.title || '').trim();
-              const subUrl = (sub.url || '').trim();
+              let subUrl = (sub.url || '').trim();
               if (!subTitle || subTitle === '새 서브메뉴') {
                 return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 서브메뉴 #${j + 1} 제목이 누락되었거나 기본값('새 서브메뉴')입니다.`, code: 'VALIDATION_ERROR' });
               }
               if (!subUrl || subUrl === '#' || subUrl.endsWith('/')) {
                 return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 서브메뉴 #${j + 1} URL이 올바르지 않습니다.`, code: 'VALIDATION_ERROR' });
+              }
+
+              // Path Traversal Mitigation: Block traversal patterns
+              if (subUrl.includes('..') || subUrl.includes('\\')) {
+                return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 서브메뉴 #${j + 1} URL에 허용되지 않는 문자(.. 또는 \\)가 포함되어 있습니다.`, code: 'VALIDATION_ERROR' });
               }
 
               if (sub.allowedRoles && !Array.isArray(sub.allowedRoles)) {
@@ -597,14 +614,23 @@ router.post('/update-content', (req, res) => {
 
               const subIsExternal = sub.external || /^https?:\/\//i.test(subUrl);
               if (!subIsExternal) {
-                if (!subUrl.startsWith('#')) {
-                  return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 서브메뉴 #${j + 1} URL은 '#'으로 시작해야 합니다.`, code: 'VALIDATION_ERROR' });
+                if (!subUrl.startsWith('#') && !subUrl.startsWith('/')) {
+                  return sendJson(res, { status: 400, ok: false, message: `메뉴 #${i + 1}의 서브메뉴 #${j + 1} URL은 '#' 또는 '/'로 시작해야 합니다.`, code: 'VALIDATION_ERROR' });
+                }
+
+                // Prepend BASE_PATH prefix on backend for local root links
+                if (subUrl.startsWith('/')) {
+                  subUrl = '{{BASE_PATH}}' + subUrl;
                 }
               }
+              sub.url = subUrl;
             }
           }
         }
       }
+
+      // Re-compile the payload with formatted URLs so the files are saved with {{BASE_PATH}} prefix
+      content_md = JSON.stringify(jsonData, null, 2);
     }
   }
 

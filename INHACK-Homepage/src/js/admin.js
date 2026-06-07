@@ -1927,34 +1927,6 @@ async function initializeAdminPanel() {
               if (item.desc) item.desc = cleanHtml(item.desc);
             });
           }
-          // Reverse-replace window.__BASE_PATH__ to {{BASE_PATH}}
-          if (block.type === 'menu_item') {
-            const formatUrl = (url) => {
-              if (!url) return url;
-              if (/^https?:\/\//i.test(url)) return url; // Skip external links
-              let clean = url;
-              if (window.__BASE_PATH__) {
-                const escapedBasePath = window.__BASE_PATH__.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-                const regex = new RegExp('^' + escapedBasePath + '(?=\\/|$)');
-                clean = clean.replace(regex, '');
-              }
-              if (clean.startsWith('/') && !clean.startsWith('{{BASE_PATH}}')) {
-                clean = '{{BASE_PATH}}' + clean;
-              }
-              return clean;
-            };
-
-            if (block.url) {
-              block.url = formatUrl(block.url);
-            }
-            if (block.submenus) {
-              block.submenus.forEach(sub => {
-                if (sub.url) {
-                  sub.url = formatUrl(sub.url);
-                }
-              });
-            }
-          }
         });
 
         const content_md = JSON.stringify(cleanedBlocks, null, 2);
