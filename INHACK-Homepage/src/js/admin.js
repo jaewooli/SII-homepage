@@ -232,6 +232,138 @@ function showSaveConfirmationModal(sectionId, onConfirm) {
   });
 }
 
+function showRestoreMenuModal(onRestoreSuccess) {
+  const overlay = document.createElement('div');
+  overlay.id = 'admin-restore-menu-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(8, 11, 18, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  `;
+
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    width: 100%;
+    max-width: 500px;
+    padding: 2rem;
+    background: #0d131f;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    color: #fff;
+    font-family: 'Inter', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh;
+  `;
+
+  modal.innerHTML = `
+    <h3 style="color: #10b981; font-size: 1.15rem; margin-top: 0; margin-bottom: 1rem; font-weight: 700; letter-spacing: 0.03em;">♻️ 삭제된 메뉴 복원</h3>
+    <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.5; margin-bottom: 1.25rem;">
+      디스크 백업 파일(.json.bak) 목록을 기반으로 지워진 메뉴 및 세부 메뉴 데이터를 복원합니다. 복원 시 네비게이션 설정에 자동으로 메뉴가 다시 재등록됩니다.
+    </p>
+    <div id="deleted-menus-list-container" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 10px; margin-bottom: 1.5rem; min-height: 150px; max-height: 300px;">
+      <div style="text-align: center; color: #64748b; padding: 30px 10px; font-size: 0.8rem;">삭제된 백업 메뉴를 검색하는 중...</div>
+    </div>
+    
+    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+      <button id="restore-close-btn" style="padding: 10px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #94a3b8; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; outline: none;">닫기</button>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const closeBtn = modal.querySelector('#restore-close-btn');
+  closeBtn.addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  const listContainer = modal.querySelector('#deleted-menus-list-container');
+
+  async function loadDeletedMenus() {
+    try {
+      const res = await fetch(window.__BASE_PATH__ + '/admin/deleted-menus');
+      if (res.ok) {
+        const payload = await res.json();
+        if (payload.ok && payload.data && payload.data.length > 0) {
+          listContainer.innerHTML = '';
+          payload.data.forEach(sectionId => {
+            const row = document.createElement('div');
+            row.style.cssText = `
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 10px 8px;
+              border-bottom: 1px solid rgba(255,255,255,0.04);
+              font-size: 0.8rem;
+            `;
+            
+            const displayTitle = sectionId;
+            row.innerHTML = `
+              <span style="font-family: monospace; color: #cbd5e1;">${displayTitle}</span>
+              <button class="restore-action-btn" data-section-id="${sectionId}" style="padding: 4px 10px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 4px; color: #34d399; font-size: 0.72rem; cursor: pointer; transition: all 0.2s;">복원</button>
+            `;
+
+            const btn = row.querySelector('.restore-action-btn');
+            btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(16, 185, 129, 0.3)'; });
+            btn.addEventListener('mouseleave', () => { btn.style.background = 'rgba(16, 185, 129, 0.15)'; });
+            btn.addEventListener('click', async () => {
+              btn.disabled = true;
+              btn.textContent = '처리 중...';
+              try {
+                const restoreRes = await fetch(window.__BASE_PATH__ + '/admin/restore-menu', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ sectionId })
+                });
+                const restoreData = await restoreRes.json();
+                if (restoreRes.ok && restoreData.ok) {
+                  showToast(`'${sectionId}' 메뉴가 완벽히 복원되었습니다.`, 'success');
+                  overlay.remove();
+                  if (onRestoreSuccess) onRestoreSuccess();
+                } else {
+                  showToast(restoreData.message || '복원 실패', 'error');
+                  btn.disabled = false;
+                  btn.textContent = '복원';
+                }
+              } catch (err) {
+                console.error(err);
+                showToast('서버 통신 실패', 'error');
+                btn.disabled = false;
+                btn.textContent = '복원';
+              }
+            });
+
+            listContainer.appendChild(row);
+          });
+        } else {
+          listContainer.innerHTML = `
+            <div style="text-align: center; color: #64748b; padding: 40px 10px; font-size: 0.8rem;">
+              📭 삭제된 백업 메뉴가 존재하지 않습니다.
+            </div>
+          `;
+        }
+      } else {
+        listContainer.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 30px 10px; font-size: 0.8rem;">서버 오류 발생</div>`;
+      }
+    } catch (err) {
+      console.error(err);
+      listContainer.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 30px 10px; font-size: 0.8rem;">연결 실패</div>`;
+    }
+  }
+
+  loadDeletedMenus();
+}
+
 // Client-side JSON layout compiler (matches backend template compile logic)
 function clientCompileJsonToHtml(sectionId, data) {
   function renderInline(text) {
@@ -1652,7 +1784,13 @@ async function initializeAdminPanel() {
       const toolbar = document.querySelector('.block-toolbar');
       if (!toolbar) return;
       
+      const restoreBtn = toolbar.querySelector('.restore-menu-btn');
+      if (restoreBtn) {
+        restoreBtn.style.display = (sectionId === 'navigation') ? '' : 'none';
+      }
+
       toolbar.querySelectorAll('.tool-btn').forEach(btn => {
+        if (btn.classList.contains('restore-menu-btn')) return;
         const blockType = btn.getAttribute('data-block-type');
         if (sectionId === 'navigation') {
           if (blockType === 'menu_item') {
@@ -1954,6 +2092,16 @@ async function initializeAdminPanel() {
             console.error(err);
             showToast('서버 통신 오류', 'error');
           }
+        });
+      });
+    }
+
+    // Restore deleted menu button listener
+    const restoreMenuBtn = document.querySelector('.restore-menu-btn');
+    if (restoreMenuBtn) {
+      restoreMenuBtn.addEventListener('click', () => {
+        showRestoreMenuModal(async () => {
+          await loadSectionMarkdown('navigation');
         });
       });
     }

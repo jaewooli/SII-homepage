@@ -793,24 +793,26 @@ router.post('/update-content', (req, res) => {
           const delJsonPath = path.join(__dirname, `../../src/html/fragments/${delSid}.json`);
           const delHtmlPath = path.join(__dirname, `../../src/html/fragments/${delSid}.html`);
           const delJsonBakPath = delJsonPath + '.bak';
-          const delHtmlBakPath = delHtmlPath + '.bak';
 
-          const backupAndDelete = (filePath, bakPath) => {
-            if (fs.existsSync(filePath)) {
-              try {
-                if (fs.existsSync(bakPath)) {
-                  fs.unlinkSync(bakPath);
-                }
-                fs.renameSync(filePath, bakPath);
-                console.log(`[Content Cleanup] Successfully backed up and deleted: ${filePath} -> ${bakPath}`);
-              } catch (err) {
-                console.error(`[Content Cleanup] Failed to cleanup file ${filePath}:`, err.message);
+          if (fs.existsSync(delJsonPath)) {
+            try {
+              if (fs.existsSync(delJsonBakPath)) {
+                fs.unlinkSync(delJsonBakPath);
               }
+              fs.renameSync(delJsonPath, delJsonBakPath);
+              console.log(`[Content Cleanup] Successfully backed up JSON: ${delJsonPath} -> ${delJsonBakPath}`);
+            } catch (err) {
+              console.error(`[Content Cleanup] Failed to backup JSON file ${delJsonPath}:`, err.message);
             }
-          };
-
-          backupAndDelete(delJsonPath, delJsonBakPath);
-          backupAndDelete(delHtmlPath, delHtmlBakPath);
+          }
+          if (fs.existsSync(delHtmlPath)) {
+            try {
+              fs.unlinkSync(delHtmlPath);
+              console.log(`[Content Cleanup] Deleted compiled HTML file directly: ${delHtmlPath}`);
+            } catch (err) {
+              console.error(`[Content Cleanup] Failed to delete HTML file ${delHtmlPath}:`, err.message);
+            }
+          }
         });
       } catch (cleanupErr) {
         console.error('[Content Cleanup Error] Failed to process deleted sections:', cleanupErr.message);
@@ -1022,6 +1024,184 @@ router.post('/archive-semester', (req, res) => {
   } catch (err) {
     console.error('[Archive Error] Failed to archive semester:', err.message);
     return sendJson(res, { status: 500, ok: false, message: `아카이브 처리 실패: ${err.message}`, code: 'SERVER_ERROR' });
+  }
+});
+
+// Admin Route: Get list of deleted menus (by checking existence of .json.bak files)
+router.get('/deleted-menus', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+
+  const fragmentsDir = path.join(__dirname, '../../src/html/fragments');
+
+  // Helper to recursively find .json.bak files
+  const findBakFiles = (dir, baseDir = '') => {
+    let results = [];
+    if (!fs.existsSync(dir)) return results;
+    const list = fs.readdirSync(dir);
+    list.forEach(file => {
+      const filePath = path.join(dir, file);
+      const stat = fs.statSync(filePath);
+      if (stat && stat.isDirectory()) {
+        results = results.concat(findBakFiles(filePath, path.join(baseDir, file)));
+      } else if (file.endsWith('.json.bak')) {
+        // e.g. curriculum/system.json.bak -> curriculum/system
+        const cleanName = path.join(baseDir, file.substring(0, file.length - 9)).replace(/\\/g, '/');
+        results.push(cleanName);
+      }
+    });
+    return results;
+  };
+
+  try {
+    const baks = findBakFiles(fragmentsDir);
+    sendJson(res, { status: 200, ok: true, data: baks, code: 'SUCCESS' });
+  } catch (err) {
+    console.error('[Deleted Menus Error] Failed to scan:', err.message);
+    sendJson(res, { status: 500, ok: false, message: '백업 목록 조회 실패', code: 'SERVER_ERROR' });
+  }
+});
+
+// Admin Route: Restore a deleted menu from its JSON backup (.json.bak)
+router.post('/restore-menu', (req, res) => {
+  if (!req.session.user || !req.session.user.isAdmin) {
+    return sendJson(res, { status: 403, ok: false, message: 'Forbidden', code: 'FORBIDDEN' });
+  }
+  const { sectionId } = req.body;
+  if (!sectionId || sectionId.includes('..') || path.isAbsolute(sectionId)) {
+    return sendJson(res, { status: 400, ok: false, message: '유효하지 않은 섹션 ID입니다.', code: 'BAD_REQUEST' });
+  }
+
+  const jsonBakPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.json.bak`);
+  const jsonPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.json`);
+  const htmlPath = path.join(__dirname, `../../src/html/fragments/${sectionId}.html`);
+
+  if (!fs.existsSync(jsonBakPath)) {
+    return sendJson(res, { status: 404, ok: false, message: '해당 메뉴의 백업 파일이 존재하지 않습니다.', code: 'NOT_FOUND' });
+  }
+
+  try {
+    // Restore JSON file
+    if (fs.existsSync(jsonPath)) {
+      fs.unlinkSync(jsonPath);
+    }
+    fs.renameSync(jsonBakPath, jsonPath);
+
+    // Read restored JSON content
+    const content_md = fs.readFileSync(jsonPath, 'utf8');
+    const jsonData = JSON.parse(content_md);
+
+    // Re-compile HTML
+    const compiledHtml = compileJsonToHtml(sectionId, jsonData);
+    fs.writeFileSync(htmlPath, compiledHtml, 'utf8');
+
+    // Update SQLite DB for restored section
+    const timestamp = new Date().toISOString();
+    db.run(
+      `INSERT OR REPLACE INTO site_contents (section_id, content_md, content_html, updated_at) VALUES (?, ?, ?, ?)`,
+      [sectionId, content_md, compiledHtml, timestamp],
+      (dbErr) => {
+        if (dbErr) {
+          console.error('[Restore DB Error] Failed to restore content in SQLite:', dbErr.message);
+        }
+      }
+    );
+
+    // Update parent navigation.json & navigation.html if needed
+    const navJsonPath = path.join(__dirname, '../../src/html/fragments/navigation.json');
+    const navHtmlPath = path.join(__dirname, '../../src/html/fragments/navigation.html');
+    if (fs.existsSync(navJsonPath)) {
+      try {
+        const navData = JSON.parse(fs.readFileSync(navJsonPath, 'utf8'));
+        let navUpdated = false;
+
+        const isAlreadyInNav = (data, targetUrl) => {
+          const cleanUrl = targetUrl.replace(/^\{\{BASE_PATH\}\}/g, '');
+          for (let item of data) {
+            if (item.url && item.url.replace(/^\{\{BASE_PATH\}\}/g, '') === cleanUrl) return true;
+            if (item.submenus) {
+              for (let sub of item.submenus) {
+                if (sub.url && sub.url.replace(/^\{\{BASE_PATH\}\}/g, '') === cleanUrl) return true;
+              }
+            }
+          }
+          return false;
+        };
+
+        const isSubmenu = sectionId.includes('/');
+        const targetUrl = isSubmenu ? '#' + sectionId : '{{BASE_PATH}}/' + sectionId;
+
+        if (!isAlreadyInNav(navData, targetUrl)) {
+          let restoredTitle = '';
+          try {
+            const blocks = JSON.parse(content_md);
+            if (Array.isArray(blocks) && blocks.length > 0) {
+              const titledBlock = blocks.find(b => b.title);
+              if (titledBlock) restoredTitle = titledBlock.title;
+            }
+          } catch(e) {}
+
+          if (isSubmenu) {
+            const parts = sectionId.split('/');
+            const parentPart = parts[0];
+            const subPart = parts.slice(1).join('/');
+            const displayTitle = restoredTitle || (subPart.charAt(0).toUpperCase() + subPart.slice(1));
+            
+            const parentMenu = navData.find(item => 
+              item.url === '#' + parentPart || 
+              item.url === '/' + parentPart ||
+              item.url === '{{BASE_PATH}}/' + parentPart
+            );
+
+            if (parentMenu) {
+              if (!parentMenu.submenus) parentMenu.submenus = [];
+              parentMenu.submenus.push({
+                title: displayTitle,
+                url: '#' + sectionId,
+                allowedRoles: ["guest", "member", "admin"]
+              });
+              navUpdated = true;
+            }
+          } else {
+            const displayTitle = restoredTitle || (sectionId.charAt(0).toUpperCase() + sectionId.slice(1));
+            navData.push({
+              type: "menu_item",
+              title: displayTitle,
+              url: '{{BASE_PATH}}/' + sectionId,
+              external: false,
+              allowedRoles: ["guest", "member", "admin"],
+              submenus: []
+            });
+            navUpdated = true;
+          }
+
+          if (navUpdated) {
+            fs.writeFileSync(navJsonPath, JSON.stringify(navData, null, 2), 'utf8');
+            const compiledNavHtml = compileJsonToHtml('navigation', navData);
+            fs.writeFileSync(navHtmlPath, compiledNavHtml, 'utf8');
+
+            const navTimestamp = new Date().toISOString();
+            db.run(
+              `INSERT OR REPLACE INTO site_contents (section_id, content_md, content_html, updated_at) VALUES (?, ?, ?, ?)`,
+              ['navigation', JSON.stringify(navData, null, 2), compiledNavHtml, navTimestamp]
+            );
+          }
+        }
+      } catch (navErr) {
+        console.error('[Restore Navigation Error] Failed to update parent navigation:', navErr.message);
+      }
+    }
+
+    return sendJson(res, {
+      status: 200,
+      ok: true,
+      message: `'${sectionId}' 메뉴가 성공적으로 복원되었습니다.`,
+      code: 'SUCCESS'
+    });
+  } catch (err) {
+    console.error('[Restore Menu Error] Process failed:', err.message);
+    return sendJson(res, { status: 500, ok: false, message: `복원 처리 중 에러 발생: ${err.message}`, code: 'SERVER_ERROR' });
   }
 });
 
