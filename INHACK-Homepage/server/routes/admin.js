@@ -908,25 +908,121 @@ router.post('/archive-semester', (req, res) => {
   const pastHtmlPath = path.join(fragsDir, 'past-events.html');
 
   try {
-    // 1. Read current other-events.json
-    if (!fs.existsSync(otherJsonPath)) {
-      throw new Error('other-events.json 파일이 존재하지 않습니다.');
+    const { compileJsonToHtml } = require('../helpers/template');
+
+    // Helper to read and parse JSON fragment safely
+    const readFragJson = (filename) => {
+      const p = path.join(fragsDir, filename);
+      if (fs.existsSync(p)) {
+        try {
+          return JSON.parse(fs.readFileSync(p, 'utf8'));
+        } catch (e) {
+          console.error(`[Archive Read Warning] Failed to parse ${filename}:`, e.message);
+        }
+      }
+      return null;
+    };
+
+    // 1. Gather all activity blocks for the semester into a unified list
+    const archiveJson = [];
+
+    // Main Cover Header Block
+    archiveJson.push({
+      type: "header",
+      title: `${semesterName} 종합 활동 아카이브`,
+      desc: `${semesterName} 동안 진행되었던 학술 세미나, 연구 프로젝트, CTF 챌린지 및 특별 활동들의 종합 기록입니다.`
+    });
+
+    // 1-1. Gather Special Events (other-events.json)
+    const otherData = readFragJson('other-events.json');
+    if (otherData && Array.isArray(otherData)) {
+      archiveJson.push({
+        type: "header",
+        title: "📢 특별 행사 및 세션 (Special Events)",
+        desc: "오리엔테이션, 개강/종강총회, 대외 세션 등의 행사 기록입니다."
+      });
+      otherData.forEach(block => {
+        if (block.type !== 'header') {
+          archiveJson.push(block);
+        }
+      });
     }
-    const otherRaw = fs.readFileSync(otherJsonPath, 'utf8');
-    const otherData = JSON.parse(otherRaw);
 
-    // 2. Clone and write as archive-{semesterCode}.json
-    const archiveJson = JSON.parse(JSON.stringify(otherData));
-    archiveJson[0].title = `${semesterName} 활동 아카이브`;
-    archiveJson[0].desc = `${semesterName} 개강총회, 종강총회, 강연 등의 특별 활동 아카이브 기록입니다.`;
+    // 1-2. Gather Curriculum & Sub-tracks (curriculum.json & curriculum/*.json)
+    const curData = readFragJson('curriculum.json');
+    if (curData && Array.isArray(curData)) {
+      archiveJson.push({
+        type: "header",
+        title: "🗺️ 학기 학습 커리큘럼 (Curriculum Roadmap)",
+        desc: "학기 동안 진행된 인핵 공식 보안 연구 및 학술 세미나 로드맵입니다."
+      });
+      curData.forEach(block => {
+        if (block.type !== 'header') {
+          archiveJson.push(block);
+        }
+      });
 
+      // Gather sub-tracks
+      const tracks = [
+        { id: 'curriculum/system', title: '└ 💻 System Hacking 트랙 커리큘럼' },
+        { id: 'curriculum/web', title: '└ 🌐 Web Hacking 트랙 커리큘럼' },
+        { id: 'curriculum/forensic', title: '└ 🔍 Forensic 트랙 커리큘럼' },
+        { id: 'curriculum/cryptography', title: '└ 🔑 Cryptography 트랙 커리큘럼' }
+      ];
+
+      tracks.forEach(track => {
+        const trackData = readFragJson(`${track.id}.json`);
+        if (trackData && Array.isArray(trackData)) {
+          archiveJson.push({
+            type: "header",
+            title: track.title,
+            desc: `${track.title.split('└ ').pop()}의 상세 세션 및 학습 내용 기록입니다.`
+          });
+          trackData.forEach(block => {
+            if (block.type !== 'header') {
+              archiveJson.push(block);
+            }
+          });
+        }
+      });
+    }
+
+    // 1-3. Gather Club Projects (projects.json)
+    const projData = readFragJson('projects.json');
+    if (projData && Array.isArray(projData)) {
+      archiveJson.push({
+        type: "header",
+        title: "🎴 학기 동아리 연구 프로젝트 (Projects)",
+        desc: "동아리 회원들이 주도하여 분석 및 개발한 보안 아티팩트와 소프트웨어 성과입니다."
+      });
+      projData.forEach(block => {
+        if (block.type !== 'header') {
+          archiveJson.push(block);
+        }
+      });
+    }
+
+    // 1-4. Gather CTF Dashboard (ctf.json)
+    const ctfData = readFragJson('ctf.json');
+    if (ctfData && Array.isArray(ctfData)) {
+      archiveJson.push({
+        type: "header",
+        title: "🏆 CTF Challenge 최종 스코어보드",
+        desc: "자체 Capture The Flag 보안 경쟁 플랫폼의 학기 최종 랭킹 및 문제 리스트입니다."
+      });
+      ctfData.forEach(block => {
+        if (block.type !== 'header') {
+          archiveJson.push(block);
+        }
+      });
+    }
+
+    // 2. Save unified JSON and HTML for the archived semester
     const archiveJsonPath = path.join(fragsDir, `archive-${semesterCode}.json`);
     const archiveHtmlPath = path.join(fragsDir, `archive-${semesterCode}.html`);
 
     fs.writeFileSync(archiveJsonPath, JSON.stringify(archiveJson, null, 2), 'utf8');
 
-    // 3. Compile archive-{semesterCode}.html and save to DB
-    const { compileJsonToHtml } = require('../helpers/template');
     const archiveHtml = compileJsonToHtml(`archive-${semesterCode}`, archiveJson);
     fs.writeFileSync(archiveHtmlPath, archiveHtml, 'utf8');
 
@@ -936,7 +1032,7 @@ router.post('/archive-semester', (req, res) => {
       [`archive-${semesterCode}`, JSON.stringify(archiveJson), archiveHtml, timestamp]
     );
 
-    // 4. Update past-events.json with a new archive card
+    // 3. Update past-events.json with a new archive card
     let pastData = [];
     if (fs.existsSync(pastJsonPath)) {
       pastData = JSON.parse(fs.readFileSync(pastJsonPath, 'utf8'));
@@ -956,8 +1052,8 @@ router.post('/archive-semester', (req, res) => {
 
     const newArchiveCard = {
       tag: semesterCode,
-      title: `${semesterName} 활동 아카이브`,
-      desc: `${semesterName} 학기 중에 진행되었던 특별 강연, 학술 세션 및 동아리 총회 등의 활동 기록 모음입니다.`,
+      title: `${semesterName} 종합 아카이브`,
+      desc: `${semesterName} 학기 중에 진행되었던 커리큘럼, 프로젝트 성과, CTF 스코어보드 및 특별 행사 기록 일체입니다.`,
       url: `#archive-${semesterCode}`
     };
 
@@ -981,7 +1077,7 @@ router.post('/archive-semester', (req, res) => {
       ['past-events', JSON.stringify(pastData), pastHtml, timestamp]
     );
 
-    // 5. Reset other-events.json for the next semester
+    // 4. Reset other-events.json for the next semester
     const resetOtherData = [
       {
         "type": "header",
@@ -1007,7 +1103,6 @@ router.post('/archive-semester', (req, res) => {
 
     fs.writeFileSync(otherJsonPath, JSON.stringify(resetOtherData, null, 2), 'utf8');
 
-    // Compile other-events.html and save to DB
     const otherHtml = compileJsonToHtml('other-events', resetOtherData);
     fs.writeFileSync(otherHtmlPath, otherHtml, 'utf8');
     db.run(
@@ -1015,10 +1110,51 @@ router.post('/archive-semester', (req, res) => {
       ['other-events', JSON.stringify(resetOtherData), otherHtml, timestamp]
     );
 
+    // 5. Reset projects.json (Clear all projects for next semester)
+    const resetProjData = [
+      {
+        "type": "header",
+        "title": "Projects",
+        "desc": "INHACK 동아리원들이 주도하여 개발 및 연구한 보안 아티팩트와 소프트웨어 프로젝트를 소개합니다."
+      },
+      {
+        "type": "features",
+        "items": []
+      }
+    ];
+    fs.writeFileSync(path.join(fragsDir, 'projects.json'), JSON.stringify(resetProjData, null, 2), 'utf8');
+    const projHtml = compileJsonToHtml('projects', resetProjData);
+    fs.writeFileSync(path.join(fragsDir, 'projects.html'), projHtml, 'utf8');
+    db.run(
+      `INSERT OR REPLACE INTO site_contents (section_id, content_md, content_html, updated_at) VALUES (?, ?, ?, ?)`,
+      ['projects', JSON.stringify(resetProjData), projHtml, timestamp]
+    );
+
+    // 6. Reset ctf.json (Clear leaderboard & challenges for next semester)
+    const resetCtfData = [
+      {
+        "type": "header",
+        "title": "CTF Dashboard",
+        "desc": "INHACK 자체 Capture The Flag 보안 경쟁 플랫폼의 실시간 스코어보드 및 활성 챌린지 리스트입니다."
+      },
+      {
+        "type": "ctf_dashboard",
+        "leaderboard": [],
+        "challenges": []
+      }
+    ];
+    fs.writeFileSync(path.join(fragsDir, 'ctf.json'), JSON.stringify(resetCtfData, null, 2), 'utf8');
+    const ctfHtml = compileJsonToHtml('ctf', resetCtfData);
+    fs.writeFileSync(path.join(fragsDir, 'ctf.html'), ctfHtml, 'utf8');
+    db.run(
+      `INSERT OR REPLACE INTO site_contents (section_id, content_md, content_html, updated_at) VALUES (?, ?, ?, ?)`,
+      ['ctf', JSON.stringify(resetCtfData), ctfHtml, timestamp]
+    );
+
     return sendJson(res, {
       status: 200,
       ok: true,
-      message: `'${semesterName}' 활동 내역이 성공적으로 아카이브에 보관되었으며, 특별 행사 페이지가 리셋되었습니다.`,
+      message: `'${semesterName}' 활동 내역(커리큘럼, 프로젝트, CTF, 특별행사)이 성공적으로 종합 아카이브에 병합 보관되었습니다.`,
       code: 'SUCCESS'
     });
   } catch (err) {
