@@ -59,6 +59,16 @@ function renderSidebarNav(menuItems) {
   const navList = document.getElementById('sidebar-nav-list');
   if (!navList) return;
 
+  const getAbsoluteUrl = (url) => {
+    if (!url) return '#';
+    if (/^https?:\/\//i.test(url)) return url;
+    let res = url.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__ || '');
+    if (res.startsWith('/') && window.__BASE_PATH__ && !res.startsWith(window.__BASE_PATH__)) {
+      res = window.__BASE_PATH__ + res;
+    }
+    return res;
+  };
+
   navList.innerHTML = '';
   menuItems.forEach(item => {
     if (item.type !== 'menu_item') return;
@@ -71,8 +81,7 @@ function renderSidebarNav(menuItems) {
 
     const a = document.createElement('a');
     const isHomepage = window.location.pathname === window.__BASE_PATH__ || window.location.pathname === window.__BASE_PATH__ + '/';
-    let resolvedUrl = item.url || '#';
-    resolvedUrl = resolvedUrl.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
+    let resolvedUrl = getAbsoluteUrl(item.url);
     if (resolvedUrl.startsWith('#') && resolvedUrl !== '#') {
       resolvedUrl = isHomepage ? resolvedUrl : `${window.__BASE_PATH__}/${resolvedUrl}`;
     }
@@ -106,8 +115,7 @@ function renderSidebarNav(menuItems) {
         const subLi = document.createElement('li');
         const subA = document.createElement('a');
         const isHomepage = window.location.pathname === window.__BASE_PATH__ || window.location.pathname === window.__BASE_PATH__ + '/';
-        let resolvedSubUrl = sub.url || '#';
-        resolvedSubUrl = resolvedSubUrl.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
+        let resolvedSubUrl = getAbsoluteUrl(sub.url);
         if (resolvedSubUrl.startsWith('#') && resolvedSubUrl !== '#') {
           resolvedSubUrl = isHomepage ? resolvedSubUrl : `${window.__BASE_PATH__}/${resolvedSubUrl}`;
         }
@@ -233,6 +241,16 @@ function clientCompileJsonToHtml(sectionId, data) {
     }
     return text;
   }
+
+  const resolveUrl = (url) => {
+    if (!url) return '#';
+    if (/^https?:\/\//i.test(url)) return url;
+    let res = url.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__ || '');
+    if (res.startsWith('/') && window.__BASE_PATH__ && !res.startsWith(window.__BASE_PATH__)) {
+      res = window.__BASE_PATH__ + res;
+    }
+    return res;
+  };
 
   // Handle legacy fallback
   if (!Array.isArray(data)) {
@@ -415,11 +433,11 @@ ${chalsHtml}</div>
       }
       else if (block.type === 'menu_item') {
         const submenusHtml = (block.submenus || []).map(s =>
-          `<li style="padding: 4px 0 4px 16px; color: #94a3b8; font-size: 0.8rem;">└ <a href="${s.url || '#'}" style="color: #94a3b8;">${s.title}${s.external ? ' ↗' : ''}</a></li>`
+          `<li style="padding: 4px 0 4px 16px; color: #94a3b8; font-size: 0.8rem;">└ <a href="${resolveUrl(s.url || '#')}" style="color: #94a3b8;">${s.title}${s.external ? ' ↗' : ''}</a></li>`
         ).join('\n');
         const externalBadge = block.external ? ' <span style="font-size:0.65rem; color:#fbbf24; vertical-align: middle;">↗ EXT</span>' : '';
         htmlResult += `<div style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-  <a href="${block.url || '#'}" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; color: #e2e8f0; text-decoration: none;">${block.title || '(제목 없음)'}${externalBadge}</a>
+  <a href="${resolveUrl(block.url || '#')}" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; color: #e2e8f0; text-decoration: none;">${block.title || '(제목 없음)'}${externalBadge}</a>
   ${submenusHtml ? `<ul style="list-style:none; padding: 0; margin: 4px 0 0 0;">${submenusHtml}</ul>` : ''}
 </div>\n`;
       }
@@ -1664,23 +1682,21 @@ async function initializeAdminPanel() {
               if (!Array.isArray(currentBlocks)) {
                 currentBlocks = legacyFallback(currentBlocks, sectionId);
               }
-              // Replace {{BASE_PATH}} with actual base path for display/editing
-              if (window.__BASE_PATH__) {
-                currentBlocks.forEach(block => {
-                  if (block.type === 'menu_item') {
-                    if (block.url) {
-                      block.url = block.url.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
-                    }
-                    if (block.submenus) {
-                      block.submenus.forEach(sub => {
-                        if (sub.url) {
-                          sub.url = sub.url.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
-                        }
-                      });
-                    }
+              // Strip {{BASE_PATH}} from local URLs so the admin only edits the raw pathname (e.g. /dreamhack)
+              currentBlocks.forEach(block => {
+                if (block.type === 'menu_item') {
+                  if (block.url) {
+                    block.url = block.url.replace(/\{\{BASE_PATH\}\}/g, '');
                   }
-                });
-              }
+                  if (block.submenus) {
+                    block.submenus.forEach(sub => {
+                      if (sub.url) {
+                        sub.url = sub.url.replace(/\{\{BASE_PATH\}\}/g, '');
+                      }
+                    });
+                  }
+                }
+              });
             } catch (e) {
               console.error(e);
               currentBlocks = [];
@@ -1913,17 +1929,28 @@ async function initializeAdminPanel() {
           }
           // Reverse-replace window.__BASE_PATH__ to {{BASE_PATH}}
           if (block.type === 'menu_item') {
-            if (block.url && window.__BASE_PATH__) {
-              const escapedBasePath = window.__BASE_PATH__.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-              const regex = new RegExp('^' + escapedBasePath + '(?=\\/|$)');
-              block.url = block.url.replace(regex, '{{BASE_PATH}}');
+            const formatUrl = (url) => {
+              if (!url) return url;
+              if (/^https?:\/\//i.test(url)) return url; // Skip external links
+              let clean = url;
+              if (window.__BASE_PATH__) {
+                const escapedBasePath = window.__BASE_PATH__.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                const regex = new RegExp('^' + escapedBasePath + '(?=\\/|$)');
+                clean = clean.replace(regex, '');
+              }
+              if (clean.startsWith('/') && !clean.startsWith('{{BASE_PATH}}')) {
+                clean = '{{BASE_PATH}}' + clean;
+              }
+              return clean;
+            };
+
+            if (block.url) {
+              block.url = formatUrl(block.url);
             }
             if (block.submenus) {
               block.submenus.forEach(sub => {
-                if (sub.url && window.__BASE_PATH__) {
-                  const escapedBasePath = window.__BASE_PATH__.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-                  const regex = new RegExp('^' + escapedBasePath + '(?=\\/|$)');
-                  sub.url = sub.url.replace(regex, '{{BASE_PATH}}');
+                if (sub.url) {
+                  sub.url = formatUrl(sub.url);
                 }
               });
             }
