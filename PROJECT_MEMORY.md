@@ -90,7 +90,7 @@ graph TD
   * Chrome Extension의 `content.js`가 `dreamhack.io` 페이지 내 AJAX(`fetch` 및 `XMLHttpRequest`) 요청/응답을 메인 월드(Main World) 컨텍스트에서 가로채는 몽키 패치(Monkey-Patch) 자바스크립트를 동적 주입하도록 고도화.
   * 문제 제출 API가 정답(`correct: true`)을 반환할 시 custom DOM Event(`DREAMHACK_CHALLENGE_SOLVED_EVENT`)를 트리거하여 크롬 런타임 메시지를 백그라운드 서비스 워커(`background.js`)로 전송.
   * `background.js`에서 해당 메시지를 수신하여 로컬 포탈의 로그인 세션(/me)을 조회하고, 식별된 사용자의 이름으로 `/dreamhack/solve-log` API에 로그를 전송 및 수집하도록 크롬 확장 로직 완비.
-  * 수정한 크롬 확장 소스를 새롭게 압축하여 포탈 다운로드용 배포 압축 파일([INHACK-Extension.zip](file:///mnt/e/Programming/Projects/SII/SII-homepage/INHACK-Homepage/src/INHACK-Extension.zip))에 동기화.
+  * 수정한 크롬 확장 소스를 새롭게 압축하여 포탈 다운로드용 배포 압축 파일([INHACK-Extension.zip](file:///mnt/e/Programming/Projects/Hosting/INHACK-Homepage/src/INHACK-Extension.zip))에 동기화.
 - [x] **계정 별 드림핵 문제 풀이 내역 조회 기능 구현**:
   * 관리자 패널의 사용자 계정 관리 목록에 "푼 문제" 칼럼을 신규 배치하고, SQLite에서 각 계정 별 문제 풀이 수(`solve_count`)를 집계하여 실시간으로 표시.
   * 푼 문제 개수 링크 클릭 시, 해당 사용자가 드림핵 사이트에서 푼 실제 문제 이름과 풀이 일시 목록을 모달 오버레이 팝업(`showUserSolvesModal`)으로 렌더링.
@@ -116,6 +116,12 @@ graph TD
   * 신규 사용자 계정 등록 폼에서 체크박스 등이 display: none으로 숨김 처리되는 경우를 고려하여, 폼 입력 컨트롤 간의 기본 세로 간격(`gap: 12px;`) 및 생성 제출 버튼 상단 마진(`margin-top: 14px;`)을 명시적으로 추가하여 여백 조화성 최적화.
   * 커리큘럼(Curriculum) 하위에 세부 학습 트랙 서브메뉴(System, Web, Forensic, Cryptography)를 구성하고, 동아리 아티팩트 소개를 위한 **`Projects` 메인 메뉴** 신규 증설.
   * 신규 페이지들의 비주얼 편집 및 DB 서빙을 위해 서버 측 유효 섹션(`validSections`) 정보 확장 및 HTML/JSON 템플릿 프래그먼트(10개 파일) 생성 완료. 어드민 에디터 폼의 편집 셀렉터에 해당 메뉴들을 바인딩하여 직관적인 편집 제공.
+- [x] **공용 세션/보안 관련 및 베이스 경로(`/homepage`) 안정화**:
+  * **베이스 경로 라우팅 안정화**: 전체 프로젝트가 `/homepage` (또는 환경변수에 지정된 어떤 임의의 베이스 경로) 내부로 마운트되어 실행되도록 라우터 redirect, HTML 템플릿의 `{{BASE_PATH}}` 치환 및 클라이언트 사이드의 `window.__BASE_PATH__` 변수 제공 방식을 정립 및 통일.
+  * **비활성/비어있는 데이터의 404 에러 제거**: `/shared-session` 및 `/encrypted-credentials` API에 대해, 데이터베이스가 비어있는 상태일 때 `404 Not Found`를 리턴하는 대신 `200 OK` 상태코드와 함께 `data: null` 및 `ok: true` (code: `'NOT_FOUND'`) 구조화된 JSON 응답을 반환하도록 리팩토링. 이를 통해 브라우저 콘솔의 빨간색 404 네트워크 에러 경고를 방지하고, 클라이언트-사이드의 로그아웃/세션 초기화 흐름이 예외 없이 깔끔하게 처리되도록 개선.
+  * **SameSite Lax 쿠키 제한 해결**: 크롬 익스텐션 백그라운드 서비스 워커의 크로스 오리진 요청 시 세션 쿠키가 전달되지 않는 브라우저 보안 이슈를 해결하기 위해, 민감한 인증용 포탈 호출(`/shared-session`, `/dreamhack/login`)을 동일 오리진을 보장하는 콘텐츠 스크립트(`content.js`) 단에서 직접 `fetch`를 수행해 위임하도록 설계 변경.
+  * **익스텐션 오류 전파 구조 개선**: 백그라운드 스크립트(`background.js`)와 콘텐츠 스크립트(`content.js`) 간 메시지 패싱 오류 처리 과정에서, 일부 에러 객체의 프로퍼티 누락으로 인해 사용자 화면에 "unknown error"로 뭉뚱그려 표시되던 문제 수정. 오류 메시지 전송 시 `message`와 `error` 키를 쌍으로 정확히 정의하고, 문자열 형변환 및 기본 대체 문자열을 구성하여 실제 디버그 에러 메시지(예: 마스터 키 없음, 복호화 실패 등)가 사용자 토스트 메시지로 올바르게 노출되도록 신뢰성 향상.
+  * **크롬 익스텐션 최신 빌드 자동화 패키징**: 변경된 `background.js` 및 `content.js` 소스 코드가 포함된 최신 버전의 확장 프로그램을 빌드하여 포털 다운로드용 압축 파일([INHACK-Extension.zip](file:///mnt/e/Programming/Projects/Hosting/INHACK-Homepage/src/INHACK-Extension.zip))로 로컬 압축 배포 완료.
 
 ---
 
@@ -126,7 +132,7 @@ graph TD
   * **수행 테스트 순서**:
     1. 로컬 포탈 서버 기동 (`npm start` 또는 `npm run dev`).
     2. 로컬 포탈 사이트에 로그인 후 드림핵 연동 페이지 방문.
-    3. 최신 크롬 확장 파일([INHACK-Extension.zip](file:///mnt/e/Programming/Projects/SII/SII-homepage/INHACK-Homepage/src/INHACK-Extension.zip))을 다운로드받아 압축 해제 후 크롬 `chrome://extensions/` 페이지에서 개발자 모드 로드로 수동 설치.
+    3. 최신 크롬 확장 파일([INHACK-Extension.zip](file:///mnt/e/Programming/Projects/Hosting/INHACK-Homepage/src/INHACK-Extension.zip))을 다운로드받아 압축 해제 후 크롬 `chrome://extensions/` 페이지에서 개발자 모드 로드로 수동 설치.
     4. 드림핵(`dreamhack.io/wargame/challenges/`)에 접속해 워게임 문제를 임의로 해결하여 정답 플래그 제출.
     5. 제출 성공 후 로컬 포탈의 로그 파일(`log/dreamhack_solves.log`)과 어드민 패널 내 사용자 목록의 `푼 문제` 개수 링크 모달 내에 해결한 챌린지 정보가 실시간으로 쌓이는지 확인.
 

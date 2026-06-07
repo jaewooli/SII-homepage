@@ -1664,6 +1664,23 @@ async function initializeAdminPanel() {
               if (!Array.isArray(currentBlocks)) {
                 currentBlocks = legacyFallback(currentBlocks, sectionId);
               }
+              // Replace {{BASE_PATH}} with actual base path for display/editing
+              if (window.__BASE_PATH__) {
+                currentBlocks.forEach(block => {
+                  if (block.type === 'menu_item') {
+                    if (block.url) {
+                      block.url = block.url.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
+                    }
+                    if (block.submenus) {
+                      block.submenus.forEach(sub => {
+                        if (sub.url) {
+                          sub.url = sub.url.replace(/\{\{BASE_PATH\}\}/g, window.__BASE_PATH__);
+                        }
+                      });
+                    }
+                  }
+                });
+              }
             } catch (e) {
               console.error(e);
               currentBlocks = [];
@@ -1893,6 +1910,23 @@ async function initializeAdminPanel() {
             block.items.forEach(item => {
               if (item.desc) item.desc = cleanHtml(item.desc);
             });
+          }
+          // Reverse-replace window.__BASE_PATH__ to {{BASE_PATH}}
+          if (block.type === 'menu_item') {
+            if (block.url && window.__BASE_PATH__) {
+              const escapedBasePath = window.__BASE_PATH__.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+              const regex = new RegExp('^' + escapedBasePath + '(?=\\/|$)');
+              block.url = block.url.replace(regex, '{{BASE_PATH}}');
+            }
+            if (block.submenus) {
+              block.submenus.forEach(sub => {
+                if (sub.url && window.__BASE_PATH__) {
+                  const escapedBasePath = window.__BASE_PATH__.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                  const regex = new RegExp('^' + escapedBasePath + '(?=\\/|$)');
+                  sub.url = sub.url.replace(regex, '{{BASE_PATH}}');
+                }
+              });
+            }
           }
         });
 

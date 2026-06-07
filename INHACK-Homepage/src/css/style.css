@@ -2315,3 +2315,21 @@ body.resizing-active {
 .page-admin .admin-form button[type="submit"] {
     margin-top: 14px;
 }
+
+/* Responsive adjustments for admin panel grid and lists */
+@media (max-width: 1024px) {
+    .page-admin .admin-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}
+
+.page-admin .user-list-wrapper {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.page-admin .user-list-header,
+.page-admin .user-row {
+    min-width: 450px;
+}

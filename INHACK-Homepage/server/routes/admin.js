@@ -690,6 +690,16 @@ router.post('/update-content', (req, res) => {
       fs.mkdirSync(htmlDir, { recursive: true });
     }
 
+    // Read old navigation data for cleanup comparison before overwriting
+    let oldJsonData = [];
+    if (sectionId === 'navigation' && fs.existsSync(jsonPath)) {
+      try {
+        oldJsonData = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+      } catch (err) {
+        console.error(`[Backup Read Error] Failed to read/parse old JSON for ${sectionId}:`, err.message);
+      }
+    }
+
     // 1. Save previous .json file as backup if it exists
     if (fs.existsSync(jsonPath)) {
       try {
@@ -707,6 +717,79 @@ router.post('/update-content', (req, res) => {
 
     // 4. Save HTML file physically
     fs.writeFileSync(htmlPath, compiledHtml, 'utf8');
+
+    // 4.5. If section is navigation, find deleted menu items and backup/delete their files
+    if (sectionId === 'navigation') {
+      try {
+        const extractLocalSectionId = (url) => {
+          if (!url || typeof url !== 'string') return null;
+          let clean = url.trim();
+          if (/^https?:\/\//i.test(clean)) return null;
+          clean = clean.replace(/^\{\{BASE_PATH\}\}/g, '');
+          clean = clean.replace(/^[#\/]+/, '');
+          if (!clean) return null;
+          return clean;
+        };
+
+        const oldSections = new Set();
+        if (Array.isArray(oldJsonData)) {
+          oldJsonData.forEach(item => {
+            const sid = extractLocalSectionId(item.url);
+            if (sid) oldSections.add(sid);
+            if (item.submenus && Array.isArray(item.submenus)) {
+              item.submenus.forEach(sub => {
+                const subSid = extractLocalSectionId(sub.url);
+                if (subSid) oldSections.add(subSid);
+              });
+            }
+          });
+        }
+
+        const newSections = new Set();
+        if (Array.isArray(jsonData)) {
+          jsonData.forEach(item => {
+            const sid = extractLocalSectionId(item.url);
+            if (sid) newSections.add(sid);
+            if (item.submenus && Array.isArray(item.submenus)) {
+              item.submenus.forEach(sub => {
+                const subSid = extractLocalSectionId(sub.url);
+                if (subSid) newSections.add(subSid);
+              });
+            }
+          });
+        }
+
+        const deletedSections = [...oldSections].filter(sid => !newSections.has(sid));
+
+        deletedSections.forEach(delSid => {
+          if (delSid.includes('..') || path.isAbsolute(delSid)) return;
+
+          const delJsonPath = path.join(__dirname, `../../src/html/fragments/${delSid}.json`);
+          const delHtmlPath = path.join(__dirname, `../../src/html/fragments/${delSid}.html`);
+          const delJsonBakPath = delJsonPath + '.bak';
+          const delHtmlBakPath = delHtmlPath + '.bak';
+
+          const backupAndDelete = (filePath, bakPath) => {
+            if (fs.existsSync(filePath)) {
+              try {
+                if (fs.existsSync(bakPath)) {
+                  fs.unlinkSync(bakPath);
+                }
+                fs.renameSync(filePath, bakPath);
+                console.log(`[Content Cleanup] Successfully backed up and deleted: ${filePath} -> ${bakPath}`);
+              } catch (err) {
+                console.error(`[Content Cleanup] Failed to cleanup file ${filePath}:`, err.message);
+              }
+            }
+          };
+
+          backupAndDelete(delJsonPath, delJsonBakPath);
+          backupAndDelete(delHtmlPath, delHtmlBakPath);
+        });
+      } catch (cleanupErr) {
+        console.error('[Content Cleanup Error] Failed to process deleted sections:', cleanupErr.message);
+      }
+    }
 
     // 5. Update SQLite database
     const timestamp = new Date().toISOString();
